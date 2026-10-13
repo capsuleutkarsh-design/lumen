@@ -8,7 +8,7 @@ A Windows music player for a lossless library, with Wora's look, and with the fo
 
 ## How to run it
 
-- **The app:** `C:\Users\AI10482\Documents\MusicPlayer\build\windows\x64\runner\Release\music_player.exe`. To move it somewhere else, copy the whole `Release` folder (the `.dll` files and the `data` folder must stay next to the `.exe`).
+- **The app:** `build\windows\x64\runner\Release\music_player.exe`. To move it somewhere else, copy the whole `Release` folder (the `.dll` files and the `data` folder must stay next to the `.exe`).
 - **First start:** open **Settings → Add folder** and choose your music folder. You can add more than one. The library fills in while you watch; you can play music straight away.
 - **Your data** (library database, play counts, playlists, cover thumbnails) lives in `%APPDATA%\com.example\music_player\`. Your music files are only read, never changed.
 

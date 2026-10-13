@@ -1,6 +1,6 @@
 # Third-party notices
 
-Music Player uses and credits the following work.
+Lumen uses and credits the following work.
 
 ## Bundled with the app
 
@@ -26,3 +26,5 @@ The layout and feel are inspired by [Wora](https://github.com/playwora/wora) by 
 ## Test material (not shipped)
 
 `_scratch/` (git-ignored) holds generated test tones and music from Wikimedia Commons used only for local testing; see `_scratch/real_music/CREDITS.txt`.
+
+You may replace the LGPL libraries (libmpv, FFmpeg) with your own builds: `libmpv-2.dll` sits next to the program.

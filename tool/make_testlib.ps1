@@ -1,7 +1,7 @@
 ﻿# Builds a small synthetic test library in _scratch\testlib with ffmpeg.
 # Never touches real music. Run:  powershell -ExecutionPolicy Bypass -File tool\make_testlib.ps1
 $ErrorActionPreference = 'Stop'
-$ff = 'C:\Users\AI10482\AppData\Local\Programs\ffmpeg_root\ffmpeg-9.0.1-essentials_build\bin\ffmpeg.exe'
+$ff = if ($env:FFMPEG) { $env:FFMPEG } else { 'ffmpeg' }   # set FFMPEG to ffmpeg.exe if it is not on PATH
 $root = Join-Path (Split-Path $PSScriptRoot -Parent) '_scratch\testlib'
 if (Test-Path $root) { Remove-Item -Recurse -Force $root }
 New-Item -ItemType Directory $root | Out-Null
