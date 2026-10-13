@@ -41,6 +41,7 @@ Inspired by [Wora](https://github.com/playwora/wora) (MIT licence: ideas and des
 - [x] Git
 - [x] Visual Studio 2022: check that the "Desktop development with C++" workload is installed
 - [x] Android Studio + Android SDK (for later)
-- [ ] Flutter SDK (needs the owner's OK to install)
+- [x] Flutter SDK 3.47.7 in C:devlutter (on PATH, analytics off)
 - [ ] Flutter + Dart plugins in Android Studio
-- [ ] `flutter doctor` all green for Windows
+- [x] `flutter doctor` all green for Windows; empty app builds
+- [ ] Android: cmdline-tools + `flutter doctor --android-licenses` (owner)
