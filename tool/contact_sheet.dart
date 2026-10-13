@@ -25,7 +25,7 @@ void main() {
             .listSync()
             .whereType<File>()
             .map((f) => p.basename(f.path))
-            .where((n) => RegExp(r'^\d\d_.*\.png$').hasMatch(n) && !used.contains(n))
+            .where((n) => RegExp(r'^\d\d\w?_.*\.png$').hasMatch(n) && !used.contains(n))
             .toList())
         ..sort();
 
@@ -61,7 +61,7 @@ void main() {
     tile(load(p.join(shots, ours)), 'v1: $name', i, 1);
   }
   for (var i = 0; i < rest.length; i++) {
-    tile(load(p.join(shots, rest[i])), 'v1: ${rest[i].substring(3).replaceAll('.png', '').replaceAll('_', ' ')}', i % cols, 2 + i ~/ cols);
+    tile(load(p.join(shots, rest[i])), 'v1: ${rest[i].replaceFirst(RegExp(r'^\d\d\w?_'), '').replaceAll('.png', '').replaceAll('_', ' ')}', i % cols, 2 + i ~/ cols);
   }
   final out = p.join(shots, 'v1.png');
   File(out).writeAsBytesSync(img.encodePng(sheet, level: 6));
