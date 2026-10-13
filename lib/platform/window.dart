@@ -48,30 +48,34 @@ class _Saver with WindowListener {
   Timer? _t;
   void _save() {
     _t?.cancel();
-    _t = Timer(const Duration(milliseconds: 400), () async {
-      final max = await windowManager.isMaximized();
-      final current = lib.setting('window');
-      if (max && current != null) {
-        // Keep the normal size for when the window is restored.
-        final b = (jsonDecode(current) as List).cast<num>();
-        lib.setSetting('window', jsonEncode([...b.take(4), 1]));
-        return;
-      }
-      final r = await windowManager.getBounds();
-      lib.setSetting('window', jsonEncode([r.left, r.top, r.width, r.height, 0]));
-    });
+    _t = Timer(const Duration(milliseconds: 400), _store);
+  }
+
+  Future<void> _store() async {
+    final max = await windowManager.isMaximized();
+    final current = lib.setting('window');
+    if (max && current != null) {
+      // Keep the normal size for when the window is restored.
+      final b = (jsonDecode(current) as List).cast<num>();
+      lib.setSetting('window', jsonEncode([...b.take(4), 1]));
+      return;
+    }
+    final r = await windowManager.getBounds();
+    lib.setSetting('window', jsonEncode([r.left, r.top, r.width, r.height, max ? 1 : 0]));
   }
 
   @override
   Future<void> onWindowClose() async {
+    _t?.cancel();
+    await _store();
     await onClose();
     await windowManager.destroy();
   }
 
   @override
-  void onWindowResized() => _save();
+  void onWindowResize() => _save();
   @override
-  void onWindowMoved() => _save();
+  void onWindowMove() => _save();
   @override
   void onWindowMaximize() => _save();
   @override
