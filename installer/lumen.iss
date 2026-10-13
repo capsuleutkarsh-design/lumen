@@ -1,6 +1,6 @@
 ; Lumen installer (Inno Setup 6). Build with installer\build_installer.ps1.
 #ifndef AppVersion
-  #define AppVersion "0.1.0-beta"
+  #define AppVersion "0.1.1-beta"
 #endif
 #define AppName "Lumen"
 #define SrcDir "..\build\windows\x64\runner\Release"
@@ -30,6 +30,8 @@ ArchitecturesInstallIn64BitMode=x64compatible
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern
+WizardImageFile=wizard.bmp,wizard@2x.bmp
+WizardSmallImageFile=wizard_small.bmp,wizard_small@2x.bmp
 CloseApplications=yes
 
 [Tasks]

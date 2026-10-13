@@ -1,6 +1,8 @@
 <div align="center">
 
-# 🎧 Lumen
+![Lumen](docs/images/banner.png)
+
+# Lumen
 
 **A beautiful, fast music player for your lossless library.**
 

@@ -1,6 +1,6 @@
 # Builds Lumen and its installer: build\installer\Lumen-Setup-<version>.exe
 # Needs Flutter on PATH and Inno Setup 6.
-param([string]$Version = "0.1.0-beta")
+param([string]$Version = "0.1.1-beta")
 $ErrorActionPreference = "Stop"
 Set-Location (Join-Path $PSScriptRoot "..")
 flutter build windows --release

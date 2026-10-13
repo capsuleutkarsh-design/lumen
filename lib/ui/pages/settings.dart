@@ -212,7 +212,7 @@ class SettingsPage extends StatelessWidget {
                         Expanded(
                           child: Text(
                             'Lumen · © 2026 Utkarsh Tripathi · UT Community Licence 2.0\n\n'
-                            'Version 0.1.0 beta · plays through libmpv (media_kit). Design inspired by Wora (MIT). '
+                            'Version 0.1.1 beta · plays through libmpv (media_kit). Design inspired by Wora (MIT). '
                             'Font: Inter (SIL Open Font License). Icons: Lucide (ISC). No AI, no internet: suggestions come only from what you play here.',
                             style: T.small,
                           ),

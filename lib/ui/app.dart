@@ -298,17 +298,13 @@ class _WinButtonState extends State<_WinButton> {
   );
 }
 
-/// The app's mark: a small sound-wave tile in the accent colour.
+/// The Lumen logo (assets/brand/lumen.svg, rendered by tool/brand/build_brand.py).
 class AppMark extends StatelessWidget {
   const AppMark({super.key, this.size = 32});
   final double size;
   @override
-  Widget build(BuildContext context) => Container(
-    width: size,
-    height: size,
-    decoration: BoxDecoration(color: C.accent, borderRadius: BorderRadius.circular(size * 0.3)),
-    child: Icon(LucideIcons.audioLines, size: size * 0.62, color: Colors.black),
-  );
+  Widget build(BuildContext context) =>
+      Image.asset('assets/brand/lumen_256.png', width: size, height: size, filterQuality: FilterQuality.medium);
 }
 
 /// "Scanning 12 / 30" while the library scan runs.
