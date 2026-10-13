@@ -1,0 +1,12 @@
+# Flutter / Dart
+.dart_tool/
+.packages
+build/
+.flutter-plugins*
+*.iml
+.idea/
+# Windows
+*.exe
+*.dll
+# local
+_scratch/
