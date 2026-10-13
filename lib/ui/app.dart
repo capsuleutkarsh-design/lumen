@@ -150,7 +150,7 @@ class _AppState extends State<App> {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Music Player',
+    title: 'Lumen',
     debugShowCheckedModeBanner: false,
     theme: buildTheme(),
     home: RepaintBoundary(key: shotKey, child: const Shell()),
@@ -247,7 +247,7 @@ class TitleBar extends StatelessWidget {
                   const AppMark(size: 18),
                   const SizedBox(width: S.x2),
                   Text(
-                    'Music Player',
+                    'Lumen',
                     style: T.caption.copyWith(color: C.dim, fontWeight: FontWeight.w500),
                   ),
                   const Spacer(),

@@ -211,7 +211,8 @@ class SettingsPage extends StatelessWidget {
                         const SizedBox(width: S.x4),
                         Expanded(
                           child: Text(
-                            'Music Player 1.0 · plays through libmpv (media_kit). Design inspired by Wora (MIT). '
+                            'Lumen · © 2026 Utkarsh Tripathi · UT Community Licence 2.0\n\n'
+                            'Version 0.1.0 beta · plays through libmpv (media_kit). Design inspired by Wora (MIT). '
                             'Font: Inter (SIL Open Font License). Icons: Lucide (ISC). No AI, no internet: suggestions come only from what you play here.',
                             style: T.small,
                           ),

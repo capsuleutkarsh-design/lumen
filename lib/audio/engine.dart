@@ -51,7 +51,7 @@ class Engine extends ChangeNotifier {
 
   Future<void> init() async {
     player = Player(
-      configuration: PlayerConfiguration(title: 'Music Player', logLevel: logLevel),
+      configuration: PlayerConfiguration(title: 'Lumen', logLevel: logLevel),
     );
     await _mpv.setProperty('gapless-audio', 'weak'); // gapless whenever formats match; never resample to force it
     await _mpv.setProperty('prefetch-playlist', 'yes');

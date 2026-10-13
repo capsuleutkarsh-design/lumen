@@ -23,7 +23,7 @@ Future<void> setupWindow(Library lib, Future<void> Function() onClose) async {
       center: b == null,
       backgroundColor: const Color(0xFF000000),
       titleBarStyle: TitleBarStyle.hidden,
-      title: 'Music Player',
+      title: 'Lumen',
     ),
     () async {
       if (b != null) await windowManager.setPosition(Offset(b[0].toDouble(), b[1].toDouble()));

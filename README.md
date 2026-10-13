@@ -10,7 +10,22 @@ Windows now · Android coming · No account, no internet, no AI. Just your music
 
 ---
 
-> **Status: early development.** The first Windows version is being tested. Downloads will appear under [Releases](https://github.com/capsuleutkarsh-design/lumen/releases) when it is ready.
+![Lumen home](docs/images/screens/01_home.png)
+
+## Download
+
+Get **[Lumen for Windows](https://github.com/capsuleutkarsh-design/lumen/releases/latest)** (beta): run `Lumen-Setup-….exe`, or unzip the portable `.zip` and run `lumen.exe`. Then open **Settings → Add folder** and pick your music folder. Lumen only reads your files; it never changes them.
+
+> **Beta:** this is the first version. Please report anything odd in [Issues](https://github.com/capsuleutkarsh-design/lumen/issues).
+
+## Screenshots
+
+| | |
+|---|---|
+| ![Album](docs/images/screens/03_album_two_discs.png) **Album** (a two-disc set) | ![Synced lyrics](docs/images/screens/13_lyrics_synced.png) **Synced lyrics** |
+| ![Search](docs/images/screens/15_search.png) **Ctrl+K search** | ![Queue](docs/images/screens/14_queue.png) **Play queue** |
+| ![Songs](docs/images/screens/07_songs.png) **Songs**, with the quality of every file | ![Artists](docs/images/screens/05_artists.png) **Artists** |
+| ![Playlist](docs/images/screens/10_playlist.png) **Playlist** | |
 
 ## Why Lumen
 
@@ -43,7 +58,7 @@ flutter pub get
 flutter run -d windows
 ```
 
-To build a release, run `flutter build windows --release`; the program is then in `build\windows\x64\runner\Release\`.
+To build a release, run `flutter build windows --release`; the program is then in `build\windows\x64\runner\Release\`. To build the installer as well (needs [Inno Setup 6](https://jrsoftware.org/isinfo.php)), run `installer\build_installer.ps1`.
 
 How v1 was built and tested: [docs/DONE_v1.md](docs/DONE_v1.md) · The plan: [docs/PLAN.md](docs/PLAN.md)
 
