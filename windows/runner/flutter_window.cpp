@@ -69,7 +69,7 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
       if (media_controls_) media_controls_->OnButton(static_cast<int>(wparam));
       return 0;
     case MediaControls::kThumbnailMessage:
-      if (media_controls_) media_controls_->OnThumbnail(static_cast<int>(wparam));
+      if (media_controls_) media_controls_->OnThumbnail();
       return 0;
     case WM_FONTCHANGE:
       flutter_controller_->engine()->ReloadSystemFonts();

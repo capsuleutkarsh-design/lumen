@@ -247,5 +247,5 @@ String _fnv(Uint8List b) {
   for (final x in b) {
     h = (h ^ x) * 0x100000001b3;
   }
-  return h.toUnsigned(64).toRadixString(16);
+  return (h >>> 1).toRadixString(16);
 }

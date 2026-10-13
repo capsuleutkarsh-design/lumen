@@ -87,37 +87,43 @@ void MediaControls::Update(const flutter::EncodableMap& args) {
     music.Artist(winrt::to_hstring(Get<std::string>(args, "artist", "")));
     music.AlbumTitle(winrt::to_hstring(Get<std::string>(args, "album", "")));
     music.AlbumArtist(winrt::to_hstring(Get<std::string>(args, "albumArtist", "")));
+    // The cover: reuse the open file for the same song, otherwise open it
+    // (async) and finish on the platform thread via the window.
+    const auto art = Get<std::string>(args, "art", "");
+    if (art == art_path_) {
+      if (art_file_) updater.Thumbnail(RandomAccessStreamReference::CreateFromFile(art_file_));
+      updater.Update();
+      return;
+    }
+    art_path_ = art;
+    art_file_ = nullptr;
     updater.Thumbnail(nullptr);
     updater.Update();
-
-    const int generation = ++generation_;
-    const auto art = Get<std::string>(args, "art", "");
     if (art.empty()) return;
-    // Opening a file is async; finish on the platform thread via the window.
-    StorageFile::GetFileFromPathAsync(winrt::to_hstring(art))
-        .Completed([this, generation](IAsyncOperation<StorageFile> const& op, AsyncStatus status) {
-          if (status != AsyncStatus::Completed) return;
-          {
-            std::lock_guard<std::mutex> lock(mutex_);
-            pending_thumbnail_ = op.GetResults();
-          }
-          ::PostMessage(hwnd_, kThumbnailMessage, static_cast<WPARAM>(generation), 0);
-        });
+    open_op_ = StorageFile::GetFileFromPathAsync(winrt::to_hstring(art));
+    open_op_.Completed([this, art](IAsyncOperation<StorageFile> const& op, AsyncStatus status) {
+      if (status != AsyncStatus::Completed) return;
+      {
+        std::lock_guard<std::mutex> lock(mutex_);
+        pending_path_ = art;
+        pending_file_ = op.GetResults();
+      }
+      ::PostMessage(hwnd_, kThumbnailMessage, 0, 0);
+    });
   } catch (...) {
   }
 }
 
-void MediaControls::OnThumbnail(int generation) {
-  StorageFile file{nullptr};
+void MediaControls::OnThumbnail() {
   {
     std::lock_guard<std::mutex> lock(mutex_);
-    file = pending_thumbnail_;
-    pending_thumbnail_ = nullptr;
+    if (pending_path_ != art_path_) return;  // an older song's cover
+    art_file_ = pending_file_;
   }
-  if (!smtc_ || !file || generation != generation_) return;
+  if (!smtc_ || !art_file_) return;
   try {
     auto updater = smtc_.DisplayUpdater();
-    updater.Thumbnail(RandomAccessStreamReference::CreateFromFile(file));
+    updater.Thumbnail(RandomAccessStreamReference::CreateFromFile(art_file_));
     updater.Update();
   } catch (...) {
   }

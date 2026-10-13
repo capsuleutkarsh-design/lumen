@@ -8,7 +8,9 @@
 
 #include <memory>
 #include <mutex>
+#include <string>
 
+#include <winrt/Windows.Foundation.h>
 #include <winrt/Windows.Media.h>
 #include <winrt/Windows.Storage.h>
 
@@ -23,7 +25,7 @@ class MediaControls {
 
   MediaControls(HWND hwnd, flutter::BinaryMessenger* messenger);
   void OnButton(int button);
-  void OnThumbnail(int generation);
+  void OnThumbnail();
 
  private:
   void Update(const flutter::EncodableMap& args);
@@ -32,8 +34,9 @@ class MediaControls {
   std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> channel_;
   winrt::Windows::Media::SystemMediaTransportControls smtc_{nullptr};
   std::mutex mutex_;
-  winrt::Windows::Storage::StorageFile pending_thumbnail_{nullptr};
-  int generation_ = 0;
+  winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Storage::StorageFile> open_op_{nullptr};
+  std::string art_path_, pending_path_;
+  winrt::Windows::Storage::StorageFile art_file_{nullptr}, pending_file_{nullptr};
 };
 
 #endif  // RUNNER_MEDIA_CONTROLS_H_
