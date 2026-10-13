@@ -53,6 +53,8 @@ Lumen is inspired by [Wora](https://github.com/playwora/wora), a lovely-looking 
 
 ## Build from source
 
+**The easy way:** double-click **`RUN.bat`** to try the app from the code, or **`BUILD.bat`** to make the program and the installer (it opens the folder when it is done).
+
 You need [Flutter](https://flutter.dev) (stable) and Visual Studio 2022 with *Desktop development with C++*.
 
 ```bash
