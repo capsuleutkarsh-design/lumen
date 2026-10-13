@@ -1,0 +1,28 @@
+# Third-party notices
+
+Music Player uses and credits the following work.
+
+## Bundled with the app
+
+| Component | What it is | Licence |
+|---|---|---|
+| [Inter](https://github.com/rsms/inter) 4.1 by Rasmus Andersson and the Inter Project Authors | The app's font (`assets/fonts/Inter-*.ttf`) | SIL Open Font License 1.1, full text in [`assets/fonts/Inter-OFL.txt`](assets/fonts/Inter-OFL.txt) |
+| [libmpv](https://mpv.io) and [FFmpeg](https://ffmpeg.org), audio-only builds shipped by `media_kit_libs_windows_audio` | Audio decoding and output (`libmpv-2.dll`) | LGPL 2.1 or later |
+| [SQLite](https://sqlite.org) | The library database (`sqlite3.dll`) | Public domain |
+| [Lucide](https://lucide.dev) icons, via `lucide_icons_flutter` | Icons | ISC (icons), MIT (package) |
+| [media_kit](https://github.com/media-kit/media-kit), media_kit_libs_audio | Dart bindings for libmpv | MIT |
+| [sqlite3](https://pub.dev/packages/sqlite3) (Dart) | SQLite bindings | MIT |
+| [window_manager](https://pub.dev/packages/window_manager), screen_retriever | Frameless window | MIT |
+| [image](https://pub.dev/packages/image) | Cover thumbnails | MIT |
+| [file_selector](https://pub.dev/packages/file_selector), [path_provider](https://pub.dev/packages/path_provider), [path](https://pub.dev/packages/path) | Folder/file pickers, app data folder, paths | BSD 3-Clause (Flutter / Dart authors) |
+| [Flutter](https://flutter.dev) engine and framework | UI toolkit | BSD 3-Clause |
+
+The full licence texts of the Dart and Flutter packages are kept in each package and are bundled into the app by Flutter (`NOTICES` in the build output).
+
+## Design credit
+
+The layout and feel are inspired by [Wora](https://github.com/playwora/wora) by its authors (MIT licence). No Wora code is used; its screenshots in `docs/study/wora/` are kept only as a design reference.
+
+## Test material (not shipped)
+
+`_scratch/` (git-ignored) holds generated test tones and music from Wikimedia Commons used only for local testing; see `_scratch/real_music/CREDITS.txt`.
