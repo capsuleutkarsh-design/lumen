@@ -18,8 +18,12 @@ class ScanResult {
 
 /// Scans in a background isolate so the UI never waits. [onProgress] gets
 /// (done, total) for files that need reading.
-Future<ScanResult> scanInBackground(String dbPath, String coverDir, List<String> roots,
-    void Function(int done, int total) onProgress) async {
+Future<ScanResult> scanInBackground(
+  String dbPath,
+  String coverDir,
+  List<String> roots,
+  void Function(int done, int total) onProgress,
+) async {
   final port = ReceivePort();
   await Isolate.spawn(_isolateMain, (port.sendPort, dbPath, coverDir, roots));
   await for (final m in port) {
@@ -95,9 +99,29 @@ ScanResult scan(String dbPath, String coverDir, List<String> roots, [void Functi
       final t = readTags(path);
       final folder = p.dirname(path);
       upsert.execute([
-        path, root, folder, st.modified.millisecondsSinceEpoch, st.size, t.title, t.artist, t.albumArtist,
-        t.compilation ? 1 : 0, t.album ?? p.basename(folder), t.track, t.disc, t.year, t.genre, t.durationMs,
-        t.codec, t.sampleRate, t.bitDepth, t.channels, t.bitrate, covers.forTrack(folder, t.picture), t.lyrics, now,
+        path,
+        root,
+        folder,
+        st.modified.millisecondsSinceEpoch,
+        st.size,
+        t.title,
+        t.artist,
+        t.albumArtist,
+        t.compilation ? 1 : 0,
+        t.album ?? p.basename(folder),
+        t.track,
+        t.disc,
+        t.year,
+        t.genre,
+        t.durationMs,
+        t.codec,
+        t.sampleRate,
+        t.bitDepth,
+        t.channels,
+        t.bitrate,
+        covers.forTrack(folder, t.picture),
+        t.lyrics,
+        now,
       ]);
       known.containsKey(path) ? res.updated++ : res.added++;
     }
@@ -146,8 +170,14 @@ void regroup(Database db) {
   final rows = db.select('SELECT id, folder, album, artist, album_artist_tag, compilation, album_artist, album_key FROM tracks');
   final groups = groupAlbums([
     for (final r in rows)
-      GroupInput(r['id'] as int, r['folder'] as String, r['album'] as String, r['artist'] as String?,
-          r['album_artist_tag'] as String?, r['compilation'] == 1),
+      GroupInput(
+        r['id'] as int,
+        r['folder'] as String,
+        r['album'] as String,
+        r['artist'] as String?,
+        r['album_artist_tag'] as String?,
+        r['compilation'] == 1,
+      ),
   ]);
   final upd = db.prepare('UPDATE tracks SET album_artist = ?, album_key = ? WHERE id = ?');
   db.execute('BEGIN');

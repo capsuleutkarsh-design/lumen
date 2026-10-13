@@ -21,29 +21,29 @@ class Track {
     this.bitrate = 0,
     this.cover,
     this.addedAt = 0,
-  })  : albumArtist = albumArtist ?? artist,
-        albumKey = albumKey ?? '${(albumArtist ?? artist).toLowerCase()}\u0000${album.toLowerCase()}';
+  }) : albumArtist = albumArtist ?? artist,
+       albumKey = albumKey ?? '${(albumArtist ?? artist).toLowerCase()}\u0000${album.toLowerCase()}';
 
   Track.fromRow(Row r)
-      : id = r['id'] as int,
-        path = r['path'] as String,
-        folder = r['folder'] as String,
-        title = r['title'] as String,
-        artist = r['artist'] as String? ?? 'Unknown artist',
-        albumArtist = r['album_artist'] as String,
-        album = r['album'] as String,
-        albumKey = r['album_key'] as String,
-        trackNo = r['track_no'] as int?,
-        discNo = r['disc_no'] as int?,
-        year = r['year'] as int?,
-        genre = r['genre'] as String?,
-        durationMs = r['duration_ms'] as int,
-        codec = r['codec'] as String,
-        sampleRate = r['sample_rate'] as int,
-        bitDepth = r['bit_depth'] as int,
-        bitrate = r['bitrate'] as int,
-        cover = r['cover'] as String?,
-        addedAt = r['added_at'] as int;
+    : id = r['id'] as int,
+      path = r['path'] as String,
+      folder = r['folder'] as String,
+      title = r['title'] as String,
+      artist = r['artist'] as String? ?? 'Unknown artist',
+      albumArtist = r['album_artist'] as String,
+      album = r['album'] as String,
+      albumKey = r['album_key'] as String,
+      trackNo = r['track_no'] as int?,
+      discNo = r['disc_no'] as int?,
+      year = r['year'] as int?,
+      genre = r['genre'] as String?,
+      durationMs = r['duration_ms'] as int,
+      codec = r['codec'] as String,
+      sampleRate = r['sample_rate'] as int,
+      bitDepth = r['bit_depth'] as int,
+      bitrate = r['bitrate'] as int,
+      cover = r['cover'] as String?,
+      addedAt = r['added_at'] as int;
 
   final int id;
   final String path, folder, title, artist, albumArtist, album, albumKey, codec;

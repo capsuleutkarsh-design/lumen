@@ -166,7 +166,10 @@ class PlayQueue {
   /// once before anything repeats.
   void _shuffleAroundCurrent() {
     final cur = current;
-    final rest = [for (final e in original) if (e != cur) e]..shuffle(_random);
+    final rest = [
+      for (final e in original)
+        if (e != cur) e,
+    ]..shuffle(_random);
     items = [?cur, ...rest];
     index = items.isEmpty ? -1 : 0;
   }
@@ -190,18 +193,21 @@ class PlayQueue {
 
   // Persistence: track ids + positions; entries get new identities on load.
   Map<String, Object?> toJson() => {
-        'items': [for (final e in items) e.trackId],
-        'original': [for (final e in original) items.indexOf(e)],
-        'index': index,
-        'shuffle': shuffle,
-        'repeat': repeat.index,
-      };
+    'items': [for (final e in items) e.trackId],
+    'original': [for (final e in original) items.indexOf(e)],
+    'index': index,
+    'shuffle': shuffle,
+    'repeat': repeat.index,
+  };
 
   void restore(Map<String, Object?> j, bool Function(int trackId) exists) {
     final ids = (j['items'] as List).cast<int>();
     items = [for (final id in ids) Entry(id)];
     final order = (j['original'] as List).cast<int>();
-    original = [for (final i in order) if (i >= 0 && i < items.length) items[i]];
+    original = [
+      for (final i in order)
+        if (i >= 0 && i < items.length) items[i],
+    ];
     index = (j['index'] as int).clamp(-1, items.length - 1);
     shuffle = j['shuffle'] as bool;
     repeat = Repeat.values[j['repeat'] as int];

@@ -16,8 +16,26 @@ class Tags {
 }
 
 const audioExtensions = {
-  '.flac', '.mp3', '.m4a', '.mp4', '.aac', '.alac', '.wav', '.aif', '.aiff', '.aifc',
-  '.ogg', '.oga', '.opus', '.webm', '.mka', '.ape', '.wv', '.dsf', '.dff', '.wma',
+  '.flac',
+  '.mp3',
+  '.m4a',
+  '.mp4',
+  '.aac',
+  '.alac',
+  '.wav',
+  '.aif',
+  '.aiff',
+  '.aifc',
+  '.ogg',
+  '.oga',
+  '.opus',
+  '.webm',
+  '.mka',
+  '.ape',
+  '.wv',
+  '.dsf',
+  '.dff',
+  '.wma',
 };
 
 /// Never throws: a file we cannot parse still gets a title from its name.
@@ -114,16 +132,26 @@ void _vorbisComments(Uint8List b, int o, Tags t, bool picture) {
     if (eq < 0) continue;
     final k = s.substring(0, eq).toUpperCase(), v = s.substring(eq + 1);
     switch (k) {
-      case 'TITLE': t.title ??= v;
-      case 'ARTIST': t.artist ??= v;
-      case 'ALBUMARTIST' || 'ALBUM ARTIST' || 'ALBUM_ARTIST': t.albumArtist ??= v;
-      case 'ALBUM': t.album ??= v;
-      case 'GENRE': t.genre ??= v;
-      case 'TRACKNUMBER': t.track ??= _num(v);
-      case 'DISCNUMBER': t.disc ??= _num(v);
-      case 'DATE' || 'YEAR' || 'ORIGINALDATE': t.year ??= _num(v);
-      case 'COMPILATION': t.compilation = v.trim() == '1';
-      case 'LYRICS' || 'UNSYNCEDLYRICS': t.lyrics ??= v;
+      case 'TITLE':
+        t.title ??= v;
+      case 'ARTIST':
+        t.artist ??= v;
+      case 'ALBUMARTIST' || 'ALBUM ARTIST' || 'ALBUM_ARTIST':
+        t.albumArtist ??= v;
+      case 'ALBUM':
+        t.album ??= v;
+      case 'GENRE':
+        t.genre ??= v;
+      case 'TRACKNUMBER':
+        t.track ??= _num(v);
+      case 'DISCNUMBER':
+        t.disc ??= _num(v);
+      case 'DATE' || 'YEAR' || 'ORIGINALDATE':
+        t.year ??= _num(v);
+      case 'COMPILATION':
+        t.compilation = v.trim() == '1';
+      case 'LYRICS' || 'UNSYNCEDLYRICS':
+        t.lyrics ??= v;
       case 'METADATA_BLOCK_PICTURE':
         if (picture && t.picture == null) t.picture = _flacPicture(base64.decode(v.trim()));
     }
@@ -241,15 +269,86 @@ bool _starts(List<int> b, int o, String s) {
 // ---------------------------------------------------------------- ID3v2 / MP3
 
 const _id3Genres = [
-  'Blues', 'Classic Rock', 'Country', 'Dance', 'Disco', 'Funk', 'Grunge', 'Hip-Hop', 'Jazz', 'Metal', 'New Age',
-  'Oldies', 'Other', 'Pop', 'R&B', 'Rap', 'Reggae', 'Rock', 'Techno', 'Industrial', 'Alternative', 'Ska',
-  'Death Metal', 'Pranks', 'Soundtrack', 'Euro-Techno', 'Ambient', 'Trip-Hop', 'Vocal', 'Jazz+Funk', 'Fusion',
-  'Trance', 'Classical', 'Instrumental', 'Acid', 'House', 'Game', 'Sound Clip', 'Gospel', 'Noise', 'Alt. Rock',
-  'Bass', 'Soul', 'Punk', 'Space', 'Meditative', 'Instrumental Pop', 'Instrumental Rock', 'Ethnic', 'Gothic',
-  'Darkwave', 'Techno-Industrial', 'Electronic', 'Pop-Folk', 'Eurodance', 'Dream', 'Southern Rock', 'Comedy',
-  'Cult', 'Gangsta', 'Top 40', 'Christian Rap', 'Pop/Funk', 'Jungle', 'Native American', 'Cabaret', 'New Wave',
-  'Psychedelic', 'Rave', 'Showtunes', 'Trailer', 'Lo-Fi', 'Tribal', 'Acid Punk', 'Acid Jazz', 'Polka', 'Retro',
-  'Musical', 'Rock & Roll', 'Hard Rock',
+  'Blues',
+  'Classic Rock',
+  'Country',
+  'Dance',
+  'Disco',
+  'Funk',
+  'Grunge',
+  'Hip-Hop',
+  'Jazz',
+  'Metal',
+  'New Age',
+  'Oldies',
+  'Other',
+  'Pop',
+  'R&B',
+  'Rap',
+  'Reggae',
+  'Rock',
+  'Techno',
+  'Industrial',
+  'Alternative',
+  'Ska',
+  'Death Metal',
+  'Pranks',
+  'Soundtrack',
+  'Euro-Techno',
+  'Ambient',
+  'Trip-Hop',
+  'Vocal',
+  'Jazz+Funk',
+  'Fusion',
+  'Trance',
+  'Classical',
+  'Instrumental',
+  'Acid',
+  'House',
+  'Game',
+  'Sound Clip',
+  'Gospel',
+  'Noise',
+  'Alt. Rock',
+  'Bass',
+  'Soul',
+  'Punk',
+  'Space',
+  'Meditative',
+  'Instrumental Pop',
+  'Instrumental Rock',
+  'Ethnic',
+  'Gothic',
+  'Darkwave',
+  'Techno-Industrial',
+  'Electronic',
+  'Pop-Folk',
+  'Eurodance',
+  'Dream',
+  'Southern Rock',
+  'Comedy',
+  'Cult',
+  'Gangsta',
+  'Top 40',
+  'Christian Rap',
+  'Pop/Funk',
+  'Jungle',
+  'Native American',
+  'Cabaret',
+  'New Wave',
+  'Psychedelic',
+  'Rave',
+  'Showtunes',
+  'Trailer',
+  'Lo-Fi',
+  'Tribal',
+  'Acid Punk',
+  'Acid Jazz',
+  'Polka',
+  'Retro',
+  'Musical',
+  'Rock & Roll',
+  'Hard Rock',
 ];
 
 String _genre(String g) {
@@ -320,7 +419,11 @@ int _id3v2(_R r, int pos, Tags t, bool picture) {
   final idLen = ver == 2 ? 3 : 4, hdr = ver == 2 ? 6 : 10;
   while (o + hdr <= b.length && b[o] != 0) {
     final id = latin1.decode(b.sublist(o, o + idLen));
-    final len = ver == 2 ? _be(b, o + 3, 3) : ver == 4 ? _syncsafe(b, o + 4) : _be(b, o + 4, 4);
+    final len = ver == 2
+        ? _be(b, o + 3, 3)
+        : ver == 4
+        ? _syncsafe(b, o + 4)
+        : _be(b, o + 4, 4);
     final fmt = ver == 2 ? 0 : b[o + 9];
     o += hdr;
     if (len <= 0 || o + len > b.length) break;
@@ -333,16 +436,26 @@ int _id3v2(_R r, int pos, Tags t, bool picture) {
     if (d.isEmpty) continue;
     String txt() => _text(d.sublist(1), d[0]);
     switch (id) {
-      case 'TIT2' || 'TT2': t.title ??= txt();
-      case 'TPE1' || 'TP1': t.artist ??= txt();
-      case 'TPE2' || 'TP2': t.albumArtist ??= txt();
-      case 'TALB' || 'TAL': t.album ??= txt();
-      case 'TCON' || 'TCO': t.genre ??= _genre(txt());
-      case 'TRCK' || 'TRK': t.track ??= _num(txt());
-      case 'TPOS' || 'TPA': t.disc ??= _num(txt());
-      case 'TDRC' || 'TYER' || 'TYE' || 'TDOR' || 'TORY': t.year ??= _num(txt());
-      case 'TCMP' || 'TCP': t.compilation = txt().trim() == '1';
-      case 'TLEN' || 'TLE': t.durationMs = t.durationMs > 0 ? t.durationMs : (_num(txt()) ?? 0);
+      case 'TIT2' || 'TT2':
+        t.title ??= txt();
+      case 'TPE1' || 'TP1':
+        t.artist ??= txt();
+      case 'TPE2' || 'TP2':
+        t.albumArtist ??= txt();
+      case 'TALB' || 'TAL':
+        t.album ??= txt();
+      case 'TCON' || 'TCO':
+        t.genre ??= _genre(txt());
+      case 'TRCK' || 'TRK':
+        t.track ??= _num(txt());
+      case 'TPOS' || 'TPA':
+        t.disc ??= _num(txt());
+      case 'TDRC' || 'TYER' || 'TYE' || 'TDOR' || 'TORY':
+        t.year ??= _num(txt());
+      case 'TCMP' || 'TCP':
+        t.compilation = txt().trim() == '1';
+      case 'TLEN' || 'TLE':
+        t.durationMs = t.durationMs > 0 ? t.durationMs : (_num(txt()) ?? 0);
       case 'TXXX':
         final enc = d[0], z = _skipZ(d, 1, enc);
         final desc = _text(d.sublist(1, z), enc).toUpperCase();
@@ -484,18 +597,30 @@ void _ilstItem(String type, Uint8List b, Tags t, bool picture) {
   final d = b.sublist(16, _be(b, 0, 4).clamp(16, b.length));
   String s() => utf8.decode(d, allowMalformed: true);
   switch (type) {
-    case '©nam': t.title ??= s();
-    case '©ART': t.artist ??= s();
-    case 'aART': t.albumArtist ??= s();
-    case '©alb': t.album ??= s();
-    case '©gen': t.genre ??= s();
-    case 'gnre': if (d.length >= 2) t.genre ??= _genre('${_be(d, 0, 2) - 1}');
-    case '©day': t.year ??= _num(s());
-    case '©lyr': t.lyrics ??= s();
-    case 'trkn': if (d.length >= 4) t.track ??= _be(d, 2, 2);
-    case 'disk': if (d.length >= 4) t.disc ??= _be(d, 2, 2);
-    case 'cpil': t.compilation = d.isNotEmpty && d[0] == 1;
-    case 'covr': if (picture) t.picture ??= d;
+    case '©nam':
+      t.title ??= s();
+    case '©ART':
+      t.artist ??= s();
+    case 'aART':
+      t.albumArtist ??= s();
+    case '©alb':
+      t.album ??= s();
+    case '©gen':
+      t.genre ??= s();
+    case 'gnre':
+      if (d.length >= 2) t.genre ??= _genre('${_be(d, 0, 2) - 1}');
+    case '©day':
+      t.year ??= _num(s());
+    case '©lyr':
+      t.lyrics ??= s();
+    case 'trkn':
+      if (d.length >= 4) t.track ??= _be(d, 2, 2);
+    case 'disk':
+      if (d.length >= 4) t.disc ??= _be(d, 2, 2);
+    case 'cpil':
+      t.compilation = d.isNotEmpty && d[0] == 1;
+    case 'covr':
+      if (picture) t.picture ??= d;
   }
 }
 
@@ -525,12 +650,18 @@ void _wav(_R r, Tags t, bool picture) {
           if (o + 8 + n > b.length) break;
           final v = utf8.decode(b.sublist(o + 8, o + 8 + n), allowMalformed: true);
           switch (k) {
-            case 'INAM': t.title ??= v;
-            case 'IART': t.artist ??= v;
-            case 'IPRD': t.album ??= v;
-            case 'IGNR': t.genre ??= v;
-            case 'ICRD': t.year ??= _num(v);
-            case 'ITRK' || 'IPRT': t.track ??= _num(v);
+            case 'INAM':
+              t.title ??= v;
+            case 'IART':
+              t.artist ??= v;
+            case 'IPRD':
+              t.album ??= v;
+            case 'IGNR':
+              t.genre ??= v;
+            case 'ICRD':
+              t.year ??= _num(v);
+            case 'ITRK' || 'IPRT':
+              t.track ??= _num(v);
           }
           o += 8 + n + (n & 1);
         }
@@ -587,26 +718,41 @@ void _mkv(_R r, Tags t, bool picture) {
       if (size == (1 << (7 * sLen)) - 1) size = end - data; // unknown size
       if (containers.contains(id)) {
         walk(data, data + size);
-      } else if (id != 0x1F43B675 && size < 1 << 20) { // skip Clusters (audio)
+      } else if (id != 0x1F43B675 && size < 1 << 20) {
+        // skip Clusters (audio)
         final d = r.at(data, size);
         switch (id) {
-          case 0x2AD7B1: scale = _be(d, 0, size);
-          case 0x4489: durationTicks = size == 4 ? ByteData.sublistView(d).getFloat32(0) : ByteData.sublistView(d).getFloat64(0);
-          case 0x86: t.codec = latin1.decode(d).replaceFirst('A_', '').split('/').first;
-          case 0xB5: t.sampleRate = (size == 4 ? ByteData.sublistView(d).getFloat32(0) : ByteData.sublistView(d).getFloat64(0)).round();
-          case 0x9F: t.channels = _be(d, 0, size);
-          case 0x6264: t.bitDepth = _be(d, 0, size);
-          case 0x45A3: tagName = utf8.decode(d, allowMalformed: true).toUpperCase();
+          case 0x2AD7B1:
+            scale = _be(d, 0, size);
+          case 0x4489:
+            durationTicks = size == 4 ? ByteData.sublistView(d).getFloat32(0) : ByteData.sublistView(d).getFloat64(0);
+          case 0x86:
+            t.codec = latin1.decode(d).replaceFirst('A_', '').split('/').first;
+          case 0xB5:
+            t.sampleRate = (size == 4 ? ByteData.sublistView(d).getFloat32(0) : ByteData.sublistView(d).getFloat64(0)).round();
+          case 0x9F:
+            t.channels = _be(d, 0, size);
+          case 0x6264:
+            t.bitDepth = _be(d, 0, size);
+          case 0x45A3:
+            tagName = utf8.decode(d, allowMalformed: true).toUpperCase();
           case 0x4487:
             final v = utf8.decode(d, allowMalformed: true);
             switch (tagName) {
-              case 'TITLE': t.title ??= v;
-              case 'ARTIST': t.artist ??= v;
-              case 'ALBUM_ARTIST' || 'ALBUMARTIST': t.albumArtist ??= v;
-              case 'ALBUM': t.album ??= v;
-              case 'GENRE': t.genre ??= v;
-              case 'DATE' || 'DATE_RELEASED' || 'DATE_RECORDED': t.year ??= _num(v);
-              case 'PART_NUMBER' || 'TRACK': t.track ??= _num(v);
+              case 'TITLE':
+                t.title ??= v;
+              case 'ARTIST':
+                t.artist ??= v;
+              case 'ALBUM_ARTIST' || 'ALBUMARTIST':
+                t.albumArtist ??= v;
+              case 'ALBUM':
+                t.album ??= v;
+              case 'GENRE':
+                t.genre ??= v;
+              case 'DATE' || 'DATE_RELEASED' || 'DATE_RECORDED':
+                t.year ??= _num(v);
+              case 'PART_NUMBER' || 'TRACK':
+                t.track ??= _num(v);
             }
         }
       }
@@ -666,16 +812,26 @@ void _apeTag(_R r, Tags t) {
     final v = utf8.decode(b.sublist(k + 1, k + 1 + len), allowMalformed: true);
     o = k + 1 + len;
     switch (key) {
-      case 'TITLE': t.title ??= v;
-      case 'ARTIST': t.artist ??= v;
-      case 'ALBUM ARTIST' || 'ALBUMARTIST' || 'ALBUM_ARTIST': t.albumArtist ??= v;
-      case 'ALBUM': t.album ??= v;
-      case 'GENRE': t.genre ??= v;
-      case 'TRACK': t.track ??= _num(v);
-      case 'DISC': t.disc ??= _num(v);
-      case 'YEAR' || 'DATE': t.year ??= _num(v);
-      case 'COMPILATION': t.compilation = v.trim() == '1';
-      case 'LYRICS': t.lyrics ??= v;
+      case 'TITLE':
+        t.title ??= v;
+      case 'ARTIST':
+        t.artist ??= v;
+      case 'ALBUM ARTIST' || 'ALBUMARTIST' || 'ALBUM_ARTIST':
+        t.albumArtist ??= v;
+      case 'ALBUM':
+        t.album ??= v;
+      case 'GENRE':
+        t.genre ??= v;
+      case 'TRACK':
+        t.track ??= _num(v);
+      case 'DISC':
+        t.disc ??= _num(v);
+      case 'YEAR' || 'DATE':
+        t.year ??= _num(v);
+      case 'COMPILATION':
+        t.compilation = v.trim() == '1';
+      case 'LYRICS':
+        t.lyrics ??= v;
     }
   }
 }

@@ -26,8 +26,7 @@ class HomeData {
 class ListenRules {
   static const countAfter = Duration(minutes: 4);
   static const skipBefore = Duration(seconds: 30);
-  static bool counts(Duration listened, Duration length) =>
-      listened >= countAfter || (length > Duration.zero && listened * 2 >= length);
+  static bool counts(Duration listened, Duration length) => listened >= countAfter || (length > Duration.zero && listened * 2 >= length);
   static bool isSkip(Duration listened) => listened < skipBefore;
 }
 
@@ -128,8 +127,10 @@ HomeData suggest(List<Track> tracks, List<Album> albums, List<PlayEvent> events,
       tier((t) => t.albumArtist == seed.albumArtist, 'From ${seed.albumArtist}, like “${seed.title}”');
     }
     if (seed.genre != null && decade(seed) != null) {
-      tier((t) => t.genre?.toLowerCase() == seed.genre!.toLowerCase() && decade(t) == decade(seed),
-          '${seed.genre} from the ${decade(seed)}s, like “${seed.title}”');
+      tier(
+        (t) => t.genre?.toLowerCase() == seed.genre!.toLowerCase() && decade(t) == decade(seed),
+        '${seed.genre} from the ${decade(seed)}s, like “${seed.title}”',
+      );
     }
     h.because = picks;
   }

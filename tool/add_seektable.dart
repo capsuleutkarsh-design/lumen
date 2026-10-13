@@ -27,11 +27,14 @@ int? frameAt(Uint8List b, int i) {
   if (lead < 0x80) {
     n = lead;
   } else if (lead >= 0xC0 && lead < 0xE0) {
-    n = lead & 0x1F; extra = 1;
+    n = lead & 0x1F;
+    extra = 1;
   } else if (lead >= 0xE0 && lead < 0xF0) {
-    n = lead & 0x0F; extra = 2;
+    n = lead & 0x0F;
+    extra = 2;
   } else if (lead >= 0xF0 && lead < 0xF8) {
-    n = lead & 0x07; extra = 3;
+    n = lead & 0x07;
+    extra = 3;
   } else {
     return null;
   }

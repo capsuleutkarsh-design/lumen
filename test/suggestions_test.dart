@@ -6,9 +6,17 @@ void main() {
   final now = DateTime(2026, 10, 13, 12);
   DateTime daysAgo(num d) => now.subtract(Duration(minutes: (d * 24 * 60).round()));
 
-  Track t(int id, String artist, String album, {String? aa, String genre = 'Jazz', int year = 2015, int added = 0}) =>
-      Track(id: id, title: 'Song $id', artist: artist, albumArtist: aa, album: album, genre: genre, year: year,
-          trackNo: id, addedAt: daysAgo(added).millisecondsSinceEpoch);
+  Track t(int id, String artist, String album, {String? aa, String genre = 'Jazz', int year = 2015, int added = 0}) => Track(
+    id: id,
+    title: 'Song $id',
+    artist: artist,
+    albumArtist: aa,
+    album: album,
+    genre: genre,
+    year: year,
+    trackNo: id,
+    addedAt: daysAgo(added).millisecondsSinceEpoch,
+  );
 
   final tracks = [
     t(1, 'Ana', 'Blue', added: 100), t(2, 'Ana', 'Blue', added: 100), t(3, 'Ana', 'Green', added: 50),
