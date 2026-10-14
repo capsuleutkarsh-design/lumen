@@ -1,4 +1,7 @@
 // Media keys and the Windows media overlay, against the real engine (see mpv_harness.dart).
+@Tags(['mpv']) // run one file at a time: see dart_test.yaml
+library;
+
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_player/platform/media_controls.dart';

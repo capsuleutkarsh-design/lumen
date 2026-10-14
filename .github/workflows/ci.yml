@@ -29,7 +29,8 @@ jobs:
           flutter pub get
           if ($LASTEXITCODE) { powershell -NoProfile -ExecutionPolicy Bypass -File tool\link_plugins.ps1; flutter pub get }
       - run: flutter analyze
-      - run: flutter test
+      - run: flutter test --exclude-tags mpv
+      - run: flutter test --tags mpv --concurrency=1 # libmpv tests one file at a time (dart_test.yaml)
 
   release:
     if: startsWith(github.ref, 'refs/tags/v')

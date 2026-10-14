@@ -143,7 +143,7 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   double get maxExtent => 40;
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => DecoratedBox(
-    decoration: const BoxDecoration(
+    decoration: BoxDecoration(
       border: Border(bottom: BorderSide(color: C.border)),
     ),
     child: child,

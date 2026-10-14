@@ -10,10 +10,12 @@ import 'library/library.dart';
 import 'platform/licence.dart';
 import 'platform/log.dart';
 import 'platform/media_controls.dart';
+import 'platform/tray.dart';
 import 'platform/update.dart';
 import 'platform/window.dart';
 import 'ui/app.dart';
 import 'ui/pages/credits.dart';
+import 'ui/theme.dart';
 
 /// Where the database, cover cache and log live:
 /// - `--dart-define=MP_DATA=<folder>` (tests, so they never touch the real library);
@@ -67,8 +69,10 @@ Future<void> main(List<String> args) async {
 Future<void> start(String data) async {
   try {
     await boot();
-    await setupWindow(lib, engine.shutdown);
+    loadAppearance();
+    await setupWindow(lib, engine.shutdown, background: C.bg);
     runApp(const App());
+    setupTray(lib, engine).catchError((Object e) => log('Tray icon: $e')); // Lumen works without it
     if (lib.setting('updateCheck') == '1') checkForUpdate();
   } catch (e, s) {
     log('Start-up failed: $e\n$s');

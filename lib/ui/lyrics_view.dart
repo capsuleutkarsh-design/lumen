@@ -168,10 +168,10 @@ class _LyricsViewState extends State<LyricsView> {
           children: [
             // A dark, quiet wash of the cover's colours (like Wora), not a loud glow.
             CoverGlow(t?.cover, seed: seed, opacity: 0.3, blur: 90),
-            const Positioned.fill(
+            Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  gradient: RadialGradient(center: Alignment(0.4, 0.5), radius: 1.3, colors: [Color(0xF2000000), Color(0x8C000000)]),
+                  gradient: RadialGradient(center: Alignment(0.4, 0.5), radius: 1.3, colors: [C.veil(0.95), C.veil(0.55)]),
                 ),
               ),
             ),

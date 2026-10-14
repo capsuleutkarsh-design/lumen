@@ -237,7 +237,7 @@ Future<void> addToPlaylistDialog(BuildContext context, List<Track> tracks) async
                 padding: const EdgeInsets.all(S.x3),
                 child: Row(
                   children: [
-                    const Icon(LucideIcons.plus, size: 16, color: C.text),
+                    Icon(LucideIcons.plus, size: 16, color: C.text),
                     const SizedBox(width: S.x3),
                     Text('New playlist', style: T.label),
                   ],
@@ -249,7 +249,7 @@ Future<void> addToPlaylistDialog(BuildContext context, List<Track> tracks) async
                   padding: const EdgeInsets.all(S.x3),
                   child: Row(
                     children: [
-                      const Icon(LucideIcons.listMusic, size: 16, color: C.dim),
+                      Icon(LucideIcons.listMusic, size: 16, color: C.dim),
                       const SizedBox(width: S.x3),
                       Expanded(
                         child: Text(pl.name, style: T.label, maxLines: 1, overflow: TextOverflow.ellipsis),
@@ -581,7 +581,7 @@ class SelectionBar extends StatelessWidget {
                       color: C.raised2,
                       borderRadius: BorderRadius.circular(R.pill),
                       border: Border.all(color: C.borderStrong),
-                      boxShadow: const [BoxShadow(color: C.shadow, blurRadius: 32, offset: Offset(0, 12))],
+                      boxShadow: [BoxShadow(color: C.shadow, blurRadius: 32, offset: Offset(0, 12))],
                     ),
                     child: Builder(
                       builder: (context) {

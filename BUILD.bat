@@ -21,7 +21,9 @@ call flutter pub get || goto :failed
 
 echo Checking the code and running the tests ...
 call flutter analyze || goto :failed
-call flutter test || goto :failed
+call flutter test --exclude-tags mpv || goto :failed
+rem The tests that drive libmpv run one file at a time (see dart_test.yaml).
+call flutter test --tags mpv --concurrency=1 || goto :failed
 
 echo Building the program, the installer and the zip ...
 powershell -NoProfile -ExecutionPolicy Bypass -File installer\build_installer.ps1 || goto :failed

@@ -28,6 +28,8 @@ Lumen uses and credits the following work.
 | [desktop_drop](https://pub.dev/packages/desktop_drop) | Drag and drop from Explorer | Apache 2.0 |
 | [dbus](https://pub.dev/packages/dbus) (Dart), pulled in by desktop_drop for Linux | Unmodified; not used on Windows. Source: pub.dev | Mozilla Public License 2.0 |
 | [xml](https://pub.dev/packages/xml), [petitparser](https://pub.dev/packages/petitparser), pulled in by dbus | | MIT |
+| [tray_manager](https://pub.dev/packages/tray_manager) 0.5.3, [menu_base](https://pub.dev/packages/menu_base) | The tray icon and its menu (a plain C++ plugin) | MIT |
+| [shortid](https://pub.dev/packages/shortid), pulled in by tray_manager | | BSD 3-Clause |
 | [Flutter](https://flutter.dev) engine and framework | UI toolkit | BSD 3-Clause |
 
 The full licence texts of the Dart and Flutter packages are kept in each package and are bundled into the app by Flutter (`NOTICES` in the build output).

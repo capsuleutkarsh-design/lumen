@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../audio/engine.dart';
 import '../audio/queue.dart';
 import 'app.dart';
+import 'art_accent.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -48,7 +49,11 @@ class _PlayerBarState extends State<PlayerBar> {
     final box = b.findRenderObject()! as RenderBox;
     final at = box.localToGlobal(Offset.zero);
     final on = engine.sleepAt != null || engine.stopAfter != StopAfter.none;
-    PopupMenuItem<int> item(int v, String label) => PopupMenuItem(value: v, height: 36, child: Text(label, style: T.label));
+    PopupMenuItem<int> item(int v, String label) => PopupMenuItem(
+      value: v,
+      height: 36,
+      child: Text(label, style: T.label),
+    );
     final v = await showMenu<int>(
       context: context,
       position: RelativeRect.fromLTRB(at.dx, at.dy - 8, at.dx + box.size.width, at.dy),
@@ -171,7 +176,7 @@ class _NowPlayingInfoState extends State<_NowPlayingInfo> {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(color: C.scrim, borderRadius: BorderRadius.circular(R.cover)),
-                  child: const Icon(LucideIcons.chevronUp, size: 20, color: C.text),
+                  child: Icon(LucideIcons.chevronUp, size: 20, color: C.text),
                 ),
               ),
             ],
@@ -365,8 +370,8 @@ class _PlayButton extends StatelessWidget {
       tooltip: playing ? 'Pause  (Space)' : 'Play  (Space)',
       semanticLabel: playing ? 'Pause' : 'Play',
       radius: R.pill,
-      hover: const Color(0x22000000),
-      pressed: const Color(0x44000000),
+      hover: C.veil(0.13),
+      pressed: C.veil(0.27),
       child: SizedBox(
         width: size,
         height: size,
@@ -417,26 +422,29 @@ class _SeekBarState extends State<SeekBar> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                SliderTheme(
-                  data: SliderTheme.of(context).copyWith(
-                    trackHeight: widget.big ? 6 : 4,
-                    activeTrackColor: active ? C.accent : C.text,
-                    thumbShape: RoundSliderThumbShape(
-                      enabledThumbRadius: active ? (widget.big ? 8 : 6) : 0,
-                      elevation: 0,
-                      pressedElevation: 0,
+                // Active, the bar takes the colour of the cover (coral without one).
+                ArtAccentBuilder(
+                  builder: (context, accent) => SliderTheme(
+                    data: SliderTheme.of(context).copyWith(
+                      trackHeight: widget.big ? 6 : 4,
+                      activeTrackColor: active ? accent : C.text,
+                      thumbShape: RoundSliderThumbShape(
+                        enabledThumbRadius: active ? (widget.big ? 8 : 6) : 0,
+                        elevation: 0,
+                        pressedElevation: 0,
+                      ),
                     ),
-                  ),
-                  child: Semantics(
-                    label: 'Seek',
-                    child: Slider(
-                      value: value,
-                      max: total <= 0 ? 1 : total,
-                      onChanged: total <= 0 ? null : (v) => setState(() => _drag = v),
-                      onChangeEnd: (v) {
-                        engine.seek(Duration(milliseconds: v.round()));
-                        setState(() => _drag = null);
-                      },
+                    child: Semantics(
+                      label: 'Seek',
+                      child: Slider(
+                        value: value,
+                        max: total <= 0 ? 1 : total,
+                        onChanged: total <= 0 ? null : (v) => setState(() => _drag = v),
+                        onChangeEnd: (v) {
+                          engine.seek(Duration(milliseconds: v.round()));
+                          setState(() => _drag = null);
+                        },
+                      ),
                     ),
                   ),
                 ),

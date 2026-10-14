@@ -238,7 +238,7 @@ class _SearchConsoleState extends State<SearchConsole> {
                         color: C.raised1,
                         borderRadius: BorderRadius.circular(R.panel),
                         border: Border.all(color: C.borderStrong),
-                        boxShadow: const [BoxShadow(color: C.shadow, blurRadius: 60, offset: Offset(0, 20))],
+                        boxShadow: [BoxShadow(color: C.shadow, blurRadius: 60, offset: Offset(0, 20))],
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -247,7 +247,7 @@ class _SearchConsoleState extends State<SearchConsole> {
                             padding: const EdgeInsets.fromLTRB(S.x5, S.x2, S.x3, S.x2),
                             child: Row(
                               children: [
-                                const Icon(LucideIcons.search, size: 18, color: C.dim),
+                                Icon(LucideIcons.search, size: 18, color: C.dim),
                                 const SizedBox(width: S.x3),
                                 Expanded(
                                   child: TextField(
@@ -354,7 +354,7 @@ class _SearchConsoleState extends State<SearchConsole> {
           ),
           if (selected) ...[
             Text(h.song != null ? 'Play' : 'Open', style: T.caption),
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(left: S.x2, right: S.x1),
               child: Icon(LucideIcons.cornerDownLeft, size: 14, color: C.faint),
             ),

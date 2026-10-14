@@ -1,6 +1,9 @@
 // Checks Lumen's own audio engine (libmpv-2.dll from github.com/capsuleutkarsh-design/lumen-audio-engine):
 // the "best sound" filters and the soxr resampler load and process audio.
 // Needs `flutter build windows --release` first (skipped otherwise). Silent: ao=null and volume 0.
+@Tags(['mpv']) // run one file at a time: see dart_test.yaml
+library;
+
 import 'dart:io';
 import 'dart:math';
 import 'dart:typed_data';

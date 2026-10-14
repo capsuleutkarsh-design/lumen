@@ -29,9 +29,12 @@ Future<List<Rect>> _workAreas() async => [
     (d.visiblePosition ?? Offset.zero) * (d.scaleFactor ?? 1).toDouble() & (d.visibleSize ?? d.size) * (d.scaleFactor ?? 1).toDouble(),
 ];
 
+/// When this says so, closing the window only hides it (Settings → Window → Close to tray).
+bool Function() hideOnClose = () => false;
+
 /// Frameless window that remembers its size and position.
 /// [onClose] runs before the window closes (to save the queue and stop audio).
-Future<void> setupWindow(Library lib, Future<void> Function() onClose) async {
+Future<void> setupWindow(Library lib, Future<void> Function() onClose, {Color background = const Color(0xFF000000)}) async {
   if (!isDesktop) return;
   await windowManager.ensureInitialized();
   List<num>? saved;
@@ -45,7 +48,7 @@ Future<void> setupWindow(Library lib, Future<void> Function() onClose) async {
       size: const Size(1360, 860),
       minimumSize: const Size(960, 640),
       center: bounds == null,
-      backgroundColor: const Color(0xFF000000),
+      backgroundColor: background,
       titleBarStyle: TitleBarStyle.hidden,
       title: 'Lumen',
     ),
@@ -108,6 +111,10 @@ class _Saver with WindowListener {
 
   @override
   Future<void> onWindowClose() async {
+    if (hideOnClose()) {
+      await windowManager.hide();
+      return;
+    }
     try {
       _t?.cancel();
       await _store();

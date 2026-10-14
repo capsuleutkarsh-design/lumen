@@ -86,6 +86,22 @@ const migrations = [
     CREATE INDEX plays_stats ON plays(track_id, skipped, at);
     UPDATE tracks SET mtime = 0;
   ''',
+  // 3: 0.2.0 wave 2. "Hide from library" (a flag; the file is never touched) and smart
+  // playlists (rules as JSON, see smart.dart), with four ready-made ones.
+  '''
+    ALTER TABLE tracks ADD COLUMN hidden INTEGER NOT NULL DEFAULT 0;
+    CREATE TABLE smart_playlists(
+      id INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      rules TEXT NOT NULL,
+      created_at INTEGER NOT NULL
+    );
+    INSERT INTO smart_playlists(name, rules, created_at) VALUES
+      ('Recently added', '{"match":"all","rules":[{"f":"added","a":30}],"sort":"added","limit":200}', 1),
+      ('Most played', '{"match":"all","rules":[{"f":"plays","a":0}],"sort":"plays","limit":50}', 2),
+      ('Never played', '{"match":"all","rules":[{"f":"never"}],"sort":"added","limit":0}', 3),
+      ('Hi-Res', '{"match":"any","rules":[{"f":"rate","a":88200},{"f":"bits","a":24}],"sort":"artist","limit":0}', 4);
+  ''',
 ];
 
 /// Opens (and creates or upgrades) the library database. Both the UI isolate and

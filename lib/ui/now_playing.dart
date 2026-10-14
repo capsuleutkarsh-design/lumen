@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import 'app.dart';
+import 'art_accent.dart';
 import 'lyrics_view.dart';
 import 'player_bar.dart';
 import 'theme.dart';
@@ -58,10 +59,10 @@ class _NowPlayingState extends State<NowPlaying> {
           children: [
             // The cover's colours, blurred across the whole window, then darkened.
             CoverGlow(t?.cover, seed: seed, opacity: 0.75, blur: 100),
-            const Positioned.fill(
+            Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  gradient: RadialGradient(center: Alignment(-0.35, -0.2), radius: 1.25, colors: [Color(0x66000000), Color(0xE6000000)]),
+                  gradient: RadialGradient(center: Alignment(-0.35, -0.2), radius: 1.25, colors: [C.veil(0.4), C.veil(0.9)]),
                 ),
               ),
             ),
@@ -137,14 +138,20 @@ class _Player extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            DecoratedBox(
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(R.card),
-                boxShadow: const [BoxShadow(color: C.shadow, blurRadius: 64, offset: Offset(0, 24))],
-              ),
-              child: AnimatedSwitcher(
-                duration: Motion.slow,
-                child: CoverArt.track(t, key: ValueKey(t.id), size: size, radius: R.card),
+            // The glow under the cover takes its colour (coral without one).
+            ArtAccentBuilder(
+              builder: (context, accent) => DecoratedBox(
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(R.card),
+                  boxShadow: [
+                    BoxShadow(color: C.shadow, blurRadius: 64, offset: const Offset(0, 24)),
+                    BoxShadow(color: accent.withValues(alpha: C.isLight ? 0.35 : 0.45), blurRadius: 120, spreadRadius: -12),
+                  ],
+                ),
+                child: AnimatedSwitcher(
+                  duration: Motion.slow,
+                  child: CoverArt.track(t, key: ValueKey(t.id), size: size, radius: R.card),
+                ),
               ),
             ),
             const SizedBox(height: S.x6),

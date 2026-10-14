@@ -93,7 +93,7 @@ class _FoldersPageState extends State<FoldersPage> {
                   children: [
                     _crumb('Library', null),
                     for (final c in crumbs) ...[
-                      const Icon(LucideIcons.chevronRight, size: 14, color: C.faint),
+                      Icon(LucideIcons.chevronRight, size: 14, color: C.faint),
                       _crumb(c == crumbs.first ? c : p.basename(c), c),
                     ],
                   ],
@@ -123,7 +123,7 @@ class _FoldersPageState extends State<FoldersPage> {
                       width: 40,
                       height: 40,
                       decoration: BoxDecoration(color: C.raised2, borderRadius: BorderRadius.circular(R.tiny + 2)),
-                      child: const Icon(LucideIcons.folder, size: 18, color: C.dim),
+                      child: Icon(LucideIcons.folder, size: 18, color: C.dim),
                     ),
                     const SizedBox(width: S.x3),
                     Expanded(
@@ -136,7 +136,7 @@ class _FoldersPageState extends State<FoldersPage> {
                     ),
                     Text(plural(subdirs[names[i]]!, 'song'), style: T.small),
                     const SizedBox(width: S.x2),
-                    const Icon(LucideIcons.chevronRight, size: 16, color: C.faint),
+                    Icon(LucideIcons.chevronRight, size: 16, color: C.faint),
                   ],
                 ),
               ),
