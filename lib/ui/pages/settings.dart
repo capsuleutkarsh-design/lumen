@@ -68,7 +68,7 @@ class SettingsPage extends StatelessWidget {
                                 if (await confirm(
                                   context,
                                   'Remove this folder?',
-                                  '$f\n\nIts songs leave the library (the files stay on disk). Play counts for them are forgotten.',
+                                  '$f\n\nIts songs leave the library (the files stay on disk). Their play counts are kept for 6 months in case you add it back.',
                                   action: 'Remove',
                                 )) {
                                   lib.folders = [...folders]..remove(f);
@@ -106,6 +106,20 @@ class SettingsPage extends StatelessWidget {
                         ),
                       ],
                     ),
+                    if (lib.corruptBackup != null) ...[
+                      const SizedBox(height: S.x3),
+                      Text(
+                        'The library file could not be read, so a fresh library was started. The old file is kept at ${lib.corruptBackup}',
+                        style: T.caption.copyWith(color: C.accent),
+                      ),
+                    ],
+                    if (lib.skippedFolders.isNotEmpty) ...[
+                      const SizedBox(height: S.x3),
+                      Text(
+                        'Could not read ${plural(lib.skippedFolders.length, 'folder')} (songs already in them are kept):\n${lib.skippedFolders.join('\n')}',
+                        style: T.caption,
+                      ),
+                    ],
                   ]),
                   _card('Sound output', null, [
                     Row(

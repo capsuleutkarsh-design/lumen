@@ -56,7 +56,7 @@ class ArtistPage extends StatelessWidget {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: lib,
     builder: (context, _) {
-      final a = lib.artists.where((x) => x.name.toLowerCase() == name.toLowerCase()).firstOrNull;
+      final a = lib.artistNamed(name);
       if (a == null) {
         return EmptyState(
           icon: LucideIcons.micVocal,

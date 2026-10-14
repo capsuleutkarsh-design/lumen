@@ -14,7 +14,7 @@ Lumen uses and credits the following work.
 | [sqlite3](https://pub.dev/packages/sqlite3) (Dart) | SQLite bindings | MIT |
 | [window_manager](https://pub.dev/packages/window_manager), screen_retriever | Frameless window | MIT |
 | [image](https://pub.dev/packages/image) | Cover thumbnails | MIT |
-| [file_selector](https://pub.dev/packages/file_selector), [path_provider](https://pub.dev/packages/path_provider), [path](https://pub.dev/packages/path) | Folder/file pickers, app data folder, paths | BSD 3-Clause (Flutter / Dart authors) |
+| [file_selector](https://pub.dev/packages/file_selector), [path_provider](https://pub.dev/packages/path_provider), [path](https://pub.dev/packages/path), [ffi](https://pub.dev/packages/ffi) | Folder/file pickers, app data folder, paths, fast folder listing on Windows | BSD 3-Clause (Flutter / Dart authors) |
 | [Flutter](https://flutter.dev) engine and framework | UI toolkit | BSD 3-Clause |
 
 The full licence texts of the Dart and Flutter packages are kept in each package and are bundled into the app by Flutter (`NOTICES` in the build output).

@@ -22,7 +22,9 @@ Future<String> dataDir() async {
 Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error}) async {
   WidgetsFlutterBinding.ensureInitialized();
   MediaKit.ensureInitialized();
-  lib = Library(await dataDir())..load();
+  // Cover thumbnails are a cache: Local AppData, except under MP_DATA where test data stays in one folder.
+  final cache = const String.fromEnvironment('MP_DATA').isEmpty ? (await getApplicationCacheDirectory()).path : null;
+  lib = Library(await dataDir(), cacheDir: cache)..load();
   engine = Engine(lib, silent: silent, logLevel: logLevel);
   await engine.init();
   MediaControls(engine);

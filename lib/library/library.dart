@@ -15,8 +15,11 @@ import 'suggestions.dart';
 class Artist {
   Artist(this.name);
   final String name;
+
+  /// ARTISTSORT / ALBUMARTISTSORT tag when present ("Beatles, The").
+  String? sortName;
   final albums = <Album>[];
-  final appearsOn = <Track>[]; // tracks on other artists' albums
+  final appearsOn = <Track>[]; // tracks on other artists' albums, features included
   String? get cover =>
       albums.map((a) => a.cover).whereType<String>().firstOrNull ?? appearsOn.map((t) => t.cover).whereType<String>().firstOrNull;
 }
@@ -32,17 +35,30 @@ class Playlist {
 /// stats, favourites, playlists and settings.
 /// ponytail: everything in memory; fine to ~100k tracks, page from SQL beyond that.
 class Library extends ChangeNotifier {
-  Library(this.dataDir) : db = openDb(p.join(dataDir, 'library.db'));
-  final String dataDir;
-  final Database db;
+  /// [cacheDir] holds the cover thumbnails (Local AppData in the app); without it they live in [dataDir].
+  Library(this.dataDir, {String? cacheDir}) : coverDir = p.join(cacheDir ?? dataDir, 'covers') {
+    final (d, moved) = openOrRecover(dbPath);
+    db = d;
+    corruptBackup = moved;
+    _moveCovers(p.join(dataDir, 'covers'));
+  }
+  final String dataDir, coverDir;
+  late final Database db;
   String get dbPath => p.join(dataDir, 'library.db');
-  String get coverDir => p.join(dataDir, 'covers');
+
+  /// Set when library.db could not be opened at start: the damaged file was renamed
+  /// to this path (never deleted) and a fresh library was started. Show it to the user.
+  String? corruptBackup;
+
+  /// Folders the last scan could not read (no access, path too long...). Their tracks are kept.
+  List<String> skippedFolders = [];
 
   List<Track> tracks = [];
   List<Album> albums = [];
   List<Artist> artists = [];
   Map<int, Track> byId = {};
   Map<String, Album> albumByKey = {};
+  Map<String, Artist> _artistByName = {};
   Set<int> favourites = {};
   List<Playlist> playlists = [];
   bool loaded = false;
@@ -52,14 +68,49 @@ class Library extends ChangeNotifier {
   String? lastScan;
 
   void load() {
-    tracks = [for (final r in db.select('SELECT * FROM tracks')) Track.fromRow(r)];
+    final rows = db.select('SELECT $trackColumns FROM tracks WHERE gone_at IS NULL');
+    // A first scan shows tracks before it has grouped them: group those here meanwhile.
+    final blank = db.select(
+      "SELECT id, folder, album, artist, album_artist_tag, compilation, mb_album_id FROM tracks WHERE album_key = '' AND gone_at IS NULL",
+    );
+    final provisional = blank.isEmpty ? const <int, (String, String)>{} : groupAlbums([for (final r in blank) _groupInput(r)]);
+
+    // Artist names. Several tag values (or an ARTISTS tag) are used as they are;
+    // a single ARTIST value is split by the rules in splitArtist.
+    final explicit = <int, List<String>>{};
+    for (final r in db.select('SELECT track_id, name FROM track_artists WHERE explicit = 1')) {
+      explicit.putIfAbsent(r['track_id'] as int, () => []).add(r['name'] as String);
+    }
+    // Known acts and names, built only if some credit might split.
+    late final bands = {
+      for (final v in rows.rows) (provisional[v[0]]?.$1 ?? v[5] as String).toLowerCase(),
+      for (final v in explicit.values) ...v.map((x) => x.toLowerCase()),
+    };
+    late final solo = {...bands, for (final v in rows.rows) ?(v[4] as String?)?.toLowerCase()};
+    const unknown = ['Unknown artist'];
+    List<String> names(int id, String? artist) {
+      if (explicit[id] case final v?) return v;
+      if (artist == null) return unknown;
+      final out = splitArtist(artist, band: (n) => bands.contains(n), solo: (n) => solo.contains(n));
+      if (out.length == 1) return out;
+      final seen = <String>{};
+      return [
+        for (final x in out)
+          if (seen.add(x.toLowerCase())) x,
+      ];
+    }
+
+    tracks = [
+      for (final v in rows.rows) Track.fromValues(v, names(v[0] as int, v[4] as String?), provisional[v[0]]?.$2, provisional[v[0]]?.$1),
+    ];
     byId = {for (final t in tracks) t.id: t};
     final groups = <String, List<Track>>{};
     for (final t in tracks) {
       groups.putIfAbsent(t.albumKey, () => []).add(t);
     }
-    albums = [for (final e in groups.entries) Album(e.key, e.value..sort(compareAlbumOrder))]
-      ..sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+    albums = [for (final e in groups.entries) Album(e.key, e.value..sort(compareAlbumOrder))];
+    final sortKey = {for (final a in albums) a: a.sortTitle.toLowerCase()};
+    albums.sort((a, b) => sortKey[a]!.compareTo(sortKey[b]!));
     albumByKey = {for (final a in albums) a.key: a};
     final byName = <String, Artist>{};
     Artist artist(String n) => byName.putIfAbsent(n.toLowerCase(), () => Artist(n));
@@ -67,25 +118,128 @@ class Library extends ChangeNotifier {
       artist(a.artist).albums.add(a);
     }
     for (final t in tracks) {
-      if (t.artist.toLowerCase() != t.albumArtist.toLowerCase()) artist(t.artist).appearsOn.add(t);
+      for (final n in t.artists) {
+        if (n.toLowerCase() != t.albumArtist.toLowerCase()) artist(n).appearsOn.add(t);
+      }
+      if (t.albumArtistSort != null) byName[t.albumArtist.toLowerCase()]?.sortName ??= t.albumArtistSort;
+      if (t.artistSort != null && t.artists.length == 1) byName[t.artists.first.toLowerCase()]?.sortName ??= t.artistSort;
     }
-    artists = byName.values.toList()..sort((a, b) => a.name.toLowerCase().compareTo(b.name.toLowerCase()));
+    _artistByName = byName;
+    artists = byName.values.toList()..sort((a, b) => (a.sortName ?? a.name).toLowerCase().compareTo((b.sortName ?? b.name).toLowerCase()));
     favourites = {for (final r in db.select('SELECT track_id FROM favourites')) r['track_id'] as int};
     _loadPlaylists();
     _home = null;
+    _genres = null;
+    _years = null;
+    _composers = null;
     loaded = true;
     notifyListeners();
   }
 
+  static GroupInput _groupInput(Row r) => GroupInput(
+    r['id'] as int,
+    r['folder'] as String,
+    r['album'] as String,
+    r['artist'] as String?,
+    r['album_artist_tag'] as String?,
+    r['compilation'] == 1,
+    r['mb_album_id'] as String?,
+  );
+
   void _loadPlaylists() {
     final items = <int, List<int>>{};
     for (final r in db.select('SELECT playlist_id, track_id FROM playlist_items ORDER BY playlist_id, pos')) {
-      items.putIfAbsent(r['playlist_id'] as int, () => []).add(r['track_id'] as int);
+      // Tracks whose file is gone stay in the table (they come back if the file does) but are not listed.
+      if (byId.containsKey(r['track_id'])) items.putIfAbsent(r['playlist_id'] as int, () => []).add(r['track_id'] as int);
     }
     playlists = [
       for (final r in db.select('SELECT id, name FROM playlists ORDER BY name COLLATE NOCASE'))
         Playlist(r['id'] as int, r['name'] as String, items[r['id']] ?? []),
     ];
+  }
+
+  /// The artist page for [name]: exact, else the first artist of a credit like "Ana feat. Bo" or "Ana, Bo".
+  Artist? artistNamed(String name) =>
+      _artistByName[name.toLowerCase()] ?? _artistByName[splitArtist(name, solo: (_) => true).firstOrNull?.toLowerCase() ?? ''];
+
+  // ------------------------------------------------------------ browsing data (cached until the next load)
+
+  Map<String, List<Track>>? _genres;
+
+  /// Genre name → its tracks, A–Z. A tag "Rock; Pop" or "Rock/Pop" lists the track under both.
+  Map<String, List<Track>> get genres => _genres ??= _groupBy((t) => t.genres);
+
+  /// Albums with at least one track in [genre].
+  List<Album> genreAlbums(String genre) => [
+    for (final k in {for (final t in genres[genre] ?? const <Track>[]) t.albumKey}) ?albumByKey[k],
+  ];
+
+  Map<int, List<Album>>? _years;
+
+  /// Year → albums from that year, newest year first. Albums without a year are left out.
+  Map<int, List<Album>> get years {
+    if (_years != null) return _years!;
+    final m = <int, List<Album>>{};
+    for (final a in albums) {
+      if (a.year case final y?) m.putIfAbsent(y, () => []).add(a);
+    }
+    return _years = Map.fromEntries(m.entries.toList()..sort((a, b) => b.key.compareTo(a.key)));
+  }
+
+  Map<String, List<Track>>? _composers;
+
+  /// Composer → their tracks, A–Z.
+  Map<String, List<Track>> get composers => _composers ??= _groupBy((t) => [?t.composer]);
+
+  /// A composer's tracks by work (WORK / TIT1 / ©wrk; the album when untagged), movements in order.
+  Map<String, List<Track>> works(String composer) {
+    final m = <String, List<Track>>{};
+    for (final t in composers[composer] ?? const <Track>[]) {
+      m.putIfAbsent(t.work ?? t.album, () => []).add(t);
+    }
+    for (final ts in m.values) {
+      ts.sort(
+        (a, b) => a.movementNo != null && b.movementNo != null && a.movementNo != b.movementNo
+            ? a.movementNo!.compareTo(b.movementNo!)
+            : compareAlbumOrder(a, b),
+      );
+    }
+    return m;
+  }
+
+  /// Possible duplicates: same artist and title (ignoring case and punctuation), lengths within 2 s.
+  List<List<Track>> duplicates() {
+    final groups = <String, List<Track>>{};
+    for (final t in tracks) {
+      groups.putIfAbsent('${normalise(t.artist)}\u0000${normalise(t.title)}', () => []).add(t);
+    }
+    final out = <List<Track>>[];
+    for (final g in groups.values.where((g) => g.length > 1)) {
+      g.sort((a, b) => a.durationMs.compareTo(b.durationMs));
+      var run = [g.first];
+      for (final t in g.skip(1)) {
+        if (t.durationMs - run.first.durationMs <= 2000) {
+          run.add(t);
+        } else {
+          if (run.length > 1) out.add(run);
+          run = [t];
+        }
+      }
+      if (run.length > 1) out.add(run);
+    }
+    return out;
+  }
+
+  /// Groups tracks by the names [keys] gives (case-insensitive, first spelling wins), sorted A–Z.
+  Map<String, List<Track>> _groupBy(List<String> Function(Track) keys) {
+    final m = <String, (String, List<Track>)>{};
+    for (final t in tracks) {
+      for (final k in keys(t)) {
+        m.putIfAbsent(k.toLowerCase(), () => (k, [])).$2.add(t);
+      }
+    }
+    final sorted = m.values.toList()..sort((a, b) => a.$1.toLowerCase().compareTo(b.$1.toLowerCase()));
+    return {for (final (k, ts) in sorted) k: ts};
   }
 
   // ------------------------------------------------------------ settings
@@ -102,6 +256,40 @@ class Library extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Moves a cover cache from the old place (next to the database, 0.1.x) to [coverDir].
+  void _moveCovers(String old) {
+    if (p.equals(old, coverDir) || !Directory(old).existsSync()) return;
+    Directory(coverDir).createSync(recursive: true);
+    for (final f in Directory(old).listSync().whereType<File>()) {
+      final to = p.join(coverDir, p.basename(f.path));
+      try {
+        if (File(to).existsSync()) {
+          f.deleteSync();
+        } else {
+          try {
+            f.renameSync(to);
+          } on FileSystemException {
+            f.copySync(to); // another drive
+            f.deleteSync();
+          }
+        }
+      } on FileSystemException {
+        // left behind: the next scan makes the thumbnail again
+      }
+    }
+    db.execute('UPDATE tracks SET cover = ? || substr(cover, ?) WHERE substr(cover, 1, ?) = ?', [
+      coverDir,
+      old.length + 1,
+      old.length,
+      old,
+    ]);
+    try {
+      Directory(old).deleteSync(recursive: true);
+    } on FileSystemException {
+      // try again next start
+    }
+  }
+
   // ------------------------------------------------------------ scanning + watching
 
   bool _again = false;
@@ -111,13 +299,28 @@ class Library extends ChangeNotifier {
       return;
     }
     scan.value = (0, 0);
+    // A first scan of a big library shows what it has found every 500 files or 2 s.
+    final first = tracks.isEmpty;
+    var shown = 0;
+    final since = Stopwatch()..start();
     try {
-      final r = await scanInBackground(dbPath, coverDir, folders, (d, t) => scan.value = (d, t));
+      final r = await scanInBackground(dbPath, coverDir, folders, (d, t) {
+        scan.value = (d, t);
+        if (first && d > shown && d < t && (d - shown >= 500 || since.elapsedMilliseconds >= 2000)) {
+          shown = d;
+          since.reset();
+          load();
+        }
+      });
       lastScan = r.toString();
-      load();
+      skippedFolders = r.skipped;
+    } catch (e) {
+      lastScan = 'failed: $e';
     } finally {
       scan.value = null;
     }
+    load();
+    if (_watching && !setEquals(_existing(), _watched)) watch();
     if (_again) {
       _again = false;
       await rescan();
@@ -125,34 +328,58 @@ class Library extends ChangeNotifier {
   }
 
   final _watchers = <StreamSubscription>[];
-  Timer? _debounce;
+  var _watched = <String>{};
+  var _watching = false;
+  Timer? _debounce, _poll;
+
+  Set<String> _existing() => {
+    for (final f in folders)
+      if (Directory(f).existsSync()) f,
+  };
+
+  void _soon() {
+    _debounce?.cancel();
+    _debounce = Timer(const Duration(seconds: 2), rescan);
+  }
 
   /// Rescans (incrementally) a moment after anything changes in a library folder.
+  /// A watcher that fails, or a folder that appears later (drive plugged in), is picked up again.
   void watch() {
+    _watching = true;
     for (final w in _watchers) {
       w.cancel();
     }
     _watchers.clear();
-    for (final f in folders) {
-      if (!Directory(f).existsSync()) continue;
-      _watchers.add(
-        Directory(f).watch(recursive: true).listen((_) {
-          _debounce?.cancel();
-          _debounce = Timer(const Duration(seconds: 2), rescan);
-        }, onError: (_) {}),
-      );
+    _watched = _existing();
+    for (final f in _watched) {
+      void lost([_]) {
+        _watched.remove(f); // re-watched after the rescan
+        _soon();
+      }
+
+      _watchers.add(Directory(f).watch(recursive: true).listen((_) => _soon(), onError: lost, onDone: lost));
     }
+    _poll ??= Timer.periodic(const Duration(minutes: 1), (_) {
+      if (!setEquals(_existing(), _watched)) _soon();
+    });
   }
 
   // ------------------------------------------------------------ stats + suggestions
 
   HomeData? _home;
-  HomeData get home => _home ??= suggest(tracks, albums, playEvents(), DateTime.now());
+  HomeData get home => _home ??= suggest(tracks, albums, playStats(), DateTime.now());
 
-  List<PlayEvent> playEvents() => [
-    for (final r in db.select('SELECT track_id, at, skipped FROM plays'))
-      PlayEvent(r['track_id'] as int, DateTime.fromMillisecondsSinceEpoch(r['at'] as int), r['skipped'] == 1),
-  ];
+  /// Plays, skips and last play per track, added up by the database.
+  Map<int, PlayStat> playStats() => {
+    for (final r in db.select(
+      'SELECT track_id, sum(skipped = 0) n, sum(skipped) s, max(CASE WHEN skipped = 0 THEN at END) last FROM plays GROUP BY track_id',
+    ))
+      r['track_id'] as int: PlayStat(
+        r['n'] as int,
+        r['s'] as int,
+        r['last'] == null ? null : DateTime.fromMillisecondsSinceEpoch(r['last'] as int),
+      ),
+  };
 
   void recordPlay(int trackId, {required bool skipped, DateTime? at}) {
     if (!byId.containsKey(trackId)) return;
