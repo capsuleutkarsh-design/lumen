@@ -43,6 +43,7 @@ class MainActivity : AudioServiceActivity() {
                         requestPermissions(wanted.toTypedArray(), 1)
                     }
                     "route" -> result.success(route())
+                    "version" -> result.success(packageManager.getPackageInfo(packageName, 0).versionName)
                     "open" -> {
                         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(call.arguments as String)))
                         result.success(null)

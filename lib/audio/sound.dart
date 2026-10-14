@@ -331,12 +331,6 @@ class SourceInfo {
   final bool albumInOrder;
 }
 
-/// Lumen's own libmpv: soxr and every FFmpeg filter the Sound page uses. media_kit's Android libmpv has
-/// no soxr (asking for it leaves mpv with no audio at all) and, of those filters, only `equalizer`; boot()
-/// turns this off there. Then Best quality uses swresample's best settings, and the chain keeps only the
-/// EQ's peak bands. Set it back to true when Lumen's own Android engine is in.
-bool fullEngine = true;
-
 const limiterDb = -0.3;
 const limiter = 'alimiter@lim=limit=0.966051:level=0';
 
@@ -421,20 +415,14 @@ double? rgGainDb(SoundSettings s, SourceInfo src) {
     }
     if (eq.night) f.add('acompressor@night=threshold=0.063:ratio=3:attack=10:release=250:makeup=2');
   }
-  // ponytail: no headroom or limiter without the full engine, so big EQ boosts can clip there.
-  if (!fullEngine) f.retainWhere((x) => x.startsWith('equalizer@'));
-  if (fullEngine && f.isNotEmpty && (s.bestQuality || (eq.on && eq.limit))) f.add(limiter);
-  if (fullEngine && f.isNotEmpty) f.insert(0, 'aformat=sample_fmts=fltp'); // 32-bit float processing: a boost can't clip inside the chain
+  if (f.isNotEmpty && (s.bestQuality || (eq.on && eq.limit))) f.add(limiter);
+  if (f.isNotEmpty) f.insert(0, 'aformat=sample_fmts=fltp'); // 32-bit float processing: a boost can't clip inside the chain
   final up = d.exclusive ? upsampleRate(s.upsample, src.rate) : (d.android ? androidRate(s, d, src.rate) : 0);
   return (
     chain: f.join(','),
     options: {
       // soxr at very high quality (28 bits), TPDF dither when the output is integer.
-      'audio-swresample-o': !s.bestQuality
-          ? ''
-          : fullEngine
-          ? 'resampler=soxr,precision=28,dither_method=triangular'
-          : 'filter_size=32,phase_shift=10,dither_method=triangular',
+      'audio-swresample-o': s.bestQuality ? 'resampler=soxr,precision=28,dither_method=triangular' : '',
       'audio-samplerate': '$up',
       'audio-buffer': s.largeBuffer ? '1.0' : '0.2',
       'replaygain': rgMode(s, src),
@@ -533,7 +521,7 @@ bool sameSamples(String src, int srcBits, String out) {
     steps.add('Volume ${d.volume.round()} %');
   }
   final resampled = d.outRate > 0 && src.rate > 0 && d.outRate != src.rate;
-  if (resampled) steps.add(s.bestQuality && fullEngine ? 'soxr' : 'resampler');
+  if (resampled) steps.add(s.bestQuality ? 'soxr' : 'resampler');
   if (d.outRate > 0) steps.add('${khz(d.outRate)} ${formatName(d.outFormat)}');
   if (d.android) steps.add(d.nativeRate > 0 ? 'Android mixer (${khz(d.nativeRate)})' : 'Android mixer');
   if (d.bluetooth) steps.add('Bluetooth codec');

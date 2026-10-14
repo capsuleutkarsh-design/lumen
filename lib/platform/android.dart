@@ -53,6 +53,9 @@ class AudioRoute {
   }
 }
 
+/// The app's version name from the APK (pubspec.yaml's version without the build number).
+Future<String?> androidVersion() => _channel.invokeMethod<String>('version');
+
 /// Reads the permission and the output, and follows output changes. Off Android: nothing.
 Future<void> initAndroid() async {
   if (!Platform.isAndroid) return;

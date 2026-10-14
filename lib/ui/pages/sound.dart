@@ -344,19 +344,9 @@ Widget _androidOutput(SoundSettings s) {
         ),
         child: Text(bluetoothTip, style: T.small),
       ),
-    if (!fullEngine)
-      Padding(
-        padding: const EdgeInsets.only(bottom: S.x4),
-        child: Text(
-          'This first Android version runs the EQ’s peak bands (the graphic EQ, and the peaks of an AutoEQ profile) and ReplayGain. '
-          'Shelves, filters and curves, crossfeed, levelling, night mode and the limiter need Lumen’s own Android sound engine, '
-          'which comes in an update; until then they are left out of the signal path.',
-          style: T.caption,
-        ),
-      ),
     _switchRow(
       'Best quality on this device',
-      'Converts to the rate Android plays at with the best resampler${fullEngine ? ' (soxr, highest quality)' : ''}, so Android never does a rough '
+      'Converts to the rate Android plays at with the best resampler (soxr, highest quality), so Android never does a rough '
           'conversion. Works in 32-bit float, lowers the level just enough for EQ boosts, and a gentle limiter stops peaks '
           'just below full scale. Off, Lumen sends each song at its own rate (up to 96 kHz).',
       s.bestQuality,

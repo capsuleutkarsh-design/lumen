@@ -32,6 +32,11 @@ Lumen uses and credits the following work.
 | [xml](https://pub.dev/packages/xml), [petitparser](https://pub.dev/packages/petitparser), pulled in by dbus | | MIT |
 | [tray_manager](https://pub.dev/packages/tray_manager) 0.5.3, [menu_base](https://pub.dev/packages/menu_base) | The tray icon and its menu (a plain C++ plugin) | MIT |
 | [shortid](https://pub.dev/packages/shortid), pulled in by tray_manager | | BSD 3-Clause |
+| [audio_service](https://pub.dev/packages/audio_service), [audio_session](https://pub.dev/packages/audio_session) | Android: background playback, the media notification and lock screen controls, audio focus | MIT |
+| [flutter_cache_manager](https://pub.dev/packages/flutter_cache_manager), pulled in by audio_service | | MIT |
+| [sqflite](https://pub.dev/packages/sqflite), pulled in by flutter_cache_manager | | BSD 2-Clause |
+| [rxdart](https://pub.dev/packages/rxdart), pulled in by audio_service | | Apache 2.0 |
+| [js](https://pub.dev/packages/js), pulled in by audio_service_web | Not used on Windows or Android | BSD 3-Clause |
 | [Flutter](https://flutter.dev) engine and framework | UI toolkit | BSD 3-Clause |
 
 The full licence texts of the Dart and Flutter packages are kept in each package and are bundled into the app by Flutter (`NOTICES` in the build output).

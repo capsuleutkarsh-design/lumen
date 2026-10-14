@@ -8,7 +8,6 @@ import 'package:path_provider/path_provider.dart';
 import 'art/art_cache.dart';
 import 'art/art_sources.dart';
 import 'audio/engine.dart';
-import 'audio/sound.dart' show fullEngine;
 import 'library/library.dart';
 import 'platform/android.dart';
 import 'platform/licence.dart';
@@ -42,7 +41,6 @@ Future<String> dataDir() async {
 Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error}) async {
   WidgetsFlutterBinding.ensureInitialized();
   initMediaKit();
-  if (Platform.isAndroid) fullEngine = false; // media_kit's Android libmpv: no soxr, only the equalizer filter (sound.dart)
   // Cover thumbnails are a cache: Local AppData, except under MP_DATA where test data stays in one folder.
   final cache = const String.fromEnvironment('MP_DATA').isEmpty ? (await getApplicationCacheDirectory()).path : null;
   lib = Library(await dataDir(), cacheDir: cache)..load();
@@ -69,6 +67,7 @@ Future<void> main(List<String> args) async {
   for (final a in args) {
     if (a.startsWith('--app-version=')) appVersion = a.substring(14);
   }
+  if (Platform.isAndroid) appVersion = await androidVersion() ?? appVersion;
   final data = await dataPath();
   startLog(data);
   log('Lumen $appVersion starting; data in $data');

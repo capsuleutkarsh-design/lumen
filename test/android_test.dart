@@ -43,25 +43,6 @@ void main() {
     expect(b.why.join(', '), contains('lossy codec'));
   });
 
-  test("media_kit's Android libmpv: only the EQ's peak bands, and no soxr", () {
-    fullEngine = false;
-    try {
-      final s = SoundSettings()
-        ..eq = Eq(on: true, graphic: [0, 0, 0, 0, 0, 3, 0, 0, 0, 0])
-        ..crossfeed = Crossfeed.strong
-        ..levelling = true;
-      final c = buildAudioChain(s, phone, flac);
-      expect(c.chain, startsWith('equalizer@'));
-      for (final missing in ['aformat', 'volume', 'bs2b', 'dynaudnorm', 'alimiter']) {
-        expect(c.chain, isNot(contains(missing)));
-      }
-      expect(c.options['audio-swresample-o'], isNot(contains('soxr')));
-      expect(signalPath(s, phone, flac).steps, isNot(contains('Crossfeed (strong)')));
-    } finally {
-      fullEngine = true;
-    }
-  });
-
   test('the route: names, and the native rate (listed rates up to 96 kHz, else the mixer)', () {
     final r = AudioRoute.from({'kind': 'bluetooth', 'product': 'WH-1000XM4', 'rates': <int>[], 'mixerRate': 48000, 'sdk': 30});
     expect(r.bluetooth, isTrue);

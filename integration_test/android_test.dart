@@ -113,18 +113,33 @@ void main() {
     expect(engine.queue.items.length, 9);
     say('Next, previous and Add to queue: ok');
 
-    // The Sound page's filters on media_kit's Android libmpv: which of them run (a failing chain turns off with a toast).
+    // The Sound page on Lumen's own Android libmpv: every filter and soxr run, the song keeps playing,
+    // and mpv logs no error ("osc" is media_kit asking for the Lua OSC, which the engine leaves out).
+    final mpvErrors = <String>[];
+    engine.player.stream.log.listen((l) {
+      if (l.level == 'error' && !l.text.contains('osc')) mpvErrors.add('${l.prefix}: ${l.text.trim()}');
+    });
     Future<String> filters(String name, void Function(SoundSettings s) edit) async {
+      final errs = mpvErrors.length;
       sound.change(edit);
+      await Future<void>.delayed(const Duration(seconds: 1));
+      final from = engine.position.value;
       await Future<void>.delayed(const Duration(seconds: 2));
       final af = await mpv.getProperty('af');
-      say('$name: chain "${sound.chain}", ${af.isEmpty ? 'nothing runs' : 'runs'}; playing ${engine.playing}; sends ${engine.outputFormat}');
+      final moved = engine.position.value - from;
+      say('$name: chain "${sound.chain}", ${af.isEmpty ? 'nothing runs' : 'runs'}; resampler "${await mpv.getProperty('audio-swresample-o')}"; '
+          'in ${await mpv.getProperty('audio-params/samplerate')} Hz, out ${await mpv.getProperty('audio-out-params/samplerate')} Hz '
+          '${await mpv.getProperty('audio-out-params/format')}; played ${moved.inMilliseconds} ms in 2 s; mpv errors ${mpvErrors.skip(errs).toList()}');
       expect(engine.playing, isTrue, reason: name);
+      expect(af, isNotEmpty, reason: name);
+      expect(moved, greaterThan(const Duration(milliseconds: 1500)), reason: '$name: the sound must keep going');
+      expect(mpvErrors.skip(errs), isEmpty, reason: name);
       return af;
     }
 
-    expect(await filters('EQ +3 dB at 1 kHz', (s) => s.eq = Eq(on: true, graphic: [0, 0, 0, 0, 0, 3, 0, 0, 0, 0])), isNotEmpty);
-    await filters('Crossfeed', (s) => s.crossfeed = Crossfeed.values.last);
+    final rock = builtInPresets.firstWhere((p) => p.name == 'Rock').copy()..on = true;
+    expect(await filters('EQ preset Rock', (s) => s.eq = rock), contains('equalizer'));
+    expect(await filters('Crossfeed', (s) => s.crossfeed = Crossfeed.values.last), contains('bs2b'));
     await filters('Night mode', (s) => s.eq.night = true);
     await filters('Advanced EQ curve', (s) {
       s.crossfeed = Crossfeed.off;
@@ -136,6 +151,23 @@ void main() {
       s.eq = Eq();
       s.levelling = true;
     });
+    // Best quality with a song whose rate differs from Android's output: soxr converts it.
+    final native = audioRoute.value!.nativeRate;
+    final other = lib.tracks.firstWhere((t) => t.sampleRate > 0 && t.sampleRate != native);
+    await engine.playTracks([other]);
+    await waitFor(() => engine.playing && engine.position.value > const Duration(milliseconds: 500), what: 'Best quality song');
+    await filters(
+      'Best quality, Rock and crossfeed (${other.sampleRate} Hz song, Android at $native Hz)',
+      (s) => s
+        ..bestQuality = true
+        ..levelling = false
+        ..eq = (rock.copy()..on = true)
+        ..crossfeed = Crossfeed.values.last,
+    );
+    expect(await mpv.getProperty('audio-swresample-o'), contains('soxr'));
+    expect(await mpv.getProperty('audio-out-params/samplerate'), '$native');
+    await engine.playTracks(deep.tracks);
+    await waitFor(() => engine.playing, what: 'back to Deep Water');
     sound.change((s) => s
       ..eq = Eq()
       ..levelling = false
