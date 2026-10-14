@@ -25,7 +25,9 @@ class QueuePanel extends StatelessWidget {
               child: Row(
                 children: [
                   Expanded(child: Text('Queue', style: T.heading)),
-                  Text(q.shuffle ? 'Shuffled' : '', style: T.caption),
+                  Text([if (q.items.isNotEmpty) plural(q.items.length, 'song'), if (q.shuffle) 'shuffled'].join(' · '), style: T.caption),
+                  if (upcoming.isNotEmpty) IconBtn(LucideIcons.listX, size: 16, tooltip: 'Clear the queue', onTap: engine.clearQueue),
+                  if (cur != null) IconBtn(LucideIcons.listPlus, size: 16, tooltip: 'Save as playlist', onTap: () => _save(context)),
                   IconBtn(LucideIcons.x, size: 16, tooltip: 'Close', onTap: nav.toggleQueue),
                 ],
               ),
@@ -40,7 +42,7 @@ class QueuePanel extends StatelessWidget {
               )
             else ...[
               _label('Now playing'),
-              _entry(context, cur, q.index, current: true),
+              _entry(context, cur, current: true),
               _label(upcoming.isEmpty ? 'Nothing after this' : 'Next up · ${plural(upcoming.length, 'song')}'),
               Expanded(
                 child: ReorderableListView.builder(
@@ -54,12 +56,15 @@ class QueuePanel extends StatelessWidget {
                       child: child,
                     ),
                   ),
+                  // Positions are looked up at drop time: the queue may have moved on since this was drawn.
                   onReorderItem: (from, to) {
-                    engine.moveInQueue(q.index + 1 + from, q.index + 1 + to);
+                    final i = q.items.indexOf(upcoming[from]);
+                    final j = q.items.indexOf(upcoming[to]);
+                    if (i > q.index && j > q.index) engine.moveInQueue(i, j);
                   },
                   itemBuilder: (_, i) => KeyedSubtree(
                     key: ValueKey(upcoming[i].uid),
-                    child: _entry(context, upcoming[i], q.index + 1 + i, dragIndex: i),
+                    child: _entry(context, upcoming[i], dragIndex: i),
                   ),
                 ),
               ),
@@ -75,11 +80,18 @@ class QueuePanel extends StatelessWidget {
     child: Text(s, style: T.caption),
   );
 
-  Widget _entry(BuildContext context, Entry e, int index, {bool current = false, int? dragIndex}) {
-    final t = lib.byId[e.trackId];
+  Future<void> _save(BuildContext context) async {
+    final name = await askText(context, 'Save the queue as a playlist', action: 'Save');
+    if (name == null || !context.mounted) return;
+    engine.saveQueueAsPlaylist(name);
+    toast(context, "Saved the queue as '$name'");
+  }
+
+  Widget _entry(BuildContext context, Entry e, {bool current = false, int? dragIndex}) {
+    final t = lib.byId[e.trackId] ?? (current ? engine.current : null);
     if (t == null) return const SizedBox.shrink();
     final row = Clickable(
-      onDoubleTap: current ? null : () => engine.jump(index),
+      onDoubleTap: current ? null : () => engine.jump(engine.queue.items.indexOf(e)),
       onTap: () {},
       selected: current,
       radius: R.small + 2,
@@ -128,7 +140,10 @@ class QueuePanel extends StatelessWidget {
                 box: 28,
                 color: C.faint,
                 tooltip: 'Remove from queue',
-                onTap: () => engine.removeFromQueue(index),
+                onTap: () {
+                  engine.removeFromQueue(engine.queue.items.indexOf(e));
+                  toast(context, "Removed '${t.title}'", action: 'Undo', onAction: engine.undoRemove);
+                },
               ),
           ],
         ),

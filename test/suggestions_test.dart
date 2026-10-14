@@ -47,6 +47,9 @@ void main() {
     expect(ListenRules.counts(const Duration(minutes: 4), const Duration(minutes: 20)), isTrue);
     expect(ListenRules.isSkip(const Duration(seconds: 29)), isTrue);
     expect(ListenRules.isSkip(const Duration(seconds: 30)), isFalse);
+    expect(ListenRules.isSkip(Duration.zero), isFalse, reason: 'a quick Next press is not a skip');
+    expect(ListenRules.isSkip(const Duration(seconds: 2), const Duration(seconds: 8)), isTrue);
+    expect(ListenRules.isSkip(const Duration(seconds: 2), const Duration(seconds: 29)), isFalse);
   });
 
   test('jump back in lists albums by most recent play', () {

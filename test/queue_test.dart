@@ -99,4 +99,63 @@ void main() {
     expect(ids(r.items), [1, 3, 4, 5, 6, 7, 8, 9, 10]);
     expect(r.current!.trackId, 5);
   });
+
+  // ---- 0.2.0 review fixes
+
+  test('W3: playing something new drops the cached repeat-all cycle (unshuffled)', () {
+    final q = PlayQueue()..repeat = Repeat.all;
+    q.playNow([1, 2, 3], 2);
+    q.peekNext(); // the engine preloads: caches the next cycle
+    q.playNow([10, 11, 12], 2);
+    expect(q.peekNext()!.trackId, 10, reason: 'the preload wraps to the NEW queue');
+  });
+
+  test('W3: ... and with shuffle the old list never comes back', () {
+    final q = PlayQueue(random: Random(3))
+      ..shuffle = true
+      ..repeat = Repeat.all;
+    q.playNow([1, 2, 3], 0);
+    q.next();
+    q.next();
+    q.peekNext();
+    q.playNow([10], 0);
+    expect(q.peekNext()!.trackId, 10);
+    expect(q.next(auto: true)!.trackId, 10);
+    expect(ids(q.items), [10]);
+  });
+
+  test('W9: restore when the current track left the library: the song after it, not song 1', () {
+    final q = PlayQueue()..playNow([1, 2, 3, 4, 5], 3);
+    final r = PlayQueue();
+    expect(r.restore(q.toJson(), (id) => id != 4), isFalse, reason: 'tells the engine to start at 0:00');
+    expect(r.current!.trackId, 5);
+    expect(PlayQueue().restore(q.toJson(), (id) => id != 1), isTrue);
+  });
+
+  test('P1: saving a 20 000-song shuffled queue is fast (no indexOf per entry)', () {
+    final q = PlayQueue(random: Random(1))..playNow(List.generate(20000, (i) => i));
+    q.setShuffle(true);
+    final sw = Stopwatch()..start();
+    final j = q.toJson();
+    expect(sw.elapsedMilliseconds, lessThan(50));
+    final r = PlayQueue()..restore(j, (_) => true);
+    expect(ids(r.original), List.generate(20000, (i) => i));
+  });
+
+  test('clear keeps only the playing song; undo puts the last removed song back in place', () {
+    final q = PlayQueue()..playNow([1, 2, 3, 4, 5], 2);
+    q.remove(0); // before the current one
+    expect(q.current!.trackId, 3);
+    q.undoRemove();
+    expect(ids(q.items), [1, 2, 3, 4, 5]);
+    expect(q.current!.trackId, 3);
+    q.remove(4);
+    q.undoRemove();
+    expect(ids(q.items), [1, 2, 3, 4, 5]);
+    expect(q.canUndo, isFalse);
+    q.clear();
+    expect(ids(q.items), [3]);
+    expect(q.current!.trackId, 3);
+    expect(q.peekNext(), isNull);
+  });
 }

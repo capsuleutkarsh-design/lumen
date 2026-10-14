@@ -47,10 +47,16 @@ MediaControls::MediaControls(HWND hwnd, flutter::BinaryMessenger* messenger) : h
     smtc_.IsPauseEnabled(true);
     smtc_.IsNextEnabled(true);
     smtc_.IsPreviousEnabled(true);
+    smtc_.IsStopEnabled(true);
     smtc_.IsEnabled(false);
-    smtc_.ButtonPressed([hwnd](auto&&, SystemMediaTransportControlsButtonPressedEventArgs const& args) {
+    button_token_ = smtc_.ButtonPressed([hwnd](auto&&, SystemMediaTransportControlsButtonPressedEventArgs const& args) {
       ::PostMessage(hwnd, kButtonMessage, static_cast<WPARAM>(args.Button()), 0);
     });
+    seek_token_ = smtc_.PlaybackPositionChangeRequested(
+        [hwnd](auto&&, PlaybackPositionChangeRequestedEventArgs const& args) {
+          const int64_t ms = args.RequestedPlaybackPosition().count() / 10000;
+          ::PostMessage(hwnd, kSeekMessage, 0, static_cast<LPARAM>(ms));
+        });
   } catch (...) {
     smtc_ = nullptr;  // No media controls on this system; playback still works.
   }
@@ -60,6 +66,17 @@ MediaControls::MediaControls(HWND hwnd, flutter::BinaryMessenger* messenger) : h
     }
     result->Success();
   });
+}
+
+MediaControls::~MediaControls() {
+  try {
+    if (open_op_) open_op_.Cancel();
+    if (smtc_) {
+      smtc_.ButtonPressed(button_token_);
+      smtc_.PlaybackPositionChangeRequested(seek_token_);
+    }
+  } catch (...) {
+  }
 }
 
 void MediaControls::Update(const flutter::EncodableMap& args) {
@@ -100,15 +117,18 @@ void MediaControls::Update(const flutter::EncodableMap& args) {
     updater.Thumbnail(nullptr);
     updater.Update();
     if (art.empty()) return;
+    if (open_op_) open_op_.Cancel();
     open_op_ = StorageFile::GetFileFromPathAsync(winrt::to_hstring(art));
-    open_op_.Completed([this, art](IAsyncOperation<StorageFile> const& op, AsyncStatus status) {
+    // Captures copies only (never `this`): it may finish after the window is gone.
+    open_op_.Completed([pending = pending_, hwnd = hwnd_, art](IAsyncOperation<StorageFile> const& op,
+                                                               AsyncStatus status) {
       if (status != AsyncStatus::Completed) return;
       {
-        std::lock_guard<std::mutex> lock(mutex_);
-        pending_path_ = art;
-        pending_file_ = op.GetResults();
+        std::lock_guard<std::mutex> lock(pending->mutex);
+        pending->path = art;
+        pending->file = op.GetResults();
       }
-      ::PostMessage(hwnd_, kThumbnailMessage, 0, 0);
+      ::PostMessage(hwnd, kThumbnailMessage, 0, 0);
     });
   } catch (...) {
   }
@@ -116,9 +136,9 @@ void MediaControls::Update(const flutter::EncodableMap& args) {
 
 void MediaControls::OnThumbnail() {
   {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (pending_path_ != art_path_) return;  // an older song's cover
-    art_file_ = pending_file_;
+    std::lock_guard<std::mutex> lock(pending_->mutex);
+    if (pending_->path != art_path_) return;  // an older song's cover
+    art_file_ = pending_->file;
   }
   if (!smtc_ || !art_file_) return;
   try {
@@ -136,8 +156,12 @@ void MediaControls::OnButton(int button) {
     case SystemMediaTransportControlsButton::Pause: name = "pause"; break;
     case SystemMediaTransportControlsButton::Next: name = "next"; break;
     case SystemMediaTransportControlsButton::Previous: name = "previous"; break;
-    case SystemMediaTransportControlsButton::Stop: name = "pause"; break;
+    case SystemMediaTransportControlsButton::Stop: name = "stop"; break;
     default: return;
   }
   channel_->InvokeMethod("button", std::make_unique<flutter::EncodableValue>(name));
+}
+
+void MediaControls::OnSeek(int64_t ms) {
+  channel_->InvokeMethod("seek", std::make_unique<flutter::EncodableValue>(ms));
 }
