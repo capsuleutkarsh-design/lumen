@@ -17,6 +17,8 @@ Lumen uses and credits the following work.
 | [libass](https://github.com/libass/libass) 0.17.5, [HarfBuzz](https://harfbuzz.github.io) 14.6.0, [FreeType](https://freetype.org) 2.14.3, [FriBidi](https://github.com/fribidi/fribidi) 1.0.17, in `libmpv-2.dll` | Needed to build mpv (subtitle text, not used by Lumen) | ISC; MIT; FreeType License (FTL); LGPL-2.1-or-later |
 | [zlib](https://zlib.net) 1.3.2, in `libmpv-2.dll` | Compressed tags and containers | zlib |
 | [llvm-mingw](https://github.com/mstorsjo/llvm-mingw) runtime (libc++, libunwind, compiler-rt, mingw-w64 CRT), in `libmpv-2.dll` | Compiler runtime | Apache-2.0 WITH LLVM-exception; mingw-w64 runtime licence |
+| Lumen's audio engine for Android, `libmpv.so` (arm64-v8a, armeabi-v7a, x86_64) | The same FFmpeg, mpv, libplacebo, libsoxr, libbs2b, libass, HarfBuzz, FreeType, FriBidi and zlib as above, built for Android | As above |
+| [Android NDK](https://developer.android.com/ndk) r28c runtime (libc++, libc++abi, libunwind, compiler-rt), in `libmpv.so` | Compiler runtime (Android) | Apache-2.0 WITH LLVM-exception |
 | Microsoft Visual C++ runtime (`msvcp140*.dll`, `vcruntime140*.dll`, `concrt140.dll`) | C++ runtime for `lumen.exe` and the plugins | Microsoft Visual C++ Redistributable, distributed under the Visual Studio licence terms |
 | [SQLite](https://sqlite.org) | The library database (`sqlite3.dll`) | Public domain |
 | [Lucide](https://lucide.dev) icons, via `lucide_icons_flutter` | Icons | ISC (icons), MIT (package) |
@@ -34,12 +36,13 @@ Lumen uses and credits the following work.
 
 The full licence texts of the Dart and Flutter packages are kept in each package and are bundled into the app by Flutter (`NOTICES` in the build output).
 
-### Lumen's audio engine (`libmpv-2.dll`)
+### Lumen's audio engine (`libmpv-2.dll` on Windows, `libmpv.so` on Android)
 
 - **What it is:** mpv and FFmpeg built for audio only, with Lumen's audio filters and the soxr resampler. Network protocols are switched off; it opens local files only.
-- **Source code:** every release of [capsuleutkarsh-design/lumen-audio-engine](https://github.com/capsuleutkarsh-design/lumen-audio-engine/releases) has the complete corresponding source (`lumen-audio-engine-<tag>-source.tar`: the exact source tarballs, the build script and the configure lines). The release this version of Lumen uses is named in `windows/CMakeLists.txt` (`LUMEN_ENGINE_TAG`).
-- **Licence texts:** `LGPL-3.0.txt` and `GPL-3.0.txt` sit next to `lumen.exe`. The licence of every library inside the DLL is in [`licenses/`](licenses/) and in the app (Credits, All package licences).
+- **Source code:** every release of [capsuleutkarsh-design/lumen-audio-engine](https://github.com/capsuleutkarsh-design/lumen-audio-engine/releases) has the complete corresponding source (`lumen-audio-engine-<tag>-source.tar`: the exact source tarballs, the build script and the configure lines). The releases this version of Lumen uses are named in `windows/CMakeLists.txt` (`LUMEN_ENGINE_TAG`) and `android/app/build.gradle.kts` (`lumenEngineTag`, a `-android` release).
+- **Licence texts:** `LGPL-3.0.txt` and `GPL-3.0.txt` sit next to `lumen.exe`. The licence of every library inside the DLL and `libmpv.so` is in [`licenses/`](licenses/) and in the app (Credits, All package licences).
 - Portions of this software are copyright © 2026 The FreeType Project (https://freetype.org). All rights reserved.
+- On Android, `libmediakitandroidhelper.so` next to `libmpv.so` is media_kit's own helper (MIT), from media_kit_libs_android_audio.
 - The engine has no TLS library, so the mbedTLS notice of the old build no longer applies.
 
 ## Design credit
@@ -50,7 +53,7 @@ The layout and feel are inspired by [Wora](https://github.com/playwora/wora) (MI
 
 Local tests use generated test tones and music from Wikimedia Commons. They are kept outside the repository and are not part of Lumen.
 
-You may replace the LGPL libraries (libmpv, FFmpeg) with your own builds: `libmpv-2.dll` sits next to the program.
+You may replace the LGPL libraries (libmpv, FFmpeg) with your own builds: `libmpv-2.dll` sits next to the program, and on Android `lib/<abi>/libmpv.so` can be swapped in the APK (then re-sign it).
 
 ## Cover art: Masterpieces pack
 

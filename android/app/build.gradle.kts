@@ -1,3 +1,6 @@
+import java.security.MessageDigest
+import java.util.zip.ZipInputStream
+
 plugins {
     id("com.android.application")
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
@@ -38,6 +41,36 @@ android {
         }
     }
 }
+
+// Lumen's own audio engine: libmpv.so (mpv + FFmpeg with the audio filters, soxr and bs2b), built in
+// public at https://github.com/capsuleutkarsh-design/lumen-audio-engine. It replaces the libmpv.so of
+// media_kit_libs_android_audio: the app's own jniLibs win over a dependency's.
+// To update: set the new release tag and the SHA-256 of its zip (from the release's SHA256SUMS.txt).
+val lumenEngineTag = "v2026.10.14-android"
+val lumenEngineSha256 = "a446d0ec91cbbb9d0ffbdddb39381567a592fca9e9a38121394df3dc8c00888a"
+val lumenEngineLibs = layout.buildDirectory.dir("lumen-audio-engine-$lumenEngineTag/lib").get().asFile
+val lumenEngineDone = File("$lumenEngineLibs.ok") // written last, so a half-done extract is redone
+if (!lumenEngineDone.exists()) {
+    val url = "https://github.com/capsuleutkarsh-design/lumen-audio-engine/releases/download/" +
+        "$lumenEngineTag/lumen-audio-engine-$lumenEngineTag.zip"
+    // curl (in Windows 10+, macOS and Linux) rather than Java: Java's connect timed out here (IPv6).
+    val file = File("$lumenEngineLibs.zip").apply { parentFile.mkdirs() }
+    check(ProcessBuilder("curl", "-fsSL", "--retry", "3", "-o", file.path, url).inheritIO().start().waitFor() == 0) {
+        "Lumen audio engine: could not download $url"
+    }
+    val zip = file.readBytes()
+    val sha = MessageDigest.getInstance("SHA-256").digest(zip).joinToString("") { "%02x".format(it) }
+    check(sha == lumenEngineSha256) { "Lumen audio engine: wrong SHA-256 $sha for $url" }
+    lumenEngineLibs.deleteRecursively()
+    ZipInputStream(zip.inputStream()).use { z ->
+        generateSequence { z.nextEntry }.filter { !it.isDirectory && it.name.startsWith("lib/") }.forEach {
+            File(lumenEngineLibs, it.name.removePrefix("lib/")).apply { parentFile.mkdirs() }.writeBytes(z.readBytes())
+        }
+    }
+    file.delete()
+    lumenEngineDone.writeText(sha)
+}
+android.sourceSets.getByName("main").jniLibs.srcDir(lumenEngineLibs)
 
 kotlin {
     compilerOptions {
