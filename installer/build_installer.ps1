@@ -20,7 +20,7 @@ $out = New-Item -ItemType Directory -Force build\installer
 $md = [IO.File]::ReadAllText("$PWD\LICENSE.md", [Text.Encoding]::UTF8)
 $txt = $md -replace '<[^>]+>', '' -replace '\[([^\]]*)\]\(mailto:[^)]*\)', '$1' -replace '\[([^\]]*)\]\(([^)]*)\)', '$1 ($2)' `
            -replace '(?m)^#+\s*', '' -replace '(?m)^>\s?', '' -replace '[*`]', '' `
-           -replace '[☀-➿️]|[\uD800-\uDFFF]', '' -replace '(?m)^[ \t]+', '' -replace '(\r?\n){3,}', "`r`n`r`n"
+           -replace '[\u2600-\u27BF\uFE0F]|\p{Cs}', '' -replace '(?m)^[ \t]+', '' -replace '(\r?\n){3,}', "`r`n`r`n"
 [IO.File]::WriteAllText("$PWD\build\LICENSE.txt", $txt.Trim() + "`r`n", (New-Object Text.UTF8Encoding $true))
 
 $iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
