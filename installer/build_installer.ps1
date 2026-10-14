@@ -41,7 +41,10 @@ Set-Content -Encoding ascii "$stage\portable.txt" @(
   'Delete this file to use %APPDATA% instead.')
 $zip = "$out\Lumen-$version-portable.zip"
 if (Test-Path $zip) { Remove-Item $zip }
-Compress-Archive -Path $stage -DestinationPath $zip
+# Windows' own bsdtar writes zip entries with forward slashes (Compress-Archive in PowerShell 5.1
+# writes backslashes, which unzip on Linux and some tools turn into odd file names).
+& "$env:SystemRoot\System32\tar.exe" -a -cf $zip -C build\portable Lumen
+if ($LASTEXITCODE) { throw "zip failed" }
 
 $files = @("$out\Lumen-Setup-$version.exe", $zip)
 $sums = foreach ($f in $files) { "$((Get-FileHash -Algorithm SHA256 $f).Hash.ToLower())  $(Split-Path $f -Leaf)" }

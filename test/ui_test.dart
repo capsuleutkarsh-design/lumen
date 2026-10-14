@@ -10,6 +10,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:music_player/art/art_sources.dart';
 import 'package:music_player/audio/engine.dart';
 import 'package:music_player/library/library.dart';
 import 'package:music_player/library/models.dart';
@@ -183,7 +184,7 @@ void main() {
             width: w,
             child: PageHero(
               cover: CoverArt.album(a),
-              glow: (null, 'x'),
+              glow: null,
               title: long,
               meta: [longArtist, '2017', '8 songs'],
               badge: a.badge,
@@ -470,20 +471,11 @@ void main() {
     expect(p.didExceedMaxLines, isFalse);
   });
 
-  uiTest('P11: no art = a gradient with the album initials, the same every time', (tester) async {
-    expect(initialsOf('Velvet Static'), 'VS');
-    expect(initialsOf('The Dark Side of the Moon'), 'DS');
-    expect(initialsOf('1989'), '19');
-    expect(noCoverColors('a\u0000b'), noCoverColors('a\u0000b'));
-    expect(noCoverColors('a\u0000b'), isNot(noCoverColors('c\u0000d')));
-    await pumpOne(
-      tester,
-      const SizedBox(
-        width: 200,
-        child: CoverArt(null, seed: 'Velvet Static\u0000X', label: 'Velvet Static'),
-      ),
-    );
-    expect(find.text('VS'), findsOneWidget);
+  uiTest('P11: no art = generated art for the album, the same every time', (tester) async {
+    addTracks(albums: 1);
+    final a = lib.albums.first;
+    await pumpOne(tester, SizedBox(width: 200, child: CoverArt.album(a)));
+    expect(tester.widget<ArtImage>(find.byType(ArtImage)).art, autoArt(a.key, lib.artSourcesOn));
   });
 
   uiTest('Multi-select bar, Ctrl+A and Esc', (tester) async {

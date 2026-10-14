@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../art/art_cache.dart';
 import '../library/library.dart';
 import '../library/models.dart';
 import 'app.dart';
@@ -13,9 +14,9 @@ import 'tracks.dart';
 import 'widgets.dart';
 
 class _Hit {
-  _Hit(this.kind, this.title, this.subtitle, this.cover, this.open, this.tracks, {this.round = false, this.seed, this.song});
+  _Hit(this.kind, this.title, this.subtitle, this.art, this.open, this.tracks, {this.round = false, this.song});
   final String kind, title, subtitle;
-  final String? cover, seed;
+  final Art? art;
   final VoidCallback open;
 
   /// What Play next / Add to queue / the right-click menu act on.
@@ -80,18 +81,10 @@ class _SearchConsoleState extends State<SearchConsole> {
             'Albums',
             [
               for (final a in albums)
-                _Hit(
-                  'Album',
-                  a.title,
-                  '${a.artist} · ${a.badge}',
-                  a.cover,
-                  () {
-                    close();
-                    nav.push('album', a.key);
-                  },
-                  a.tracks,
-                  seed: '${a.title}\u0000${a.artist}',
-                ),
+                _Hit('Album', a.title, '${a.artist} · ${a.badge}', lib.artFor(a.key, a.cover), () {
+                  close();
+                  nav.push('album', a.key);
+                }, a.tracks),
             ],
           ),
         if (artists.isNotEmpty)
@@ -103,14 +96,13 @@ class _SearchConsoleState extends State<SearchConsole> {
                   'Artist',
                   a.name,
                   artistMeta(a),
-                  a.cover,
+                  resolveArt(a.cover, seed: a.name),
                   () {
                     close();
                     nav.push('artist', a.name);
                   },
                   artistTracks(a),
                   round: true,
-                  seed: a.name,
                 ),
             ],
           ),
@@ -123,7 +115,7 @@ class _SearchConsoleState extends State<SearchConsole> {
                   'Song',
                   t.title,
                   '${t.artist} · ${t.album}',
-                  t.cover,
+                  lib.artFor(t.albumKey, t.cover),
                   () {
                     close();
                     // Play the song's album from this song, so what comes next makes sense.
@@ -132,7 +124,6 @@ class _SearchConsoleState extends State<SearchConsole> {
                   },
                   [t],
                   song: t,
-                  seed: '${t.album}\u0000${t.albumArtist}',
                 ),
             ],
           ),
@@ -238,7 +229,7 @@ class _SearchConsoleState extends State<SearchConsole> {
                         color: C.raised1,
                         borderRadius: BorderRadius.circular(R.panel),
                         border: Border.all(color: C.borderStrong),
-                        boxShadow: const [BoxShadow(color: C.shadow, blurRadius: 60, offset: Offset(0, 20))],
+                        boxShadow: [BoxShadow(color: C.shadow, blurRadius: 60, offset: Offset(0, 20))],
                       ),
                       child: Column(
                         mainAxisSize: MainAxisSize.min,
@@ -247,7 +238,7 @@ class _SearchConsoleState extends State<SearchConsole> {
                             padding: const EdgeInsets.fromLTRB(S.x5, S.x2, S.x3, S.x2),
                             child: Row(
                               children: [
-                                const Icon(LucideIcons.search, size: 18, color: C.dim),
+                                Icon(LucideIcons.search, size: 18, color: C.dim),
                                 const SizedBox(width: S.x3),
                                 Expanded(
                                   child: TextField(
@@ -323,14 +314,7 @@ class _SearchConsoleState extends State<SearchConsole> {
       height: 56,
       child: Row(
         children: [
-          CoverArt(
-            h.cover,
-            size: 40,
-            radius: R.tiny + 2,
-            round: h.round,
-            seed: h.seed,
-            label: h.round ? h.title : (h.song?.album ?? h.title),
-          ),
+          CoverArt.art(h.art, size: 40, radius: R.tiny + 2, round: h.round),
           const SizedBox(width: S.x3),
           Expanded(
             child: Column(
@@ -354,7 +338,7 @@ class _SearchConsoleState extends State<SearchConsole> {
           ),
           if (selected) ...[
             Text(h.song != null ? 'Play' : 'Open', style: T.caption),
-            const Padding(
+            Padding(
               padding: EdgeInsets.only(left: S.x2, right: S.x1),
               child: Icon(LucideIcons.cornerDownLeft, size: 14, color: C.faint),
             ),

@@ -6,11 +6,14 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
+import '../art/art_cache.dart';
+import '../art/art_sources.dart';
 import 'db.dart';
 import 'lyrics.dart';
 import 'm3u.dart';
 import 'models.dart';
 import 'scanner.dart';
+import 'smart.dart';
 import 'suggestions.dart';
 
 class Artist {
@@ -69,10 +72,10 @@ class Library extends ChangeNotifier {
   String? lastScan;
 
   void load() {
-    final rows = db.select('SELECT $trackColumns FROM tracks WHERE gone_at IS NULL');
+    final rows = db.select('SELECT $trackColumns FROM tracks WHERE gone_at IS NULL AND hidden = 0');
     // A first scan shows tracks before it has grouped them: group those here meanwhile.
     final blank = db.select(
-      "SELECT id, folder, album, artist, album_artist_tag, compilation, mb_album_id FROM tracks WHERE album_key = '' AND gone_at IS NULL",
+      "SELECT id, folder, album, artist, album_artist_tag, compilation, mb_album_id FROM tracks WHERE album_key = '' AND gone_at IS NULL AND hidden = 0",
     );
     final provisional = blank.isEmpty ? const <int, (String, String)>{} : groupAlbums([for (final r in blank) _groupInput(r)]);
 
@@ -128,6 +131,10 @@ class Library extends ChangeNotifier {
     _artistByName = byName;
     artists = byName.values.toList()..sort((a, b) => (a.sortName ?? a.name).toLowerCase().compareTo((b.sortName ?? b.name).toLowerCase()));
     favourites = {for (final r in db.select('SELECT track_id FROM favourites')) r['track_id'] as int};
+    lowCovers = {for (final r in db.select('SELECT cover FROM cover_quality WHERE problem IS NOT NULL')) r['cover'] as String};
+    coverChoices = {
+      for (final r in db.select('SELECT album_key, choice FROM album_covers')) r['album_key'] as String: r['choice'] as String,
+    };
     _loadPlaylists();
     _home = null;
     _genres = null;
@@ -162,6 +169,46 @@ class Library extends ChangeNotifier {
   /// The artist page for [name]: exact, else the first artist of a credit like "Ana feat. Bo" or "Ana, Bo".
   Artist? artistNamed(String name) =>
       _artistByName[name.toLowerCase()] ?? _artistByName[splitArtist(name, solo: (_) => true).firstOrNull?.toLowerCase() ?? ''];
+
+  // ------------------------------------------------------------ cover art
+
+  /// Cover thumbnails the scanner found small, blocky or blurry.
+  Set<String> lowCovers = {};
+
+  /// Album key -> the user's pick: 'original', or the key of an artwork Lumen draws ([Art.key]).
+  Map<String, String> coverChoices = {};
+
+  /// What an album shows: its own cover, unless it has none or a low-quality one, or the user
+  /// picked other art (Change cover). Otherwise Lumen's art, picked by the album key from the
+  /// art sources that are on (art_sources.dart).
+  Art artFor(String albumKey, String? cover) {
+    final choice = coverChoices[albumKey];
+    if (choice != null && choice != 'original' && knownArt(choice)) return Art.drawn(choice);
+    if (cover != null && (choice == 'original' || !lowCovers.contains(cover))) return Art.file(cover);
+    return autoArt(albumKey, artSourcesOn);
+  }
+
+  /// Settings → Disc & covers: the art sources Lumen picks from (painterly ones by default).
+  Set<String> get artSourcesOn => _sourcesOn ??= sourcesOn(setting('artSources'));
+  Set<String>? _sourcesOn;
+  set artSourcesOn(Set<String> ids) {
+    setSetting('artSources', jsonEncode(ids.toList()));
+    _sourcesOn = ids;
+    notifyListeners();
+  }
+
+  /// Stores the cover picked for an album: 'original', an [Art.key], or null for automatic.
+  /// Only the database changes, never the music files.
+  void setCoverChoice(String albumKey, String? choice) {
+    if (choice == null) {
+      db.execute('DELETE FROM album_covers WHERE album_key = ?', [albumKey]);
+      coverChoices.remove(albumKey);
+    } else {
+      db.execute('INSERT OR REPLACE INTO album_covers(album_key, choice) VALUES(?, ?)', [albumKey, choice]);
+      coverChoices[albumKey] = choice;
+    }
+    notifyListeners();
+  }
 
   // ------------------------------------------------------------ browsing data (cached until the next load)
 
@@ -390,7 +437,11 @@ class Library extends ChangeNotifier {
       skipped ? 1 : 0,
     ]);
     _home = null;
+    plays.value++;
   }
+
+  /// Goes up by one with every play or skip recorded (smart playlists and Statistics listen to it).
+  final plays = ValueNotifier(0);
 
   /// mpv knows the true length of files whose header did not say (e.g. streamed FLAC).
   void fixDuration(int trackId, int ms) {
@@ -398,6 +449,56 @@ class Library extends ChangeNotifier {
   }
 
   String? embeddedLyrics(int trackId) => db.select('SELECT lyrics FROM tracks WHERE id = ?', [trackId]).firstOrNull?['lyrics'] as String?;
+
+  // ------------------------------------------------------------ hidden songs
+
+  /// Hides songs from the library (Duplicates' "Hide from library"). Only a flag in the
+  /// database: the files are never touched, and plays, favourites and playlists are kept.
+  void setHidden(Iterable<int> ids, bool hidden) {
+    final upd = db.prepare('UPDATE tracks SET hidden = ? WHERE id = ?');
+    db.execute('BEGIN');
+    for (final id in ids) {
+      upd.execute([hidden ? 1 : 0, id]);
+    }
+    db.execute('COMMIT');
+    upd.close();
+    load();
+  }
+
+  List<int> get hiddenIds => [for (final r in db.select('SELECT id FROM tracks WHERE hidden = 1 AND gone_at IS NULL')) r['id'] as int];
+
+  // ------------------------------------------------------------ smart playlists
+
+  List<SmartPlaylist> get smartPlaylists => [
+    for (final r in db.select('SELECT id, name, rules FROM smart_playlists ORDER BY created_at, id'))
+      SmartPlaylist.fromRow(r['id'] as int, r['name'] as String, r['rules'] as String),
+  ];
+
+  SmartPlaylist? smartPlaylist(int id) => smartPlaylists.where((s) => s.id == id).firstOrNull;
+
+  /// Saves [s] (id 0 makes a new one) and returns its id.
+  int saveSmart(SmartPlaylist s) {
+    if (s.id == 0) {
+      db.execute('INSERT INTO smart_playlists(name, rules, created_at) VALUES(?, ?, ?)', [
+        s.name,
+        s.rulesJson,
+        DateTime.now().millisecondsSinceEpoch,
+      ]);
+    } else {
+      db.execute('UPDATE smart_playlists SET name = ?, rules = ? WHERE id = ?', [s.name, s.rulesJson, s.id]);
+    }
+    final id = s.id == 0 ? db.lastInsertRowId : s.id;
+    notifyListeners();
+    return id;
+  }
+
+  void deleteSmart(int id) {
+    db.execute('DELETE FROM smart_playlists WHERE id = ?', [id]);
+    notifyListeners();
+  }
+
+  /// The songs [s] matches right now.
+  List<Track> smartTracks(SmartPlaylist s) => s.evaluate(tracks, SmartContext(playStats(), favourites, DateTime.now()));
 
   // ------------------------------------------------------------ favourites
 

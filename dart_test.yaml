@@ -1,0 +1,5 @@
+# Tests tagged mpv load the real libmpv-2.dll. BUILD.bat and CI run them on their own with
+# --concurrency=1: with several loading libmpv next to the other tests, the test runner sometimes
+# failed to start one ("Cannot close sink while adding stream") and the gapless timing test lost its race.
+tags:
+  mpv:

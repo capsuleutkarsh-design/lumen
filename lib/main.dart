@@ -5,15 +5,20 @@ import 'package:media_kit/media_kit.dart';
 import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
+import 'art/art_cache.dart';
+import 'art/art_sources.dart';
 import 'audio/engine.dart';
 import 'library/library.dart';
 import 'platform/licence.dart';
 import 'platform/log.dart';
 import 'platform/media_controls.dart';
+import 'platform/tray.dart';
 import 'platform/update.dart';
 import 'platform/window.dart';
 import 'ui/app.dart';
+import 'ui/mini_player.dart';
 import 'ui/pages/credits.dart';
+import 'ui/theme.dart';
 
 /// Where the database, cover cache and log live:
 /// - `--dart-define=MP_DATA=<folder>` (tests, so they never touch the real library);
@@ -38,6 +43,8 @@ Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error
   // Cover thumbnails are a cache: Local AppData, except under MP_DATA where test data stays in one folder.
   final cache = const String.fromEnvironment('MP_DATA').isEmpty ? (await getApplicationCacheDirectory()).path : null;
   lib = Library(await dataDir(), cacheDir: cache)..load();
+  ArtCache.init(p.join(p.dirname(lib.coverDir), 'art')); // generated covers, next to the thumbnails
+  await loadArtPacks();
   engine = Engine(lib, silent: silent, logLevel: logLevel);
   await engine.init();
   MediaControls(engine);
@@ -67,8 +74,11 @@ Future<void> main(List<String> args) async {
 Future<void> start(String data) async {
   try {
     await boot();
-    await setupWindow(lib, engine.shutdown);
+    loadAppearance();
+    await setupWindow(lib, engine.shutdown, background: C.bg);
     runApp(const App());
+    trayItems.add(('Mini player', () => setMini(!nav.mini)));
+    setupTray(lib, engine).catchError((Object e) => log('Tray icon: $e')); // Lumen works without it
     if (lib.setting('updateCheck') == '1') checkForUpdate();
   } catch (e, s) {
     log('Start-up failed: $e\n$s');

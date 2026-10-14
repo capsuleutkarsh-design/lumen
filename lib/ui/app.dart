@@ -16,16 +16,21 @@ import '../library/library.dart';
 import '../library/models.dart';
 import '../library/tags.dart' show audioExtensions;
 import '../platform/window.dart';
+import 'art_accent.dart';
 import 'lyrics_view.dart';
+import 'mini_player.dart';
 import 'now_playing.dart';
 import 'pages/albums.dart';
 import 'pages/artists.dart';
+import 'pages/browse.dart';
 import 'pages/favourites.dart';
 import 'pages/folders.dart';
 import 'pages/home.dart';
 import 'pages/playlists.dart';
 import 'pages/settings.dart';
+import 'pages/smart_playlists.dart';
 import 'pages/songs.dart';
+import 'pages/stats_page.dart';
 import 'player_bar.dart';
 import 'queue_panel.dart';
 import 'search.dart';
@@ -51,6 +56,9 @@ class Nav extends ChangeNotifier {
   Place get top => _stack.last;
   bool get canBack => _stack.length > 1;
   bool lyrics = false, queue = false, search = false, nowPlaying = false;
+
+  /// Disc mode (only the cover and the spinning disc), and the mini player.
+  bool disc = false, mini = false, miniExpanded = false;
 
   /// Per-page choices that survive navigation (sort order, open folder).
   final memo = <String, Object?>{};
@@ -78,6 +86,7 @@ class Nav extends ChangeNotifier {
   }
 
   void back() {
+    if (disc) return setDisc(false);
     if (nowPlaying) {
       nowPlaying = false;
     } else if (lyrics) {
@@ -116,6 +125,19 @@ class Nav extends ChangeNotifier {
     nowPlaying = v;
     notifyListeners();
   }
+
+  void setDisc(bool v) {
+    disc = v;
+    if (!v) leaveFullScreen();
+    notifyListeners();
+  }
+
+  /// Use [setMini] in mini_player.dart: it also reshapes the window.
+  void setMini(bool v, {bool? expanded}) {
+    mini = v;
+    miniExpanded = expanded ?? miniExpanded;
+    notifyListeners();
+  }
 }
 
 final shotKey = GlobalKey();
@@ -148,23 +170,62 @@ class _Modals extends NavigatorObserver {
 
 final _modals = _Modals();
 
+/// Settings → Theme: 'dark' (the default), 'light' or 'system' (follow Windows).
+final appearance = ValueNotifier<String>('dark');
+
+/// Reads the saved theme and switches the colours to it (before the window shows, so it opens in them).
+void loadAppearance() {
+  appearance.value = lib.setting('appearance') ?? 'dark';
+  C.use(paletteFor(appearance.value, ui.PlatformDispatcher.instance.platformBrightness));
+}
+
+void setAppearance(String mode) {
+  lib.setSetting('appearance', mode);
+  appearance.value = mode;
+}
+
 class App extends StatefulWidget {
   const App({super.key});
   @override
   State<App> createState() => _AppState();
 }
 
-class _AppState extends State<App> {
+class _AppState extends State<App> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_key);
+    WidgetsBinding.instance.addObserver(this);
+    loadAppearance();
+    appearance.addListener(_theme);
+    watchArtAccent();
   }
 
   @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_key);
+    WidgetsBinding.instance.removeObserver(this);
+    appearance.removeListener(_theme);
     super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() => _theme();
+
+  /// Switches the palette and rebuilds every widget (const widgets too, which a plain setState skips).
+  void _theme() {
+    final p = paletteFor(appearance.value, ui.PlatformDispatcher.instance.platformBrightness);
+    if (p == C.palette) return;
+    C.use(p);
+    setState(() {});
+    void dirty(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(dirty);
+    }
+
+    (context as Element).visitChildren(dirty);
+    refreshArtAccent();
+    if (isDesktop) windowManager.setBackgroundColor(C.bg).catchError((_) {});
   }
 
   /// Global keys. Text fields, dialogs, menus and focused buttons/sliders keep their own keys.
@@ -197,6 +258,12 @@ class _AppState extends State<App> {
       nav.toggleLyrics();
     } else if (ctrl && k == LogicalKeyboardKey.keyA) {
       selection.selectAll();
+    } else if (k == LogicalKeyboardKey.keyD && !ctrl && !nav.mini) {
+      nav.setDisc(!nav.disc);
+    } else if (k == LogicalKeyboardKey.f11 && nav.disc) {
+      toggleFullScreen();
+    } else if (k == LogicalKeyboardKey.escape && nav.disc) {
+      nav.setDisc(false);
     } else if (k == LogicalKeyboardKey.escape && nav.nowPlaying) {
       nav.setNowPlaying(false);
     } else if (k == LogicalKeyboardKey.escape && selection.length > 0) {
@@ -240,7 +307,10 @@ class _ShellState extends State<Shell> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) =>
+      ListenableBuilder(listenable: nav, builder: (context, _) => nav.mini ? const MiniPlayer() : _shell(context));
+
+  Widget _shell(BuildContext context) => Scaffold(
     backgroundColor: C.bg,
     body: Listener(
       onPointerDown: _pointer,
@@ -255,70 +325,75 @@ class _ShellState extends State<Shell> {
           listenable: nav,
           builder: (context, _) => Stack(
             children: [
-              Column(
-                children: [
-                  const TitleBar(),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(S.x4, 0, S.x4, S.x4),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          FocusTraversalGroup(child: const Rail()),
-                          const SizedBox(width: S.x4),
-                          Expanded(
-                            child: Column(
-                              children: [
-                                Expanded(
-                                  child: LayoutBuilder(
-                                    builder: (context, c) => Row(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        Expanded(
-                                          child: FocusTraversalGroup(
-                                            child: Stack(
-                                              children: [
-                                                Positioned.fill(
-                                                  child: AnimatedSwitcher(
-                                                    duration: Motion.normal,
-                                                    switchInCurve: Motion.curve,
-                                                    child: KeyedSubtree(
-                                                      key: ValueKey(nav.lyrics ? 'lyrics' : nav.top.id),
-                                                      child: nav.lyrics ? const LyricsView() : _page(nav.top),
+              // Under Now Playing or Disc mode the window is covered: its animations
+              // (the playing bars in a list) pause, so nothing draws there for nothing.
+              TickerMode(
+                enabled: !nav.nowPlaying && !nav.disc,
+                child: Column(
+                  children: [
+                    const TitleBar(),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(S.x4, 0, S.x4, S.x4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            FocusTraversalGroup(child: const Rail()),
+                            const SizedBox(width: S.x4),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: LayoutBuilder(
+                                      builder: (context, c) => Row(
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: [
+                                          Expanded(
+                                            child: FocusTraversalGroup(
+                                              child: Stack(
+                                                children: [
+                                                  Positioned.fill(
+                                                    child: AnimatedSwitcher(
+                                                      duration: Motion.normal,
+                                                      switchInCurve: Motion.curve,
+                                                      child: KeyedSubtree(
+                                                        key: ValueKey(nav.lyrics ? 'lyrics' : nav.top.id),
+                                                        child: nav.lyrics ? const LyricsView() : _page(nav.top),
+                                                      ),
                                                     ),
                                                   ),
-                                                ),
-                                                const Positioned(
-                                                  left: 0,
-                                                  right: 0,
-                                                  bottom: S.x4,
-                                                  child: Center(child: SelectionBar()),
-                                                ),
-                                              ],
+                                                  const Positioned(
+                                                    left: 0,
+                                                    right: 0,
+                                                    bottom: S.x4,
+                                                    child: Center(child: SelectionBar()),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        if (nav.queue) ...[
-                                          const SizedBox(width: S.x4),
-                                          SizedBox(
-                                            width: c.maxWidth < 900 ? 300 : 340,
-                                            child: FocusTraversalGroup(child: const QueuePanel()),
-                                          ),
+                                          if (nav.queue) ...[
+                                            const SizedBox(width: S.x4),
+                                            SizedBox(
+                                              width: c.maxWidth < 900 ? 300 : 340,
+                                              child: FocusTraversalGroup(child: const QueuePanel()),
+                                            ),
+                                          ],
                                         ],
-                                      ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: S.x4),
-                                FocusTraversalGroup(child: const PlayerBar()),
-                              ],
+                                  const SizedBox(height: S.x4),
+                                  FocusTraversalGroup(child: const PlayerBar()),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               Positioned.fill(
                 top: TitleBar.height,
@@ -334,6 +409,7 @@ class _ShellState extends State<Shell> {
                 ),
               ),
               if (nav.search) const SearchConsole(),
+              if (nav.disc) const Positioned.fill(child: DiscMode()),
               if (_dragging) const _DropHint(),
             ],
           ),
@@ -351,6 +427,14 @@ class _ShellState extends State<Shell> {
     'folders' => const FoldersPage(),
     'playlists' => const PlaylistsPage(),
     'playlist' => PlaylistPage(p.arg as int),
+    'smart' => SmartPlaylistPage(p.arg as int),
+    'genres' => const GenresPage(),
+    'genre' => GenrePage(p.arg as String),
+    'years' => const YearsPage(),
+    'composers' => const ComposersPage(),
+    'composer' => ComposerPage(p.arg as String),
+    'duplicates' => const DuplicatesPage(),
+    'stats' => const StatsPage(),
     'favourites' => const FavouritesPage(),
     'settings' => const SettingsPage(),
     _ => const HomePage(),
@@ -600,6 +684,7 @@ class Rail extends StatelessWidget {
     ('artists', LucideIcons.micVocal, 'Artists'),
     ('songs', LucideIcons.music, 'Songs'),
     ('folders', LucideIcons.folder, 'Folders'),
+    ('browse', LucideIcons.compass, 'Browse  (genres, years, composers, duplicates, statistics)'),
     ('playlists', LucideIcons.listMusic, 'Playlists'),
     ('favourites', LucideIcons.heart, 'Favourites'),
   ];
@@ -607,7 +692,8 @@ class Rail extends StatelessWidget {
   static String _section(String page) => switch (page) {
     'album' => 'albums',
     'artist' => 'artists',
-    'playlist' => 'playlists',
+    'playlist' || 'smart' => 'playlists',
+    'genres' || 'genre' || 'years' || 'composers' || 'composer' || 'duplicates' || 'stats' => 'browse',
     _ => page,
   };
 
@@ -645,7 +731,7 @@ class Rail extends StatelessWidget {
                     const AppMark(size: 36),
                     const SizedBox(height: S.x6),
                     for (final (page, icon, label) in items)
-                      item(page, icon, label, () => nav.go(page), active: !nav.lyrics && current == page),
+                      item(page, icon, label, () => nav.go(page == 'browse' ? browseTab : page), active: !nav.lyrics && current == page),
                     const Spacer(),
                     const SizedBox(height: S.x6),
                     item('search', LucideIcons.search, 'Search  (Ctrl+K)', () => nav.setSearch(true)),

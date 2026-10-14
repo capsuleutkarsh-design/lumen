@@ -47,7 +47,7 @@ class ArtistsPage extends StatelessWidget {
                 padding: const EdgeInsets.all(S.x3),
                 child: Column(
                   children: [
-                    CoverArt(a.cover, round: true, seed: a.name, label: a.name),
+                    CoverArt(a.cover, round: true, seed: a.name),
                     const SizedBox(height: S.x3),
                     Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.label, textAlign: TextAlign.center),
                     Text(artistMeta(a), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
@@ -84,8 +84,8 @@ class ArtistPage extends StatelessWidget {
         slivers: [
           SliverToBoxAdapter(
             child: PageHero(
-              cover: CoverArt(a.cover, round: true, seed: a.name, label: a.name),
-              glow: (a.cover, a.name),
+              cover: CoverArt(a.cover, round: true, seed: a.name),
+              glow: resolveArt(a.cover, seed: a.name),
               title: a.name,
               label: 'Artist',
               round: true,

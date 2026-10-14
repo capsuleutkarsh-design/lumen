@@ -1,11 +1,15 @@
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../art/art_cache.dart';
+import '../art/art_sources.dart';
 import '../library/models.dart';
+import 'app.dart';
 import 'theme.dart';
 
 String fmtTime(Duration d) {
@@ -33,16 +37,16 @@ double textHeight(BuildContext context, List<TextStyle> lines) {
 
 /// A raised, 1 px bordered surface.
 class Panel extends StatelessWidget {
-  const Panel({super.key, required this.child, this.radius = R.panel, this.padding = EdgeInsets.zero, this.color = C.raised1});
+  const Panel({super.key, required this.child, this.radius = R.panel, this.padding = EdgeInsets.zero, this.color});
   final Widget child;
   final double radius;
   final EdgeInsetsGeometry padding;
-  final Color color;
+  final Color? color; // C.raised1
   @override
   Widget build(BuildContext context) => Container(
     padding: padding,
     decoration: BoxDecoration(
-      color: color,
+      color: color ?? C.raised1,
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: C.border),
     ),
@@ -67,8 +71,8 @@ class Clickable extends StatefulWidget {
     this.onSecondaryTapDown,
     this.onHover,
     this.radius = R.small,
-    this.hover = C.raised2,
-    this.pressed = C.raised3,
+    this.hover,
+    this.pressed,
     this.selected = false,
     this.selectedColor,
     this.padding = EdgeInsets.zero,
@@ -84,7 +88,7 @@ class Clickable extends StatefulWidget {
   final GestureTapDownCallback? onSecondaryTapDown;
   final ValueChanged<bool>? onHover;
   final double radius;
-  final Color hover, pressed;
+  final Color? hover, pressed; // C.raised2, C.raised3
   final Color? selectedColor;
   final bool selected;
   final EdgeInsetsGeometry padding;
@@ -138,11 +142,11 @@ class _ClickableState extends State<Clickable> {
     final bg = !_enabled
         ? Colors.transparent
         : _down
-        ? widget.pressed
+        ? widget.pressed ?? C.raised3
         : widget.selected
-        ? (widget.selectedColor ?? widget.hover)
+        ? (widget.selectedColor ?? widget.hover ?? C.raised2)
         : _hover
-        ? widget.hover
+        ? widget.hover ?? C.raised2
         : Colors.transparent;
     Widget w = FocusableActionDetector(
       focusNode: _node,
@@ -198,12 +202,12 @@ class _ClickableState extends State<Clickable> {
 }
 
 class IconBtn extends StatelessWidget {
-  const IconBtn(this.icon, {super.key, this.onTap, this.tooltip, this.size = 18, this.box = 36, this.color = C.dim, this.active = false});
+  const IconBtn(this.icon, {super.key, this.onTap, this.tooltip, this.size = 18, this.box = 36, this.color, this.active = false});
   final IconData icon;
   final VoidCallback? onTap;
   final String? tooltip;
   final double size, box;
-  final Color color;
+  final Color? color; // C.dim
   final bool active;
   @override
   Widget build(BuildContext context) => Clickable(
@@ -219,14 +223,14 @@ class IconBtn extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Icon(icon, size: size, color: active ? C.accent : color),
+            Icon(icon, size: size, color: active ? C.accent : color ?? C.dim),
             if (active)
               Positioned(
                 bottom: S.x1 - 1,
                 child: Container(
                   width: 4,
                   height: 4,
-                  decoration: const BoxDecoration(color: C.accent, shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: C.accent, shape: BoxShape.circle),
                 ),
               ),
           ],
@@ -261,8 +265,8 @@ class PillButton extends StatelessWidget {
           onTap: onTap,
           radius: R.pill,
           semanticLabel: label,
-          hover: primary ? const Color(0x1A000000) : C.raised2,
-          pressed: primary ? const Color(0x33000000) : C.raised3,
+          hover: primary ? C.veil(0.1) : C.raised2,
+          pressed: primary ? C.veil(0.2) : C.raised3,
           padding: EdgeInsets.symmetric(horizontal: dense ? S.x3 : S.x5, vertical: dense ? S.x1 + 2 : S.x2 + 2),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -279,72 +283,50 @@ class PillButton extends StatelessWidget {
 
 // ------------------------------------------------------------ cover art
 
-/// FNV-1a: the same album always gets the same colours, run after run.
-int stableHash(String s) {
-  var h = 0x811c9dc5;
-  for (final c in s.codeUnits) {
-    h = ((h ^ c) * 0x01000193) & 0xffffffff;
-  }
-  return h;
+/// What to show for a cover that is not an album's (artists, empty playlists): [path] unless
+/// it is low quality, else generated art seeded by [seed]. Null: nothing to show.
+Art? resolveArt(String? path, {String? seed}) {
+  if (path != null && !lib.lowCovers.contains(path)) return Art.file(path);
+  return seed == null ? null : autoArt(seed, lib.artSourcesOn);
 }
 
-/// The two colours of an album without art: a hue picked by the album + artist.
-(Color, Color) noCoverColors(String seed) {
-  final h = stableHash(seed.toLowerCase());
-  final hue = (h % 360).toDouble();
-  final shift = 20.0 + (h >> 9) % 30;
-  return (HSLColor.fromAHSL(1, hue, 0.42, 0.36).toColor(), HSLColor.fromAHSL(1, (hue + shift) % 360, 0.5, 0.13).toColor());
-}
+/// A song's album art as an image file: its cover, or the generated art (drawn first if needed).
+/// The one place to get a cover as a file (the Windows media overlay, accent colours...).
+Future<String?> coverFile(Track t, {double px = 384}) => ArtCache.ensure(lib.artFor(t.albumKey, t.cover), px);
 
-/// "Velvet Static" -> "VS", "Deep Water (Remastered)" -> "DW", "1989" -> "19".
-String initialsOf(String name) {
-  final words = name
-      .replaceAll(RegExp(r'[\(\[].*?[\)\]]'), ' ')
-      .split(RegExp(r'[\s\-_/·:,.&+]+'))
-      .where((w) => w.isNotEmpty && !const {'the', 'a', 'an', 'of'}.contains(w.toLowerCase()))
-      .toList();
-  if (words.isEmpty) return name.trim().isEmpty ? '♪' : name.trim().characters.first.toUpperCase();
-  if (words.length == 1) return words.first.characters.take(2).toString().toUpperCase();
-  return (words[0].characters.first + words[1].characters.first).toUpperCase();
-}
-
-/// Cover art from the thumbnail cache, or a tinted gradient with the album's
-/// initials when the file has none (most real files).
+/// An album's cover, or the art Lumen draws for it when it has none or only a low-quality one
+/// (and whatever the user picked with Change cover).
 class CoverArt extends StatelessWidget {
-  const CoverArt(this.path, {super.key, this.size, this.radius = R.cover, this.round = false, this.seed, this.label});
-  CoverArt.track(Track t, {super.key, this.size, this.radius = R.cover, this.round = false})
-    : path = t.cover,
-      seed = '${t.album.isEmpty ? t.title : t.album}\u0000${t.albumArtist}',
-      label = t.album.isEmpty ? t.title : t.album;
-  CoverArt.album(Album a, {super.key, this.size, this.radius = R.cover, this.round = false})
-    : path = a.cover,
-      seed = '${a.title}\u0000${a.artist}',
-      label = a.title.isEmpty ? a.first.title : a.title;
-  final String? path;
+  CoverArt(String? path, {super.key, this.size, this.radius = R.cover, this.round = false, String? seed})
+    : art = resolveArt(path, seed: seed);
+  CoverArt.track(Track t, {super.key, this.size, this.radius = R.cover, this.round = false}) : art = lib.artFor(t.albumKey, t.cover);
+  CoverArt.album(Album a, {super.key, this.size, this.radius = R.cover, this.round = false}) : art = lib.artFor(a.key, a.cover);
+  const CoverArt.art(this.art, {super.key, this.size, this.radius = R.cover, this.round = false});
+  final Art? art;
   final double? size;
   final double radius;
   final bool round;
 
-  /// What picks the colours (album + artist) and the initials (album title).
-  final String? seed, label;
+  /// What [CoverArt.track] shows for [t] at [px] pixels: the cover file, or the art Lumen draws
+  /// (drawn when first read), plus a colour for when the image can't be read.
+  /// The accent-from-art reads covers only through here.
+  static (ImageProvider?, Color) source(Track t, int px) {
+    final art = lib.artFor(t.albumKey, t.cover);
+    return (art.file != null ? ResizeImage(FileImage(File(art.file!)), width: px) : GeneratedArtImage(art, px), C.raised3);
+  }
 
   @override
   Widget build(BuildContext context) {
     final r = round ? BorderRadius.circular(R.pill) : BorderRadius.circular(radius);
-    final placeholder = NoCover(seed: seed, label: label, radius: r, round: round);
-    final px = ((size ?? 320) * MediaQuery.devicePixelRatioOf(context)).round();
-    final child = path == null
-        ? placeholder
+    final child = art == null
+        ? DecoratedBox(
+            decoration: BoxDecoration(borderRadius: r, color: C.raised3),
+            child: Center(child: Icon(LucideIcons.music, color: C.faint, size: 18)),
+          )
         : ClipRRect(
             borderRadius: r,
-            child: Image.file(
-              File(path!),
-              fit: BoxFit.cover,
-              cacheWidth: px,
-              gaplessPlayback: true,
-              errorBuilder: (_, _, _) => placeholder,
-              frameBuilder: (_, child, frame, sync) =>
-                  sync ? child : AnimatedOpacity(opacity: frame == null ? 0 : 1, duration: Motion.normal, child: child),
+            child: LayoutBuilder(
+              builder: (context, c) => ArtImage(art!, px: (size ?? c.maxWidth) * MediaQuery.devicePixelRatioOf(context)),
             ),
           );
     return SizedBox(
@@ -355,93 +337,168 @@ class CoverArt extends StatelessWidget {
   }
 }
 
-class NoCover extends StatelessWidget {
-  const NoCover({super.key, this.seed, this.label, required this.radius, this.round = false});
-  final String? seed, label;
-  final BorderRadius radius;
-  final bool round;
+/// Shows [art] at about [px] pixels: the cover file, or generated art once it is drawn
+/// (a quiet placeholder until then; drawing never blocks a frame).
+class ArtImage extends StatefulWidget {
+  const ArtImage(this.art, {super.key, required this.px, this.fit = BoxFit.cover});
+  final Art art;
+  final double px;
+  final BoxFit fit;
+  @override
+  State<ArtImage> createState() => _ArtImageState();
+}
+
+class _ArtImageState extends State<ArtImage> {
+  String? _file;
+  ArtJob? _job;
+
+  @override
+  void initState() {
+    super.initState();
+    _resolve();
+  }
+
+  @override
+  void didUpdateWidget(ArtImage old) {
+    super.didUpdateWidget(old);
+    if (old.art != widget.art || ArtCache.bucket(old.px) != ArtCache.bucket(widget.px)) _resolve();
+  }
+
+  /// Until generated art is drawn at this size, another size of it is shown if drawn,
+  /// else the previous image stays (no flash on a track change).
+  void _resolve() {
+    _job?.release();
+    _job = null;
+    final ready = ArtCache.file(widget.art, widget.px);
+    if (ready != null || ArtCache.dir == null) {
+      _file = ready;
+      return;
+    }
+    _file = [for (final s in ArtCache.sizes) ?ArtCache.file(widget.art, s.toDouble())].lastOrNull ?? _file;
+    final job = _job = ArtCache.want(widget.art, widget.px);
+    job.done.then((f) {
+      if (mounted && _job == job) setState(() => _file = f);
+    });
+  }
+
+  @override
+  void dispose() {
+    _job?.release();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) {
-    if (seed == null) {
-      return DecoratedBox(
-        decoration: BoxDecoration(borderRadius: radius, color: C.raised3),
-        child: const Center(child: Icon(LucideIcons.music, color: C.faint, size: 18)),
-      );
-    }
-    final (a, b) = noCoverColors(seed!);
-    return LayoutBuilder(
-      builder: (context, c) {
-        final w = c.maxWidth.isFinite ? c.maxWidth : 120.0;
-        final text = Text(
-          initialsOf(label ?? ''),
-          maxLines: 1,
-          textScaler: TextScaler.noScaling,
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: w * (round ? 0.32 : 0.3),
-            fontWeight: FontWeight.w600,
-            letterSpacing: -w * 0.01,
-            height: 1,
-            color: Colors.white.withValues(alpha: 0.88),
-          ),
-        );
-        return DecoratedBox(
-          decoration: BoxDecoration(
-            borderRadius: radius,
-            gradient: LinearGradient(colors: [a, b], begin: Alignment.topLeft, end: Alignment.bottomRight),
-          ),
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              borderRadius: radius,
-              gradient: RadialGradient(
-                center: const Alignment(-0.7, -0.8),
-                radius: 1.1,
-                colors: [Colors.white.withValues(alpha: 0.14), Colors.white.withValues(alpha: 0)],
-              ),
-            ),
-            child: round
-                ? Center(child: text)
-                : Padding(
-                    padding: EdgeInsets.fromLTRB(w * 0.1, 0, w * 0.08, w * 0.08),
-                    child: Align(alignment: Alignment.bottomLeft, child: text),
-                  ),
-          ),
-        );
-      },
+    final placeholder = ColoredBox(color: C.raised3, child: const SizedBox.expand());
+    if (_file == null) return placeholder;
+    // On the placeholder colour, so a fading-in image never shows what is behind it.
+    return ColoredBox(
+      color: C.raised3,
+      child: Image.file(
+        File(_file!),
+        fit: widget.fit,
+        width: double.infinity,
+        height: double.infinity,
+        cacheWidth: widget.px.round(),
+        gaplessPlayback: true,
+        errorBuilder: (_, _, _) => placeholder,
+        frameBuilder: (_, child, frame, sync) =>
+            sync ? child : AnimatedOpacity(opacity: frame == null ? 0 : 1, duration: Motion.normal, child: child),
+      ),
     );
   }
 }
 
-/// Blurred cover colour behind a hero, the lyrics or Now Playing. Without art
-/// it glows with the album's gradient colours.
+/// Blurred cover colours behind a hero, the lyrics or Now Playing. The blur is drawn once
+/// into a small image (per art and size) and stretched, so a spinning disc on top never
+/// makes the GPU blur the whole window again on every frame.
 class CoverGlow extends StatelessWidget {
-  const CoverGlow(this.path, {super.key, this.opacity = 0.55, this.seed, this.blur = 70});
-  final String? path, seed;
+  const CoverGlow(this.art, {super.key, this.opacity = 0.55, this.blur = 70});
+  final Art? art;
   final double opacity, blur;
   @override
   Widget build(BuildContext context) {
-    final Widget art;
-    if (path != null) {
-      art = Image.file(File(path!), fit: BoxFit.cover, cacheWidth: 64, gaplessPlayback: true, errorBuilder: (_, _, _) => const SizedBox());
-    } else if (seed != null) {
-      final (a, b) = noCoverColors(seed!);
-      art = DecoratedBox(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(colors: [a, b, a.withValues(alpha: 0.6)], begin: Alignment.topLeft, end: Alignment.bottomRight),
-        ),
-      );
-    } else {
-      return const SizedBox.shrink();
-    }
-    return Positioned.fill(
-      child: ClipRect(
-        child: ImageFiltered(
-          imageFilter: ui.ImageFilter.blur(sigmaX: blur, sigmaY: blur, tileMode: TileMode.decal),
-          child: Opacity(opacity: opacity, child: art),
-        ),
-      ),
-    );
+    if (art == null) return const SizedBox.shrink();
+    return Positioned.fill(child: LayoutBuilder(builder: (context, c) => _Glow(art!, c.biggest, opacity, blur)));
   }
+}
+
+class _Glow extends StatefulWidget {
+  const _Glow(this.art, this.size, this.opacity, this.blur);
+  final Art art;
+  final Size size;
+  final double opacity, blur;
+  @override
+  State<_Glow> createState() => _GlowState();
+}
+
+class _GlowState extends State<_Glow> {
+  ui.Image? _image;
+  Object? _key;
+
+  @override
+  void initState() {
+    super.initState();
+    _bake();
+  }
+
+  @override
+  void didUpdateWidget(_Glow oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    _bake();
+  }
+
+  @override
+  void dispose() {
+    _image?.dispose();
+    super.dispose();
+  }
+
+  Future<void> _bake() async {
+    final w = widget.size.width, h = widget.size.height;
+    if (!w.isFinite || !h.isFinite || w <= 0 || h <= 0) return;
+    // Same art, same look, about the same size (32 px steps): keep the image.
+    final key = (widget.art, widget.opacity, widget.blur, (w / 32).round(), (h / 32).round());
+    if (key == _key) return;
+    _key = key;
+    try {
+      final file = await ArtCache.ensure(widget.art, 64);
+      if (file == null) return;
+      final codec = await ui.instantiateImageCodec(await File(file).readAsBytes(), targetWidth: 64, targetHeight: 64);
+      final art = (await codec.getNextFrame()).image;
+      codec.dispose();
+      final k = 96 / max(w, h); // a 96 px image is plenty for a blur this soft
+      final out = Size((w * k).ceilToDouble(), (h * k).ceilToDouble());
+      final rec = ui.PictureRecorder();
+      final c = Canvas(rec);
+      final s = max(out.width, out.height); // cover-fit the square art
+      c.saveLayer(
+        Offset.zero & out,
+        Paint()
+          ..imageFilter = ui.ImageFilter.blur(sigmaX: widget.blur * k, sigmaY: widget.blur * k, tileMode: TileMode.decal)
+          ..color = Color.fromRGBO(0, 0, 0, widget.opacity),
+      );
+      c.drawImageRect(
+        art,
+        const Offset(0, 0) & const Size(64, 64),
+        Rect.fromCenter(center: out.center(Offset.zero), width: s, height: s),
+        Paint(),
+      );
+      c.restore();
+      final pic = rec.endRecording();
+      final image = await pic.toImage(out.width.toInt(), out.height.toInt());
+      pic.dispose();
+      art.dispose();
+      if (!mounted || key != _key) return image.dispose();
+      final old = _image;
+      setState(() => _image = image);
+      old?.dispose();
+    } catch (_) {} // no glow
+  }
+
+  @override
+  Widget build(BuildContext context) =>
+      RawImage(image: _image, width: widget.size.width, height: widget.size.height, fit: BoxFit.fill, filterQuality: FilterQuality.medium);
 }
 
 /// "FLAC 24/96". Neutral: the coral is kept for what is playing now.
@@ -585,9 +642,9 @@ class SectionTitle extends StatelessWidget {
 
 /// Small animated bars shown on the playing row.
 class PlayingBars extends StatefulWidget {
-  const PlayingBars({super.key, required this.playing, this.color = C.accent});
+  const PlayingBars({super.key, required this.playing, this.color});
   final bool playing;
-  final Color color;
+  final Color? color; // C.accent
   @override
   State<PlayingBars> createState() => _PlayingBarsState();
 }
@@ -626,7 +683,7 @@ class _PlayingBarsState extends State<PlayingBars> with SingleTickerProviderStat
               margin: const EdgeInsets.symmetric(horizontal: 1),
               width: 3,
               height: 4 + 10 * (widget.playing ? (0.5 + 0.5 * _wave((_c.value + phase) % 1)) : 0.3),
-              decoration: BoxDecoration(color: widget.color, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: widget.color ?? C.accent, borderRadius: BorderRadius.circular(2)),
             ),
         ],
       ),

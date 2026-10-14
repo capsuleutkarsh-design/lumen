@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../art/art_cache.dart';
 import '../../library/models.dart';
 import '../app.dart';
+import '../cover_picker.dart';
 import '../theme.dart';
 import '../tracks.dart';
 import '../widgets.dart';
@@ -64,7 +66,7 @@ class _AlbumCardState extends State<AlbumCard> {
                         duration: Motion.normal,
                         curve: Motion.curve,
                         child: DecoratedBox(
-                          decoration: const BoxDecoration(
+                          decoration: BoxDecoration(
                             color: C.text,
                             shape: BoxShape.circle,
                             boxShadow: [BoxShadow(color: C.shadow, blurRadius: 16, offset: Offset(0, 6))],
@@ -74,8 +76,8 @@ class _AlbumCardState extends State<AlbumCard> {
                             tooltip: 'Play',
                             semanticLabel: 'Play ${a.title}',
                             radius: R.pill,
-                            hover: const Color(0x22000000),
-                            child: const SizedBox(width: 40, height: 40, child: Icon(LucideIcons.play, size: 18, color: C.onLight)),
+                            hover: C.veil(0.13),
+                            child: SizedBox(width: 40, height: 40, child: Icon(LucideIcons.play, size: 18, color: C.onLight)),
                           ),
                         ),
                       ),
@@ -110,7 +112,10 @@ Future<void> albumMenu(BuildContext context, Offset at, Album a) => showCollecti
   context,
   at,
   a.tracks,
-  extra: [('artist', LucideIcons.micVocal, 'Go to artist', () => nav.push('artist', a.artist))],
+  extra: [
+    ('artist', LucideIcons.micVocal, 'Go to artist', () => nav.push('artist', a.artist)),
+    ('cover', LucideIcons.image, 'Change cover…', () => showCoverPicker(context, a)),
+  ],
 );
 
 /// A horizontal row of albums with arrow buttons (Wora's carousel). The arrows
@@ -176,7 +181,7 @@ class _AlbumShelfState extends State<AlbumShelf> {
       color: C.raised2.withValues(alpha: 0.92),
       shape: BoxShape.circle,
       border: Border.all(color: C.borderStrong),
-      boxShadow: const [BoxShadow(color: C.shadow, blurRadius: 16)],
+      boxShadow: [BoxShadow(color: C.shadow, blurRadius: 16)],
     ),
     child: IconBtn(i, onTap: onTap, color: C.text, tooltip: tip),
   );
@@ -246,7 +251,7 @@ class SortMenu extends StatelessWidget {
               height: 36,
               child: Row(
                 children: [
-                  SizedBox(width: 24, child: o == value ? const Icon(LucideIcons.check, size: 14, color: C.text) : null),
+                  SizedBox(width: 24, child: o == value ? Icon(LucideIcons.check, size: 14, color: C.text) : null),
                   Text(o, style: T.label),
                 ],
               ),
@@ -328,13 +333,16 @@ class AlbumPage extends StatelessWidget {
           SliverToBoxAdapter(
             child: PageHero(
               cover: CoverArt.album(a, radius: R.card),
-              glow: (a.cover, '${a.title}\u0000${a.artist}'),
+              glow: lib.artFor(a.key, a.cover),
               title: a.title,
               meta: [a.artist, if (a.year != null) '${a.year}', plural(a.tracks.length, 'song'), fmtLong(a.duration)],
               badge: a.badge,
               onArtist: () => nav.push('artist', a.artist),
               tracks: a.tracks,
-              menu: [('artist', LucideIcons.micVocal, 'Go to artist', () => nav.push('artist', a.artist))],
+              menu: [
+                ('artist', LucideIcons.micVocal, 'Go to artist', () => nav.push('artist', a.artist)),
+                ('cover', LucideIcons.image, 'Change cover…', () => showCoverPicker(context, a)),
+              ],
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: S.x4)),
@@ -347,7 +355,7 @@ class AlbumPage extends StatelessWidget {
                   padding: const EdgeInsets.fromLTRB(S.x3, S.x4, S.x3, S.x2),
                   child: Row(
                     children: [
-                      const Icon(LucideIcons.disc, size: 14, color: C.faint),
+                      Icon(LucideIcons.disc, size: 14, color: C.faint),
                       const SizedBox(width: S.x2),
                       Text('Disc $d', style: T.caption.copyWith(fontWeight: FontWeight.w600)),
                     ],
@@ -387,8 +395,8 @@ class PageHero extends StatelessWidget {
   /// The square (or round) cover widget.
   final Widget cover;
 
-  /// (cover path, no-art seed) for the blurred backdrop.
-  final (String?, String?) glow;
+  /// The art blurred behind the header.
+  final Art? glow;
   final String title, label;
   final List<String> meta;
   final List<Track> tracks;
@@ -414,14 +422,14 @@ class PageHero extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            CoverGlow(glow.$1, seed: glow.$2, opacity: 0.8, blur: 80),
-            const Positioned.fill(
+            CoverGlow(glow, opacity: 0.8, blur: 80),
+            Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
                     begin: Alignment.topCenter,
                     end: Alignment.bottomCenter,
-                    colors: [Color(0x26000000), Color(0x8C000000), Color(0xE6000000)],
+                    colors: [C.veil(0.15), C.veil(0.55), C.veil(0.9)],
                     stops: [0, 0.55, 1],
                   ),
                 ),
@@ -436,7 +444,7 @@ class PageHero extends StatelessWidget {
                 final art = DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(round ? R.pill : R.card),
-                    boxShadow: const [BoxShadow(color: C.shadow, blurRadius: 48, offset: Offset(0, 20))],
+                    boxShadow: [BoxShadow(color: C.shadow, blurRadius: 48, offset: Offset(0, 20))],
                   ),
                   child: SizedBox(width: size, height: size, child: cover),
                 );
@@ -457,7 +465,7 @@ class PageHero extends StatelessWidget {
                       runSpacing: S.x1,
                       children: [
                         for (var i = 0; i < meta.length; i++) ...[
-                          if (i > 0) const Text('·', style: T.small),
+                          if (i > 0) Text('·', style: T.small),
                           i == 0 && onArtist != null
                               ? Clickable(
                                   onTap: onArtist,
@@ -550,7 +558,7 @@ class _BackPill extends StatelessWidget {
       radius: R.card - S.x1,
       hover: C.glassBorder,
       padding: const EdgeInsets.symmetric(horizontal: S.x3, vertical: S.x2),
-      child: const Row(
+      child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
           Icon(LucideIcons.arrowLeft, size: 16, color: C.text),

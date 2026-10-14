@@ -68,7 +68,7 @@ class HomePage extends StatelessWidget {
                     padding: const EdgeInsets.all(S.x5),
                     child: Row(
                       children: [
-                        const Icon(LucideIcons.sparkles, size: 20, color: C.dim),
+                        Icon(LucideIcons.sparkles, size: 20, color: C.dim),
                         const SizedBox(width: S.x4),
                         Expanded(
                           child: Text(

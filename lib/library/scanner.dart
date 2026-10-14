@@ -8,6 +8,7 @@ import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
+import '../art/cover_quality.dart';
 import 'db.dart';
 import 'models.dart';
 import 'tags.dart';
@@ -151,7 +152,12 @@ ScanResult scan(String dbPath, String coverDir, List<String> roots, [void Functi
     final moveTo = db.prepare('UPDATE tracks SET path = ? WHERE id = ?');
     final clearArtists = db.prepare('DELETE FROM track_artists WHERE track_id = ?');
     final addArtist = db.prepare('INSERT INTO track_artists(track_id, name, explicit) VALUES(?, ?, ?)');
-    final covers = _Covers(coverDir, walk.images, {for (final v in rows) ?v[4] as String?});
+    final covers = _Covers(
+      coverDir,
+      walk.images,
+      {for (final v in rows) ?v[4] as String?},
+      {for (final r in db.select('SELECT cover FROM cover_quality')) r['cover'] as String},
+    );
     final now = DateTime.now().millisecondsSinceEpoch;
     onProgress?.call(0, todo.length);
     var i = 0;
@@ -225,6 +231,7 @@ ScanResult scan(String dbPath, String coverDir, List<String> roots, [void Functi
           addArtist.execute([id, a, explicit ? 1 : 0]);
         }
       }
+      covers.saveQuality(db);
       db.execute('COMMIT');
       onProgress?.call(i, todo.length);
     }
@@ -273,6 +280,9 @@ void _refreshFolderCovers(Database db, _Covers covers, _Walk walk) {
   final upd = db.prepare('UPDATE tracks SET cover = ? WHERE id = ?');
   _batched(db, changes, (x) => upd.execute([x.$1, x.$2]));
   upd.close();
+  db.execute('BEGIN IMMEDIATE');
+  covers.saveQuality(db);
+  db.execute('COMMIT');
 }
 
 /// Runs [write] for each item in short transactions, so a UI write never waits long.
@@ -421,7 +431,7 @@ void regroup(Database db) {
 /// Cover thumbnails: embedded picture first, else the folder's art (see [_pickImage]),
 /// or its parent's for CD1/Disc 2 folders. Cached once per image.
 class _Covers {
-  _Covers(this.dir, this.images, this.known) {
+  _Covers(this.dir, this.images, this.known, this.checked) {
     Directory(dir).createSync(recursive: true);
   }
   final String dir;
@@ -429,6 +439,22 @@ class _Covers {
 
   /// Thumbnails the database already uses (they exist: [clean] never deletes those).
   final Set<String> known;
+
+  /// Thumbnails whose quality is already in `cover_quality`.
+  final Set<String> checked;
+
+  /// Quality results not written yet: thumbnail -> problem (null when fine).
+  final _quality = <String, String?>{};
+
+  /// Writes the quality results so far (inside the caller's transaction).
+  void saveQuality(Database db) {
+    if (_quality.isEmpty) return;
+    final ins = db.prepare('INSERT OR REPLACE INTO cover_quality(cover, problem) VALUES(?, ?)');
+    _quality.forEach((c, problem) => ins.execute([c, problem]));
+    ins.close();
+    _quality.clear();
+  }
+
   final _folderCache = <String, String?>{};
 
   /// The thumbnail and whether it came from embedded art.
@@ -458,12 +484,18 @@ class _Covers {
 
   String? _fileThumb(_File f) => _thumb(_fnv(Uint8List.fromList('${f.$1}|${f.$3}|${f.$2}'.codeUnits)), File(f.$1).readAsBytesSync);
 
+  /// The thumbnail for an image, made once; its quality (small, blocky, blurry) is checked
+  /// once on the full image, so low-quality covers can get generated art instead.
   String? _thumb(String hash, Uint8List Function() bytes) {
     final out = p.join(dir, '$hash.jpg');
-    if (known.contains(out) || File(out).existsSync()) return out;
+    final exists = known.contains(out) || File(out).existsSync();
+    if (exists && checked.contains(out)) return out;
     try {
       final image = img.decodeImage(bytes());
-      if (image == null) return null;
+      if (image == null) return exists ? out : null;
+      checked.add(out);
+      _quality[out] = imageProblem(image);
+      if (exists) return out;
       final small = image.width > 512 ? img.copyResize(image, width: 512, interpolation: img.Interpolation.average) : image;
       File(out).writeAsBytesSync(img.encodeJpg(small, quality: 88));
       return out;
@@ -478,6 +510,7 @@ class _Covers {
     final used = {
       for (final r in db.select('SELECT DISTINCT cover FROM tracks WHERE gone_at IS NULL AND cover IS NOT NULL')) r['cover'] as String,
     };
+    db.execute('DELETE FROM cover_quality WHERE cover NOT IN (SELECT cover FROM tracks WHERE cover IS NOT NULL)');
     final old = DateTime.now().subtract(const Duration(minutes: 10));
     for (final f in Directory(dir).listSync().whereType<File>()) {
       if (used.contains(f.path)) continue;
