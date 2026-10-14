@@ -11,7 +11,7 @@ var appVersion = 'dev';
 /// "0.2.0-beta" from "0.2.0-beta+3".
 String get shortVersion => appVersion.split('+').first;
 
-const releasesApi = 'https://api.github.com/repos/capsuleutkarsh-design/lumen/releases?per_page=1';
+const releasesApi = 'https://api.github.com/repos/capsuleutkarsh-design/lumen/releases/latest'; // newest non-pre-release (Android test builds are pre-releases)
 
 /// The result of the last check: (what to say, the release page or null).
 final updateStatus = ValueNotifier<(String, String?)?>(null);
@@ -42,7 +42,7 @@ Future<void> checkForUpdate() async {
     final res = await req.close().timeout(const Duration(seconds: 15));
     final body = await res.transform(utf8.decoder).join();
     if (res.statusCode != 200) throw HttpException('GitHub answered ${res.statusCode}');
-    final r = (jsonDecode(body) as List).firstOrNull as Map?;
+    final r = jsonDecode(body) as Map?;
     final tag = r?['tag_name'] as String?;
     updateStatus.value = tag != null && isNewer(tag, appVersion)
         ? ('Lumen ${tag.replaceFirst('v', '')} is available.', r!['html_url'] as String?)
