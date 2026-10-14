@@ -71,7 +71,7 @@ class _CoverPickerState extends State<_CoverPicker> {
                               borderRadius: BorderRadius.circular(R.small),
                               border: Border.all(color: C.borderStrong),
                             ),
-                            child: const Center(child: Icon(LucideIcons.ellipsis, color: C.dim)),
+                            child: Center(child: Icon(LucideIcons.ellipsis, color: C.dim)),
                           ),
                         ),
                         const SizedBox(height: S.x1),

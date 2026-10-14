@@ -1,5 +1,8 @@
 // The engine with the real libmpv (see mpv_harness.dart). Audio goes to mpv's
 // null output; the device tests use the real device in shared mode at volume 0.
+@Tags(['mpv']) // run one file at a time: see dart_test.yaml
+library;
+
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';

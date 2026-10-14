@@ -15,8 +15,6 @@ import 'widgets.dart';
 const _compact = Size(320, 120), _expanded = Size(320, 360);
 bool _wasMaximised = false;
 
-// TODO(extras tray): add a "Mini player" tray item that calls setMini(!nav.mini).
-
 /// Turns the window into the mini player and back.
 Future<void> setMini(bool on) async {
   if (on == nav.mini) return;

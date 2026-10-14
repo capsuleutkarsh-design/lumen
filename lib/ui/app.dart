@@ -16,17 +16,21 @@ import '../library/library.dart';
 import '../library/models.dart';
 import '../library/tags.dart' show audioExtensions;
 import '../platform/window.dart';
+import 'art_accent.dart';
 import 'lyrics_view.dart';
 import 'mini_player.dart';
 import 'now_playing.dart';
 import 'pages/albums.dart';
 import 'pages/artists.dart';
+import 'pages/browse.dart';
 import 'pages/favourites.dart';
 import 'pages/folders.dart';
 import 'pages/home.dart';
 import 'pages/playlists.dart';
 import 'pages/settings.dart';
+import 'pages/smart_playlists.dart';
 import 'pages/songs.dart';
+import 'pages/stats_page.dart';
 import 'player_bar.dart';
 import 'queue_panel.dart';
 import 'search.dart';
@@ -166,23 +170,62 @@ class _Modals extends NavigatorObserver {
 
 final _modals = _Modals();
 
+/// Settings → Theme: 'dark' (the default), 'light' or 'system' (follow Windows).
+final appearance = ValueNotifier<String>('dark');
+
+/// Reads the saved theme and switches the colours to it (before the window shows, so it opens in them).
+void loadAppearance() {
+  appearance.value = lib.setting('appearance') ?? 'dark';
+  C.use(paletteFor(appearance.value, ui.PlatformDispatcher.instance.platformBrightness));
+}
+
+void setAppearance(String mode) {
+  lib.setSetting('appearance', mode);
+  appearance.value = mode;
+}
+
 class App extends StatefulWidget {
   const App({super.key});
   @override
   State<App> createState() => _AppState();
 }
 
-class _AppState extends State<App> {
+class _AppState extends State<App> with WidgetsBindingObserver {
   @override
   void initState() {
     super.initState();
     HardwareKeyboard.instance.addHandler(_key);
+    WidgetsBinding.instance.addObserver(this);
+    loadAppearance();
+    appearance.addListener(_theme);
+    watchArtAccent();
   }
 
   @override
   void dispose() {
     HardwareKeyboard.instance.removeHandler(_key);
+    WidgetsBinding.instance.removeObserver(this);
+    appearance.removeListener(_theme);
     super.dispose();
+  }
+
+  @override
+  void didChangePlatformBrightness() => _theme();
+
+  /// Switches the palette and rebuilds every widget (const widgets too, which a plain setState skips).
+  void _theme() {
+    final p = paletteFor(appearance.value, ui.PlatformDispatcher.instance.platformBrightness);
+    if (p == C.palette) return;
+    C.use(p);
+    setState(() {});
+    void dirty(Element e) {
+      e.markNeedsBuild();
+      e.visitChildren(dirty);
+    }
+
+    (context as Element).visitChildren(dirty);
+    refreshArtAccent();
+    if (isDesktop) windowManager.setBackgroundColor(C.bg).catchError((_) {});
   }
 
   /// Global keys. Text fields, dialogs, menus and focused buttons/sliders keep their own keys.
@@ -384,6 +427,14 @@ class _ShellState extends State<Shell> {
     'folders' => const FoldersPage(),
     'playlists' => const PlaylistsPage(),
     'playlist' => PlaylistPage(p.arg as int),
+    'smart' => SmartPlaylistPage(p.arg as int),
+    'genres' => const GenresPage(),
+    'genre' => GenrePage(p.arg as String),
+    'years' => const YearsPage(),
+    'composers' => const ComposersPage(),
+    'composer' => ComposerPage(p.arg as String),
+    'duplicates' => const DuplicatesPage(),
+    'stats' => const StatsPage(),
     'favourites' => const FavouritesPage(),
     'settings' => const SettingsPage(),
     _ => const HomePage(),
@@ -633,6 +684,7 @@ class Rail extends StatelessWidget {
     ('artists', LucideIcons.micVocal, 'Artists'),
     ('songs', LucideIcons.music, 'Songs'),
     ('folders', LucideIcons.folder, 'Folders'),
+    ('browse', LucideIcons.compass, 'Browse  (genres, years, composers, duplicates, statistics)'),
     ('playlists', LucideIcons.listMusic, 'Playlists'),
     ('favourites', LucideIcons.heart, 'Favourites'),
   ];
@@ -640,7 +692,8 @@ class Rail extends StatelessWidget {
   static String _section(String page) => switch (page) {
     'album' => 'albums',
     'artist' => 'artists',
-    'playlist' => 'playlists',
+    'playlist' || 'smart' => 'playlists',
+    'genres' || 'genre' || 'years' || 'composers' || 'composer' || 'duplicates' || 'stats' => 'browse',
     _ => page,
   };
 
@@ -678,7 +731,7 @@ class Rail extends StatelessWidget {
                     const AppMark(size: 36),
                     const SizedBox(height: S.x6),
                     for (final (page, icon, label) in items)
-                      item(page, icon, label, () => nav.go(page), active: !nav.lyrics && current == page),
+                      item(page, icon, label, () => nav.go(page == 'browse' ? browseTab : page), active: !nav.lyrics && current == page),
                     const Spacer(),
                     const SizedBox(height: S.x6),
                     item('search', LucideIcons.search, 'Search  (Ctrl+K)', () => nav.setSearch(true)),

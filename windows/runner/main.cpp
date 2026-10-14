@@ -28,6 +28,7 @@ BOOL CALLBACK FocusRunning(HWND hwnd, LPARAM exe) {
   const bool same = _wcsicmp(ExePath(process).c_str(), reinterpret_cast<const std::wstring*>(exe)->c_str()) == 0;
   ::CloseHandle(process);
   if (!same) return TRUE;
+  if (!::IsWindowVisible(hwnd)) ::ShowWindow(hwnd, SW_SHOW);  // closed to the tray
   if (::IsIconic(hwnd)) ::ShowWindow(hwnd, SW_RESTORE);
   ::SetForegroundWindow(hwnd);
   return FALSE;

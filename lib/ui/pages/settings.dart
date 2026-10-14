@@ -8,6 +8,7 @@ import '../disc.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'credits.dart';
+import 'settings_extras.dart';
 
 /// Asks for a folder and adds it to the library (Settings, the empty Home, drag and drop).
 Future<void> addMusicFolder() async {
@@ -81,7 +82,7 @@ class SettingsPage extends StatelessWidget {
                         ),
                         child: Row(
                           children: [
-                            const Icon(LucideIcons.folder, size: 16, color: C.dim),
+                            Icon(LucideIcons.folder, size: 16, color: C.dim),
                             const SizedBox(width: S.x3),
                             Expanded(
                               child: Text(f, style: T.label, overflow: TextOverflow.ellipsis),
@@ -143,7 +144,7 @@ class SettingsPage extends StatelessWidget {
                   _card('Sound output', null, [
                     Row(
                       children: [
-                        const SizedBox(width: 140, child: Text('Output device', style: T.label)),
+                        SizedBox(width: 140, child: Text('Output device', style: T.label)),
                         Expanded(
                           child: Container(
                             padding: const EdgeInsets.symmetric(horizontal: S.x3),
@@ -160,7 +161,7 @@ class SettingsPage extends StatelessWidget {
                                 dropdownColor: C.raised2,
                                 borderRadius: BorderRadius.circular(R.small + 2),
                                 style: T.label,
-                                icon: const Icon(LucideIcons.chevronDown, size: 16, color: C.dim),
+                                icon: Icon(LucideIcons.chevronDown, size: 16, color: C.dim),
                                 items: [
                                   for (final d in engine.devices)
                                     DropdownMenuItem(
@@ -178,7 +179,7 @@ class SettingsPage extends StatelessWidget {
                     const SizedBox(height: S.x4),
                     Row(
                       children: [
-                        const Expanded(
+                        Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
@@ -204,7 +205,7 @@ class SettingsPage extends StatelessWidget {
                   _card('Disc & covers', 'Appearance', [
                     Row(
                       children: [
-                        const SizedBox(width: 140, child: Text('Spinning disc', style: T.label)),
+                        SizedBox(width: 140, child: Text('Spinning disc', style: T.label)),
                         Expanded(
                           child: Wrap(
                             spacing: S.x2,
@@ -218,17 +219,19 @@ class SettingsPage extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: S.x2),
-                    const Text(
+                    Text(
                       'Shown beside the cover in Now Playing, Disc mode (D) and the mini player. It turns only while music plays.',
                       style: T.caption,
                     ),
                     const SizedBox(height: S.x4),
-                    const Text(
+                    Text(
                       'Albums without a cover, or with a small or blurry one, get artwork drawn by Lumen. '
                       'Right-click an album and choose Change cover to pick another or keep the original. Your music files are never changed.',
                       style: T.small,
                     ),
                   ]),
+                  _card('Theme', null, [const ThemeSettings()]),
+                  _card('Window', null, [const WindowSettings()]),
                   _card('Keyboard', null, [
                     for (final (k, v) in const [
                       ('Space', 'Play / pause'),
@@ -278,7 +281,8 @@ class SettingsPage extends StatelessWidget {
                         Expanded(
                           child: Text(
                             'Lumen · © 2026 Utkarsh Tripathi · UT Community Licence 2.0\n\n'
-                            'Version $shortVersion · plays through libmpv (media_kit). Design inspired by Wora (MIT). '
+                            'Version $shortVersion · Lumen audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/lumen-audio-engine). '
+                            'Design inspired by Wora (MIT). '
                             'Font: Inter (SIL Open Font License). Icons: Lucide (ISC). No AI. Suggestions come only from what you play here, '
                             'and nothing goes to the internet unless you turn on the update check.',
                             style: T.small,

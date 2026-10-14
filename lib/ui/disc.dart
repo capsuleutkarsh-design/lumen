@@ -52,8 +52,12 @@ class DiscView extends StatefulWidget {
     required this.style,
     this.onCoverTap,
     this.onCoverMenu,
+    this.glow,
   });
   final Art art;
+
+  /// A coloured glow under the cover (the accent from the art), if any.
+  final Color? glow;
 
   /// The song: a new one slides the disc back and out again, even on the same album.
   final Object? id;
@@ -197,7 +201,15 @@ class DiscViewState extends State<DiscView> with TickerProviderStateMixin {
       child: DecoratedBox(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(radius),
-          boxShadow: [BoxShadow(color: C.shadow, blurRadius: s * 0.1, offset: Offset(0, s * 0.04))],
+          boxShadow: [
+            BoxShadow(color: C.shadow, blurRadius: s * 0.1, offset: Offset(0, s * 0.04)),
+            if (widget.glow != null)
+              BoxShadow(
+                color: widget.glow!.withValues(alpha: C.isLight ? 0.35 : 0.45),
+                blurRadius: s * 0.2,
+                spreadRadius: -12,
+              ),
+          ],
         ),
         child: CoverArt.art(widget.art, size: s, radius: radius),
       ),

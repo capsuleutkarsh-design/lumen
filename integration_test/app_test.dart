@@ -3,7 +3,8 @@
 //  2. track changes are gapless (no position gap, audio output never reopened);
 //  3. screenshots of every page.
 // Run (never touches the real library; sound is at volume 0):
-//   flutter test integration_test -d windows --dart-define=MP_DATA=<root>\_scratch\appdata --dart-define=MP_ROOT=<root>
+//   flutter test integration_test/app_test.dart -d windows --dart-define=MP_DATA=<root>\_scratch\appdata --dart-define=MP_ROOT=<root>
+// Every integration test in one command: tool\integration.ps1 (one flutter test per file).
 import 'dart:async';
 import 'dart:io';
 

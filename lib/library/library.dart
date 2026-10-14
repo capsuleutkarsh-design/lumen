@@ -13,6 +13,7 @@ import 'lyrics.dart';
 import 'm3u.dart';
 import 'models.dart';
 import 'scanner.dart';
+import 'smart.dart';
 import 'suggestions.dart';
 
 class Artist {
@@ -71,10 +72,10 @@ class Library extends ChangeNotifier {
   String? lastScan;
 
   void load() {
-    final rows = db.select('SELECT $trackColumns FROM tracks WHERE gone_at IS NULL');
+    final rows = db.select('SELECT $trackColumns FROM tracks WHERE gone_at IS NULL AND hidden = 0');
     // A first scan shows tracks before it has grouped them: group those here meanwhile.
     final blank = db.select(
-      "SELECT id, folder, album, artist, album_artist_tag, compilation, mb_album_id FROM tracks WHERE album_key = '' AND gone_at IS NULL",
+      "SELECT id, folder, album, artist, album_artist_tag, compilation, mb_album_id FROM tracks WHERE album_key = '' AND gone_at IS NULL AND hidden = 0",
     );
     final provisional = blank.isEmpty ? const <int, (String, String)>{} : groupAlbums([for (final r in blank) _groupInput(r)]);
 
@@ -427,7 +428,11 @@ class Library extends ChangeNotifier {
       skipped ? 1 : 0,
     ]);
     _home = null;
+    plays.value++;
   }
+
+  /// Goes up by one with every play or skip recorded (smart playlists and Statistics listen to it).
+  final plays = ValueNotifier(0);
 
   /// mpv knows the true length of files whose header did not say (e.g. streamed FLAC).
   void fixDuration(int trackId, int ms) {
@@ -435,6 +440,56 @@ class Library extends ChangeNotifier {
   }
 
   String? embeddedLyrics(int trackId) => db.select('SELECT lyrics FROM tracks WHERE id = ?', [trackId]).firstOrNull?['lyrics'] as String?;
+
+  // ------------------------------------------------------------ hidden songs
+
+  /// Hides songs from the library (Duplicates' "Hide from library"). Only a flag in the
+  /// database: the files are never touched, and plays, favourites and playlists are kept.
+  void setHidden(Iterable<int> ids, bool hidden) {
+    final upd = db.prepare('UPDATE tracks SET hidden = ? WHERE id = ?');
+    db.execute('BEGIN');
+    for (final id in ids) {
+      upd.execute([hidden ? 1 : 0, id]);
+    }
+    db.execute('COMMIT');
+    upd.close();
+    load();
+  }
+
+  List<int> get hiddenIds => [for (final r in db.select('SELECT id FROM tracks WHERE hidden = 1 AND gone_at IS NULL')) r['id'] as int];
+
+  // ------------------------------------------------------------ smart playlists
+
+  List<SmartPlaylist> get smartPlaylists => [
+    for (final r in db.select('SELECT id, name, rules FROM smart_playlists ORDER BY created_at, id'))
+      SmartPlaylist.fromRow(r['id'] as int, r['name'] as String, r['rules'] as String),
+  ];
+
+  SmartPlaylist? smartPlaylist(int id) => smartPlaylists.where((s) => s.id == id).firstOrNull;
+
+  /// Saves [s] (id 0 makes a new one) and returns its id.
+  int saveSmart(SmartPlaylist s) {
+    if (s.id == 0) {
+      db.execute('INSERT INTO smart_playlists(name, rules, created_at) VALUES(?, ?, ?)', [
+        s.name,
+        s.rulesJson,
+        DateTime.now().millisecondsSinceEpoch,
+      ]);
+    } else {
+      db.execute('UPDATE smart_playlists SET name = ?, rules = ? WHERE id = ?', [s.name, s.rulesJson, s.id]);
+    }
+    final id = s.id == 0 ? db.lastInsertRowId : s.id;
+    notifyListeners();
+    return id;
+  }
+
+  void deleteSmart(int id) {
+    db.execute('DELETE FROM smart_playlists WHERE id = ?', [id]);
+    notifyListeners();
+  }
+
+  /// The songs [s] matches right now.
+  List<Track> smartTracks(SmartPlaylist s) => s.evaluate(tracks, SmartContext(playStats(), favourites, DateTime.now()));
 
   // ------------------------------------------------------------ favourites
 

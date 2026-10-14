@@ -89,7 +89,7 @@ class DataAndUpdates extends StatelessWidget {
         const SizedBox(height: S.x4),
         Row(
           children: [
-            const Expanded(
+            Expanded(
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [

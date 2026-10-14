@@ -37,16 +37,16 @@ double textHeight(BuildContext context, List<TextStyle> lines) {
 
 /// A raised, 1 px bordered surface.
 class Panel extends StatelessWidget {
-  const Panel({super.key, required this.child, this.radius = R.panel, this.padding = EdgeInsets.zero, this.color = C.raised1});
+  const Panel({super.key, required this.child, this.radius = R.panel, this.padding = EdgeInsets.zero, this.color});
   final Widget child;
   final double radius;
   final EdgeInsetsGeometry padding;
-  final Color color;
+  final Color? color; // C.raised1
   @override
   Widget build(BuildContext context) => Container(
     padding: padding,
     decoration: BoxDecoration(
-      color: color,
+      color: color ?? C.raised1,
       borderRadius: BorderRadius.circular(radius),
       border: Border.all(color: C.border),
     ),
@@ -71,8 +71,8 @@ class Clickable extends StatefulWidget {
     this.onSecondaryTapDown,
     this.onHover,
     this.radius = R.small,
-    this.hover = C.raised2,
-    this.pressed = C.raised3,
+    this.hover,
+    this.pressed,
     this.selected = false,
     this.selectedColor,
     this.padding = EdgeInsets.zero,
@@ -88,7 +88,7 @@ class Clickable extends StatefulWidget {
   final GestureTapDownCallback? onSecondaryTapDown;
   final ValueChanged<bool>? onHover;
   final double radius;
-  final Color hover, pressed;
+  final Color? hover, pressed; // C.raised2, C.raised3
   final Color? selectedColor;
   final bool selected;
   final EdgeInsetsGeometry padding;
@@ -142,11 +142,11 @@ class _ClickableState extends State<Clickable> {
     final bg = !_enabled
         ? Colors.transparent
         : _down
-        ? widget.pressed
+        ? widget.pressed ?? C.raised3
         : widget.selected
-        ? (widget.selectedColor ?? widget.hover)
+        ? (widget.selectedColor ?? widget.hover ?? C.raised2)
         : _hover
-        ? widget.hover
+        ? widget.hover ?? C.raised2
         : Colors.transparent;
     Widget w = FocusableActionDetector(
       focusNode: _node,
@@ -202,12 +202,12 @@ class _ClickableState extends State<Clickable> {
 }
 
 class IconBtn extends StatelessWidget {
-  const IconBtn(this.icon, {super.key, this.onTap, this.tooltip, this.size = 18, this.box = 36, this.color = C.dim, this.active = false});
+  const IconBtn(this.icon, {super.key, this.onTap, this.tooltip, this.size = 18, this.box = 36, this.color, this.active = false});
   final IconData icon;
   final VoidCallback? onTap;
   final String? tooltip;
   final double size, box;
-  final Color color;
+  final Color? color; // C.dim
   final bool active;
   @override
   Widget build(BuildContext context) => Clickable(
@@ -223,14 +223,14 @@ class IconBtn extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Icon(icon, size: size, color: active ? C.accent : color),
+            Icon(icon, size: size, color: active ? C.accent : color ?? C.dim),
             if (active)
               Positioned(
                 bottom: S.x1 - 1,
                 child: Container(
                   width: 4,
                   height: 4,
-                  decoration: const BoxDecoration(color: C.accent, shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: C.accent, shape: BoxShape.circle),
                 ),
               ),
           ],
@@ -265,8 +265,8 @@ class PillButton extends StatelessWidget {
           onTap: onTap,
           radius: R.pill,
           semanticLabel: label,
-          hover: primary ? const Color(0x1A000000) : C.raised2,
-          pressed: primary ? const Color(0x33000000) : C.raised3,
+          hover: primary ? C.veil(0.1) : C.raised2,
+          pressed: primary ? C.veil(0.2) : C.raised3,
           padding: EdgeInsets.symmetric(horizontal: dense ? S.x3 : S.x5, vertical: dense ? S.x1 + 2 : S.x2 + 2),
           child: Row(
             mainAxisSize: MainAxisSize.min,
@@ -307,13 +307,21 @@ class CoverArt extends StatelessWidget {
   final double radius;
   final bool round;
 
+  /// What [CoverArt.track] shows for [t] at [px] pixels: the cover file, or the art Lumen draws
+  /// (drawn when first read), plus a colour for when the image can't be read.
+  /// The accent-from-art reads covers only through here.
+  static (ImageProvider?, Color) source(Track t, int px) {
+    final art = lib.artFor(t.albumKey, t.cover);
+    return (art.file != null ? ResizeImage(FileImage(File(art.file!)), width: px) : GeneratedArtImage(art, px), C.raised3);
+  }
+
   @override
   Widget build(BuildContext context) {
     final r = round ? BorderRadius.circular(R.pill) : BorderRadius.circular(radius);
     final child = art == null
         ? DecoratedBox(
             decoration: BoxDecoration(borderRadius: r, color: C.raised3),
-            child: const Center(child: Icon(LucideIcons.music, color: C.faint, size: 18)),
+            child: Center(child: Icon(LucideIcons.music, color: C.faint, size: 18)),
           )
         : ClipRRect(
             borderRadius: r,
@@ -381,7 +389,7 @@ class _ArtImageState extends State<ArtImage> {
 
   @override
   Widget build(BuildContext context) {
-    const placeholder = ColoredBox(color: C.raised3, child: SizedBox.expand());
+    final placeholder = ColoredBox(color: C.raised3, child: const SizedBox.expand());
     if (_file == null) return placeholder;
     // On the placeholder colour, so a fading-in image never shows what is behind it.
     return ColoredBox(
@@ -634,9 +642,9 @@ class SectionTitle extends StatelessWidget {
 
 /// Small animated bars shown on the playing row.
 class PlayingBars extends StatefulWidget {
-  const PlayingBars({super.key, required this.playing, this.color = C.accent});
+  const PlayingBars({super.key, required this.playing, this.color});
   final bool playing;
-  final Color color;
+  final Color? color; // C.accent
   @override
   State<PlayingBars> createState() => _PlayingBarsState();
 }
@@ -675,7 +683,7 @@ class _PlayingBarsState extends State<PlayingBars> with SingleTickerProviderStat
               margin: const EdgeInsets.symmetric(horizontal: 1),
               width: 3,
               height: 4 + 10 * (widget.playing ? (0.5 + 0.5 * _wave((_c.value + phase) % 1)) : 0.3),
-              decoration: BoxDecoration(color: widget.color, borderRadius: BorderRadius.circular(2)),
+              decoration: BoxDecoration(color: widget.color ?? C.accent, borderRadius: BorderRadius.circular(2)),
             ),
         ],
       ),

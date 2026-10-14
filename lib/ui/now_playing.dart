@@ -8,6 +8,7 @@ import 'package:window_manager/window_manager.dart';
 import '../library/models.dart';
 import '../platform/window.dart';
 import 'app.dart';
+import 'art_accent.dart';
 import 'cover_picker.dart';
 import 'disc.dart';
 import 'lyrics_view.dart';
@@ -83,10 +84,10 @@ class _NowPlayingState extends State<NowPlaying> {
           children: [
             // The cover's colours, blurred across the whole window, then darkened.
             CoverGlow(t == null ? null : lib.artFor(t.albumKey, t.cover), opacity: 0.75, blur: 100),
-            const Positioned.fill(
+            Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(
-                  gradient: RadialGradient(center: Alignment(-0.35, -0.2), radius: 1.25, colors: [Color(0x66000000), Color(0xE6000000)]),
+                  gradient: RadialGradient(center: Alignment(-0.35, -0.2), radius: 1.25, colors: [C.veil(0.4), C.veil(0.9)]),
                 ),
               ),
             ),
@@ -166,13 +167,17 @@ class _Player extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            DiscView(
-              art: lib.artFor(t.albumKey, t.cover),
-              id: t.id,
-              playing: engine.playing,
-              size: size,
-              style: style,
-              onCoverMenu: (d) => nowPlayingCoverMenu(context, d.globalPosition, t),
+            // The glow under the cover takes the art's colour (coral without one).
+            ArtAccentBuilder(
+              builder: (context, accent) => DiscView(
+                art: lib.artFor(t.albumKey, t.cover),
+                id: t.id,
+                playing: engine.playing,
+                size: size,
+                style: style,
+                glow: accent,
+                onCoverMenu: (d) => nowPlayingCoverMenu(context, d.globalPosition, t),
+              ),
             ),
             const SizedBox(height: S.x6),
             Row(
@@ -281,9 +286,9 @@ class _DiscModeState extends State<DiscMode> {
           child: Stack(
             children: [
               CoverGlow(art, opacity: 0.7, blur: 120),
-              const Positioned.fill(
+              Positioned.fill(
                 child: DecoratedBox(
-                  decoration: BoxDecoration(gradient: RadialGradient(radius: 1.2, colors: [Color(0x59000000), Color(0xD9000000)])),
+                  decoration: BoxDecoration(gradient: RadialGradient(radius: 1.2, colors: [C.veil(0.35), C.veil(0.85)])),
                 ),
               ),
               Positioned.fill(child: dragArea(const SizedBox.expand())),

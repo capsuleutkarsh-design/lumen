@@ -66,7 +66,7 @@ void main() {
     expect(File(p.join(tmp.path, 'music', 'B', 'cover.jpg')).lengthSync(), jpeg(90, size: 600).length, reason: 'files untouched');
   });
 
-  test('a 0.2.0 database (version 2) upgrades: cover tables, embedded covers read again once', () {
+  test('a database from the 0.2.0 betas (version 2) upgrades: cover tables, embedded covers read again once', () {
     final path = p.join(tmp.path, 'library.db');
     final old = sqlite3.open(path);
     old.execute(migrations[0]);
@@ -81,7 +81,7 @@ void main() {
     }
     old.close();
     final db = openDb(path);
-    expect(db.select('PRAGMA user_version').single.values.first, 3);
+    expect(db.select('PRAGMA user_version').single.values.first, migrations.length);
     expect([for (final r in db.select('SELECT mtime FROM tracks ORDER BY id')) r['mtime']], [0, 777]);
     db.execute("INSERT INTO album_covers VALUES('k', 'original')");
     db.execute("INSERT INTO cover_quality VALUES('c', 'blurry')");

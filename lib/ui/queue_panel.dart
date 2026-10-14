@@ -103,7 +103,7 @@ class QueuePanel extends StatelessWidget {
             if (dragIndex != null)
               ReorderableDragStartListener(
                 index: dragIndex,
-                child: const MouseRegion(
+                child: MouseRegion(
                   cursor: SystemMouseCursors.grab,
                   child: Padding(
                     padding: EdgeInsets.only(right: S.x1),

@@ -7,6 +7,7 @@ import 'dart:isolate';
 import 'dart:ui' as ui;
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/painting.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
@@ -180,3 +181,28 @@ Future<bool> _encodeJpg(Uint8List rgba, int px, String path) => Isolate.run(() {
   File(tmp).renameSync(path);
   return true;
 });
+
+/// Generated art as an [ImageProvider]: read from the cache, or drawn first when it isn't there.
+class GeneratedArtImage extends ImageProvider<GeneratedArtImage> {
+  const GeneratedArtImage(this.art, this.px);
+  final Art art;
+  final int px;
+
+  @override
+  Future<GeneratedArtImage> obtainKey(ImageConfiguration configuration) => SynchronousFuture(this);
+
+  @override
+  ImageStreamCompleter loadImage(GeneratedArtImage key, ImageDecoderCallback decode) => OneFrameImageStreamCompleter(_load(decode));
+
+  Future<ImageInfo> _load(ImageDecoderCallback decode) async {
+    final file = await ArtCache.ensure(art, px.toDouble());
+    if (file == null) throw StateError('no cover cache');
+    final codec = await decode(await ui.ImmutableBuffer.fromFilePath(file), getTargetSize: (_, _) => ui.TargetImageSize(width: px));
+    return ImageInfo(image: (await codec.getNextFrame()).image);
+  }
+
+  @override
+  bool operator ==(Object other) => other is GeneratedArtImage && other.art == art && other.px == px;
+  @override
+  int get hashCode => Object.hash(art, px);
+}

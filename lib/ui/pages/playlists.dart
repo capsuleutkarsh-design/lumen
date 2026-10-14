@@ -9,6 +9,7 @@ import '../theme.dart';
 import '../tracks.dart';
 import '../widgets.dart';
 import 'albums.dart';
+import 'smart_playlists.dart';
 
 const _m3u = XTypeGroup(label: 'Playlists', extensions: ['m3u8', 'm3u']);
 
@@ -99,6 +100,7 @@ class PlaylistsPage extends StatelessWidget {
             ),
           ),
         ),
+        ...smartPlaylistSlivers(context),
         if (lib.playlists.isEmpty)
           const SliverFillRemaining(
             hasScrollBody: false,
@@ -253,7 +255,7 @@ class PlaylistPage extends StatelessWidget {
                     children: [
                       ReorderableDragStartListener(
                         index: i,
-                        child: const MouseRegion(
+                        child: MouseRegion(
                           cursor: SystemMouseCursors.grab,
                           child: Tooltip(
                             message: 'Drag to reorder',
