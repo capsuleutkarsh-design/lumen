@@ -4,13 +4,13 @@ A Windows music player for a lossless library, with Wora's look, and with the fo
 
 ![Wora (top row) next to version 1 (second row), then every other page](images/v1.png)
 
-*Top row: Wora. Second row: the same four screens in version 1. Below: every other page.* Full-size pictures of each page are in `_scratch\shots\` (`01_home.png` … `15_search.png`).
+*Top row: Wora. Second row: the same four screens in version 1. Below: every other page.* Full-size pictures of the main pages are in `docs/images/screens/`.
 
 ## How to run it
 
-- **The app:** `build\windows\x64\runner\Release\music_player.exe`. To move it somewhere else, copy the whole `Release` folder (the `.dll` files and the `data` folder must stay next to the `.exe`).
+- **The app:** `build\windows\x64\runner\Release\lumen.exe`. To move it somewhere else, copy the whole `Release` folder (the `.dll` files and the `data` folder must stay next to the `.exe`).
 - **First start:** open **Settings → Add folder** and choose your music folder. You can add more than one. The library fills in while you watch; you can play music straight away.
-- **Your data** (library database, play counts, playlists, cover thumbnails) lives in `%APPDATA%\com.example\music_player\`. Your music files are only read, never changed.
+- **Your data** (library database, play counts, playlists, cover thumbnails) lives in `%APPDATA%\Utkarsh Tripathi\Lumen\` (since the 0.1.0 rename; see the README's *Your data*). Your music files are only read, never changed.
 
 ### Keys
 
@@ -113,7 +113,7 @@ Only from what you play on this computer:
 - **Unit tests** (`flutter test`, 19 tests): the queue (shuffle without repeats, Previous rule, Play next, repeat modes, shuffle off), the suggestion rules and the play/skip rule, the scanner's incremental rescan (including an unplugged folder), album grouping, LRC lyrics and M3U8.
 - **End-to-end test** (`integration_test\app_test.dart`): starts the real app with a separate test data folder at volume 0, scans both test folders, runs the seek and gapless checks above, then takes the screenshots.
 - `flutter analyze`: no issues. `flutter build windows --release`: builds.
-- **Test music:** `_scratch\testlib` (made with `tool\make_testlib.ps1`: 4 albums, 29 songs, FLAC 16/44.1, 24/96 and 24/192 with and without seek tables, MP3, ALAC, WAV, covers, a 2-disc album, a compilation, an .lrc) and `_scratch\real_music` (Wikimedia Commons recordings and copies in 10 formats). Your own music folders were never read.
+- **Test music** (kept outside the repository): `testlib` (made with `tool\make_testlib.ps1`: 4 albums, 29 songs, FLAC 16/44.1, 24/96 and 24/192 with and without seek tables, MP3, ALAC, WAV, covers, a 2-disc album, a compilation, an .lrc) and `real_music` (Wikimedia Commons recordings and copies in 10 formats). Your own music folders were never read.
 
 ## Good to know
 
@@ -126,7 +126,7 @@ Only from what you play on this computer:
 
 `flutter build windows --release`. Without Windows Developer Mode, `flutter pub get` may stop with "requires symlink support"; then run `powershell -ExecutionPolicy Bypass -File tool\link_plugins.ps1` once (it links the plugins with folder junctions, which need no special rights) and build again.
 
-End-to-end test: `flutter test integration_test -d windows --dart-define=MP_DATA=<project>\_scratch\appdata --dart-define=MP_ROOT=<project>`. Contact sheet: `dart run tool/contact_sheet.dart`.
+End-to-end test: `flutter test integration_test -d windows --dart-define=MP_DATA=<an empty test folder> --dart-define=MP_ROOT=<project>` (it skips itself when the test music is missing; see the top of `integration_test\app_test.dart`). Contact sheet: `dart run tool/contact_sheet.dart`.
 
 ## Left for version 2
 

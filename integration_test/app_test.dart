@@ -38,6 +38,12 @@ Future<double> timePos() async => double.tryParse(await mpv.getProperty('time-po
 
 void main() {
   IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+  // The test music is not in git: testlib is made by tool\make_testlib.ps1; real_music holds the
+  // owner's copies of Wikimedia Commons recordings. Without them the test is skipped, not failed.
+  if (!Directory(testlib).existsSync() || !Directory(realMusic).existsSync()) {
+    test('end-to-end test', () {}, skip: 'needs $testlib and $realMusic');
+    return;
+  }
   final report = StringBuffer();
 
   testWidgets('library scan of both folders', (tester) async {

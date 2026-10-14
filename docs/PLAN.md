@@ -31,6 +31,17 @@ Inspired by [Wora](https://github.com/playwora/wora) (MIT licence: ideas and des
 ### v3: Android
 - The same app for Android: background playback, notification and lock-screen controls, USB DAC support, and folder access.
 
+**Done so far (0.2.0):** the app is called Lumen on the home screen (`android:label`), and the store identity is decided: `applicationId` **`com.capsuleutkarsh.lumen`**. It must not change after the first Google Play upload.
+
+**What wave 3 needs:**
+- `audio_service` for background playback with notification and lock-screen controls, plus a foreground service and its permissions in `AndroidManifest.xml` (`FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_MEDIA_PLAYBACK`, `POST_NOTIFICATIONS`, `READ_MEDIA_AUDIO`).
+- Music access through the Storage Access Framework or MediaStore, not `dart:io` paths; the scanner and the M3U import read through it.
+- No recursive `Directory.watch` on Android: rescan when the app comes back to the front.
+- Hide what Android does not have: WASAPI exclusive mode, the output device picker, the frameless window and the Windows-only settings (data folder, log, single instance).
+- Rename the code package (`namespace` and `MainActivity.kt`'s package) from `com.capsuleutkarsh.music_player` to `com.capsuleutkarsh.lumen`.
+- A release signing key (kept out of git, see `android/.gitignore`) instead of the debug key.
+- USB DAC output and bit-perfect checks on a real phone.
+
 ## Tech
 
 **Flutter (Dart) + `media_kit` (libmpv)** for playback, **SQLite** for the library, and a native tag reader for fast scans.

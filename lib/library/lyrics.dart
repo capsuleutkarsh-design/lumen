@@ -29,13 +29,15 @@ Lyrics parseLyrics(String text) {
   var offset = 0;
   for (final raw in const LineSplitter().convert(text)) {
     final o = _offset.firstMatch(raw.trim());
-    if (o != null) offset = int.parse(o.group(1)!);
+    if (o != null) offset = int.tryParse(o.group(1)!) ?? 0;
     final stamps = _stamp.allMatches(raw).toList();
     if (stamps.isEmpty) continue;
     final words = raw.substring(stamps.last.end).trim();
     for (final m in stamps) {
       final frac = m.group(3) ?? '0';
-      final ms = int.parse(m.group(1)!) * 60000 + int.parse(m.group(2)!) * 1000 + int.parse(frac.padRight(3, '0').substring(0, 3));
+      final (mm, ss) = (int.tryParse(m.group(1)!), int.tryParse(m.group(2)!)); // absurd stamps are skipped, not fatal
+      if (mm == null || ss == null) continue;
+      final ms = mm * 60000 + ss * 1000 + int.parse(frac.padRight(3, '0').substring(0, 3));
       lines.add((Duration(milliseconds: (ms - offset).clamp(0, 1 << 40)), words));
     }
   }
@@ -50,11 +52,14 @@ Lyrics parseLyrics(String text) {
 Lyrics? loadLyrics(String trackPath, String? embedded) {
   final lrc = File('${p.withoutExtension(trackPath)}.lrc');
   if (lrc.existsSync()) {
-    return parseLyrics(decodeText(lrc.readAsBytesSync()).replaceFirst('\uFEFF', ''));
+    return parseLyrics(readText(lrc.path));
   }
   if (embedded != null && embedded.trim().isNotEmpty) return parseLyrics(embedded);
   return null;
 }
+
+/// A text file (.lrc, .m3u) decoded by [decodeText], without a byte order mark.
+String readText(String path) => decodeText(File(path).readAsBytesSync()).replaceFirst('﻿', '');
 
 /// Text file bytes: UTF-16 with a byte order mark, else UTF-8, else Latin-1.
 String decodeText(List<int> b) {

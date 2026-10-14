@@ -2,9 +2,11 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../platform/update.dart';
 import '../app.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'credits.dart';
 
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
@@ -218,6 +220,7 @@ class SettingsPage extends StatelessWidget {
                         ),
                       ),
                   ]),
+                  _card('Data and updates', null, [const DataAndUpdates()]),
                   _card('About', null, [
                     Row(
                       children: [
@@ -226,13 +229,16 @@ class SettingsPage extends StatelessWidget {
                         Expanded(
                           child: Text(
                             'Lumen · © 2026 Utkarsh Tripathi · UT Community Licence 2.0\n\n'
-                            'Version 0.1.1 beta · plays through libmpv (media_kit). Design inspired by Wora (MIT). '
-                            'Font: Inter (SIL Open Font License). Icons: Lucide (ISC). No AI, no internet: suggestions come only from what you play here.',
+                            'Version $shortVersion · plays through libmpv (media_kit). Design inspired by Wora (MIT). '
+                            'Font: Inter (SIL Open Font License). Icons: Lucide (ISC). No AI. Suggestions come only from what you play here, '
+                            'and nothing goes to the internet unless you turn on the update check.',
                             style: T.small,
                           ),
                         ),
                       ],
                     ),
+                    const SizedBox(height: S.x4),
+                    PillButton('Credits', icon: LucideIcons.award, onTap: () => showCredits(context)),
                   ]),
                 ],
               ),
