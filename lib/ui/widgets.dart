@@ -361,12 +361,13 @@ class _ArtImageState extends State<ArtImage> {
   @override
   void didUpdateWidget(ArtImage old) {
     super.didUpdateWidget(old);
-    if (old.art != widget.art || ArtCache.bucket(old.px) != ArtCache.bucket(widget.px)) _resolve();
+    if (old.art != widget.art || ArtCache.bucket(old.px) != ArtCache.bucket(widget.px)) _resolve(sameArt: old.art == widget.art);
   }
 
-  /// Until generated art is drawn at this size, another size of it is shown if drawn,
-  /// else the previous image stays (no flash on a track change).
-  void _resolve() {
+  /// Until generated art is drawn at this size, another size of it is shown if drawn. Else the
+  /// previous image stays only if it is this same art (a resize); new art starts on the plain
+  /// tile, never on the previous album's cover.
+  void _resolve({bool sameArt = false}) {
     _job?.release();
     _job = null;
     final ready = ArtCache.file(widget.art, widget.px);
@@ -374,7 +375,7 @@ class _ArtImageState extends State<ArtImage> {
       _file = ready;
       return;
     }
-    _file = [for (final s in ArtCache.sizes) ?ArtCache.file(widget.art, s.toDouble())].lastOrNull ?? _file;
+    _file = [for (final s in ArtCache.sizes) ?ArtCache.file(widget.art, s.toDouble())].lastOrNull ?? (sameArt ? _file : null);
     final job = _job = ArtCache.want(widget.art, widget.px);
     job.done.then((f) {
       if (mounted && _job == job) setState(() => _file = f);

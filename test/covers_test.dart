@@ -1,8 +1,10 @@
 // Generated covers in the app: when they are used, Change cover, the 0.2.0 database
 // upgrade, and the disc's ticker stopping on pause.
+import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_player/art/art_cache.dart';
 import 'package:music_player/art/art_sources.dart';
@@ -139,22 +141,105 @@ void main() {
     expect(art, Art.drawn('${GenerativeCover.styleOf(seed).name}@${seed.toRadixString(16)}'));
   });
 
-  test('an image pack: found in the assets, picked by hash, drawn square into the cache, credited', () async {
+  test('the packs: found in the assets, credited, and the three painterly sources picked equally often', () async {
     await loadArtPacks();
-    final sample = artSources.firstWhere((s) => s.id == 'sample');
-    expect(sample.images, ['dunes.jpg', 'lanterns.jpg', 'tide.jpg']);
-    final picks = {
-      for (var i = 0; i < 30; i++) autoArt('album $i', {'sample'}),
-    };
-    expect(picks, {for (final f in sample.images) Art.drawn('pack:sample/$f')}, reason: 'every image gets used');
-    expect(creditFor(const Art.drawn('pack:sample/dunes.jpg')), 'Dunes (sample) — Drawn by Lumen, 2026');
-    expect(knownArt('pack:sample/dunes.jpg'), isTrue);
+    ArtSource src(String id) => artSources.firstWhere((s) => s.id == id);
+    expect(src('masterpieces').images, hasLength(100));
+    expect(src('illustrated').images, hasLength(100));
+    expect(artSources.map((s) => s.id), isNot(contains('sample')), reason: 'the sample pack is not shipped');
+    expect(creditFor(const Art.drawn('pack:masterpieces/vangogh_starry_night.jpg')), 'The Starry Night — Vincent van Gogh, 1889');
+    expect(creditFor(const Art.drawn('pack:illustrated/illus_001.jpg')), 'Lavender Bison — Made with Magnific AI for Lumen');
+    expect(knownArt('pack:illustrated/illus_100.jpg'), isTrue);
     expect(knownArt('pack:gone/x.jpg'), isFalse);
+    // A big library with the defaults: about a third each, abstract (off) never, and every pack image used.
+    final count = <String, int>{}, used = <String>{};
+    for (var i = 0; i < 3000; i++) {
+      final key = autoArt('artist $i\u0000album $i\u0000d:/music/$i', sourcesOn(null)).key!;
+      if (key.startsWith('pack:')) used.add(key);
+      final id = key.startsWith('pack:')
+          ? key.substring(5, key.indexOf('/'))
+          : GenerativeCover.painted.any((s) => key.startsWith('${s.name}@'))
+          ? 'painted'
+          : 'abstract';
+      count[id] = (count[id] ?? 0) + 1;
+    }
+    expect(count.keys.toSet(), {'masterpieces', 'illustrated', 'painted'});
+    for (final n in count.values) {
+      expect(n, inInclusiveRange(900, 1100), reason: '$count');
+    }
+    expect(used, hasLength(200));
+  });
 
+  test('a pack image is drawn square into the cache (a wide one is cropped), from a tiny test-only pack', () async {
+    final wide = img.Image(width: 90, height: 60);
+    for (final px in wide) {
+      px.setRgb(px.x * 2, px.y * 3, 120);
+    }
+    final pack = _Bundle({
+      'assets/covers/illustrated/wide.jpg': img.encodeJpg(wide),
+      'assets/covers/illustrated/credits.json': utf8.encode('{"wide.jpg": {"title": "Wide", "credit": "Test fixture"}}'),
+    });
+    await loadArtPacks(pack);
+    expect(artSources.firstWhere((s) => s.id == 'illustrated').images, ['wide.jpg']);
+    expect(creditFor(const Art.drawn('pack:illustrated/wide.jpg')), 'Wide — Test fixture');
+    ArtCache.assets = pack;
     ArtCache.init(p.join(tmp.path, 'art'));
-    final file = await ArtCache.ensure(const Art.drawn('pack:sample/dunes.jpg'), 128); // a 900 x 600 image
+    final file = await ArtCache.ensure(const Art.drawn('pack:illustrated/wide.jpg'), 128);
     final im = img.decodeJpg(File(file!).readAsBytesSync())!;
     expect((im.width, im.height), (128, 128));
     ArtCache.dir = null;
+    ArtCache.assets = rootBundle;
+    await loadArtPacks();
   });
+
+  test('the art cache is capped: old versions, then the least recently used files go first', () async {
+    final dir = Directory(p.join(tmp.path, 'art'))..createSync();
+    File f(String name) => File(p.join(dir.path, name));
+    final v = 'v${ArtCache.version}_';
+    f('v1_old_128.jpg').writeAsBytesSync(List.filled(10, 0));
+    final names = [for (final n in ['a', 'b', 'c', 'd']) '$v${n}_128.jpg'];
+    for (final n in names) {
+      f(n).writeAsBytesSync(List.filled(100, 0));
+    }
+    for (final (i, n) in names.indexed) {
+      f(n).setLastAccessedSync(DateTime(2026, 1, 1 + i));
+    }
+    f(names[1]).setLastAccessedSync(DateTime(2026, 2, 1)); // b was used last
+    await ArtCache.trim(dir.path, 250);
+    expect(dir.listSync().map((e) => p.basename(e.path)).toSet(), {'${v}b_128.jpg', '${v}d_128.jpg'});
+  });
+
+  test("a moved music folder keeps its albums' automatic art and Change cover choice", () {
+    var lib = scanned();
+    album(Library l, String title) => l.albums.firstWhere((x) => x.title == title);
+    final c = album(lib, 'Album C');
+    final autoC = lib.artFor(c.key, c.cover);
+    lib.setCoverChoice(album(lib, 'Album A').key, 'riso@4d2');
+    lib.db.close();
+    Directory(p.join(tmp.path, 'music')).renameSync(p.join(tmp.path, 'moved'));
+    scan(p.join(tmp.path, 'library.db'), p.join(tmp.path, 'covers'), [p.join(tmp.path, 'moved')]);
+    lib = Library(tmp.path)..load();
+    final c2 = album(lib, 'Album C'), a2 = album(lib, 'Album A');
+    expect(c2.key, isNot(c.key), reason: 'the album key has the folder in it');
+    expect(lib.artFor(c2.key, c2.cover), autoC);
+    expect(lib.artFor(a2.key, a2.cover), const Art.drawn('riso@4d2'));
+    lib.db.close();
+  });
+}
+
+/// A tiny asset bundle for tests: the given files plus their AssetManifest.
+class _Bundle extends CachingAssetBundle {
+  _Bundle(this.files);
+  final Map<String, List<int>> files;
+  @override
+  Future<ByteData> load(String key) async {
+    if (key == 'AssetManifest.bin') {
+      return const StandardMessageCodec().encodeMessage({
+        for (final f in files.keys) f: [{'asset': f}],
+      })!;
+    }
+    final bytes = files[key];
+    if (bytes == null) throw FlutterError('no asset $key');
+    return ByteData.sublistView(Uint8List.fromList(bytes));
+  }
 }

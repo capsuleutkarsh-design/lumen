@@ -59,3 +59,9 @@ You may replace the LGPL libraries (libmpv, FFmpeg) with your own builds: `libmp
 `assets/covers/masterpieces/credits.json` lists every file with its title, artist, year, the artist's death year, the Commons page it came from and its licence tag. Lumen shows the title and artist when one of these is used as a cover. Artists: Vincent van Gogh, Katsushika Hokusai, Utagawa Hiroshige, Gustav Klimt, J. M. W. Turner, Caspar David Friedrich, Georges Seurat, Paul Cézanne, Pierre-Auguste Renoir, Edgar Degas, Paul Gauguin, Alfred Sisley, Camille Pissarro, Berthe Morisot, Gustave Caillebotte, Henri-Edmond Cross, Odilon Redon, Henri Rousseau, Arnold Böcklin, Mikalojus Konstantinas Čiurlionis, John William Waterhouse, John Atkinson Grimshaw, James McNeill Whistler, Ivan Aivazovsky, Peder Balke, Winslow Homer, Gustave Courbet, Frederic Edwin Church, Albert Bierstadt, Thomas Cole, Isaac Levitan, Ivan Shishkin, Egon Schiele, Vilhelm Hammershøi, Franz Marc, August Macke, Ogata Kōrin, Itō Jakuchū, Albrecht Dürer, Rachel Ruysch, Ernst Haeckel and Pierre-Joseph Redouté.
 
 The painted cover styles (`lib/art/painted.dart`) are drawn by Lumen's own code and copy no artwork.
+
+## Cover art: Illustrated pack
+
+Illustrated cover pack: made for Lumen by Utkarsh Tripathi with Magnific AI.
+
+`assets/covers/illustrated/` holds 100 storybook illustrations (768 px), made for Lumen by its author with [Magnific AI](https://www.magnific.com) on his own account. `assets/covers/illustrated/credits.json` lists each file with its title, the prompt it was made from, the date and the line "Made with Magnific AI for Lumen", which Lumen shows when one is used as a cover.

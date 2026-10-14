@@ -175,14 +175,14 @@ class Library extends ChangeNotifier {
   /// Cover thumbnails the scanner found small, blocky or blurry.
   Set<String> lowCovers = {};
 
-  /// Album key -> the user's pick: 'original', or the key of an artwork Lumen draws ([Art.key]).
+  /// Art key ([artKeyOf] the album key) -> the user's pick: 'original', or the key of an artwork Lumen draws ([Art.key]).
   Map<String, String> coverChoices = {};
 
   /// What an album shows: its own cover, unless it has none or a low-quality one, or the user
   /// picked other art (Change cover). Otherwise Lumen's art, picked by the album key from the
   /// art sources that are on (art_sources.dart).
   Art artFor(String albumKey, String? cover) {
-    final choice = coverChoices[albumKey];
+    final choice = coverChoices[artKeyOf(albumKey)];
     if (choice != null && choice != 'original' && knownArt(choice)) return Art.drawn(choice);
     if (cover != null && (choice == 'original' || !lowCovers.contains(cover))) return Art.file(cover);
     return autoArt(albumKey, artSourcesOn);
@@ -200,6 +200,7 @@ class Library extends ChangeNotifier {
   /// Stores the cover picked for an album: 'original', an [Art.key], or null for automatic.
   /// Only the database changes, never the music files.
   void setCoverChoice(String albumKey, String? choice) {
+    albumKey = artKeyOf(albumKey); // the same album in a moved folder keeps it
     if (choice == null) {
       db.execute('DELETE FROM album_covers WHERE album_key = ?', [albumKey]);
       coverChoices.remove(albumKey);

@@ -43,7 +43,7 @@ class _CoverPickerState extends State<_CoverPicker> {
 
   @override
   Widget build(BuildContext context) {
-    final a = widget.album, key = a.key;
+    final a = widget.album, key = artKeyOf(a.key); // the album's art identity (survives a moved folder)
     final current = lib.artFor(key, a.cover);
     final auto = autoArt(key, lib.artSourcesOn);
     final credit = creditFor(current);

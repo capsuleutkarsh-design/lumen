@@ -51,6 +51,9 @@ abstract final class ArtCache {
   /// The cache folder (Local AppData\...\art). Null in widget tests: generated art stays a placeholder.
   static String? dir;
 
+  /// Where pack images are read from (a test can hand in its own bundle).
+  static AssetBundle assets = rootBundle;
+
   /// Bump when the art code changes, so files drawn by older code are not shown (or kept).
   static const version = 3;
   static const sizes = [128, 384, 1024];
@@ -59,16 +62,37 @@ abstract final class ArtCache {
 
   static String _path(String key, int px) => p.join(dir!, 'v${version}_${key.replaceAll(RegExp(r'[^\w@.-]'), '_')}_$px.jpg');
 
-  /// Sets the folder and removes files drawn by an older [version] (in the background).
+  /// The cache is kept under this size (at start): the files used longest ago go first.
+  static const maxBytes = 300 << 20;
+
+  /// Sets the folder and tidies it in the background (see [trim]).
   static void init(String folder) {
     dir = folder;
     Directory(folder).createSync(recursive: true);
-    unawaited(() async {
-      await for (final f in Directory(folder).list()) {
-        final name = p.basename(f.path);
-        if (f is File && (!name.startsWith('v${version}_') || name.endsWith('.tmp'))) await f.delete().catchError((_) => f);
+    unawaited(trim(folder));
+  }
+
+  /// Removes files drawn by an older [version], then the least recently used ones while the
+  /// folder is over [max] bytes. "Used" is the file's last-access time, which [file] sets.
+  static Future<void> trim(String folder, [int max = maxBytes]) async {
+    final keep = <(File, FileStat)>[];
+    await for (final f in Directory(folder).list()) {
+      if (f is! File) continue;
+      final name = p.basename(f.path);
+      if (!name.startsWith('v${version}_') || name.endsWith('.tmp')) {
+        await f.delete().catchError((_) => f);
+      } else {
+        keep.add((f, await f.stat()));
       }
-    }());
+    }
+    var total = keep.fold(0, (n, e) => n + e.$2.size);
+    keep.sort((a, b) => a.$2.accessed.compareTo(b.$2.accessed));
+    for (final (f, st) in keep) {
+      if (total <= max) break;
+      _ready.remove(f.path);
+      await f.delete().catchError((_) => f);
+      total -= st.size;
+    }
   }
 
   static final _ready = <String>{};
@@ -87,6 +111,7 @@ abstract final class ArtCache {
     if (_ready.contains(path)) return path;
     if (!_jobs.containsKey(path) && File(path).existsSync()) {
       _ready.add(path);
+      File(path).setLastAccessed(DateTime.now()).ignore(); // used: [trim] keeps it longer (once per run is enough)
       return path;
     }
     return null;
@@ -174,7 +199,7 @@ abstract final class ArtCache {
     final rec = ui.PictureRecorder();
     final c = Canvas(rec);
     if (key.startsWith('pack:')) {
-      final data = await rootBundle.load('assets/covers/${key.substring(5)}');
+      final data = await assets.load('assets/covers/${key.substring(5)}');
       final codec = await ui.instantiateImageCodecWithSize(
         await ui.ImmutableBuffer.fromUint8List(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes)),
         getTargetSize: (w, h) {

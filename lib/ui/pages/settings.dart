@@ -178,7 +178,8 @@ class SettingsPage extends StatelessWidget {
                     ),
                     const SizedBox(height: S.x3),
                     Text(
-                      'Albums without a cover, or with a small or blurry one, get artwork drawn by Lumen. '
+                      'Albums without a cover, or with a small or blurry one, get artwork from the collections that are on: '
+                      'public-domain paintings (Masterpieces), styles Lumen paints itself (Painted), illustrations made for Lumen (Illustrated) and code-drawn shapes (Abstract). '
                       'Right-click an album and choose Change cover to pick another or keep the original. Your music files are never changed.',
                       style: T.small,
                     ),

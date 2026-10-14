@@ -163,6 +163,8 @@ class DiscViewState extends State<DiscView> with TickerProviderStateMixin {
     }
     final px = _px(widget.size);
     final style = widget.style;
+    // The old disc tucks away while the new one is drawn, so it never shows the previous album for long.
+    final tucked = _disc != null && !_still ? _slide.reverse() : null;
     ui.Image? cover;
     try {
       final file = await ArtCache.ensure(widget.art, px.toDouble());
@@ -178,7 +180,7 @@ class DiscViewState extends State<DiscView> with TickerProviderStateMixin {
       disc.dispose();
       return;
     }
-    if (_disc != null && !_still) await _slide.reverse();
+    await tucked?.orCancel.catchError((_) {}); // a newer load may take the animation over
     if (!mounted || gen != _gen) {
       disc.dispose();
       return;

@@ -1,10 +1,12 @@
 // Where Lumen's cover art comes from: styles drawn by code (lib/art/) or bundled image
 // packs (assets/covers/<pack>/*.jpg + credits.json). The automatic art of an album is
-// picked by a hash of its key over the items of the sources that are on.
+// picked by a hash of its key: first one of the sources that are on (each equally often),
+// then one of that source's items.
 //
 // Adding a pack: put the images in assets/covers/<pack>/, list the folder in pubspec.yaml
 // (assets:), and add `ArtSource.pack('<pack>', 'Name')` below. credits.json is optional:
 //   {"starry-night.jpg": {"title": "The Starry Night", "artist": "Vincent van Gogh", "year": 1889}}
+// ("credit": "…" in place of artist and year shows that line instead.)
 // Adding a code style: add it to CoverStyle and to a source's style list below.
 import 'dart:convert';
 
@@ -28,14 +30,14 @@ class ArtSource {
   List<String> images = [];
   Map<String, Map<String, Object?>> credits = {};
 
-  /// Its share of the automatic choice: each image counts once, each code style 8 times.
-  int get weight => pack ? images.length : styles.length * 8;
+  /// How many artworks it has (0: a pack that is not installed).
+  int get weight => pack ? images.length : styles.length;
 
   /// The [n]th artwork of this source for an album; n = 0 is the album's automatic one.
   /// Packs list every image in order for n >= 1.
   Art item(String albumKey, int n) {
     final seed = GenerativeCover.seedFor(n == 0 ? albumKey : '$albumKey#$n');
-    if (pack) return Art.drawn('pack:$id/${images[(n == 0 ? GenerativeCover.seedFor('$albumKey/image') : n - 1) % images.length]}');
+    if (pack) return Art.drawn('pack:$id/${images[n == 0 ? pick(GenerativeCover.seedFor('$albumKey/image'), images.length) : (n - 1) % images.length]}');
     // The abstract styles keep the art the owner approved: the seed's own style when it is in this source.
     final own = GenerativeCover.styleOf(seed);
     final style = styles.contains(own) ? own : styles[(seed >>> 8) % styles.length];
@@ -61,7 +63,6 @@ final artSources = [
     CoverStyle.glitch,
     CoverStyle.aurora,
   ]),
-  ArtSource.pack('sample', 'Sample pack'), // a small test pack, proves the image-pack path
 ];
 
 ArtSource get _abstract => artSources.firstWhere((s) => s.id == 'abstract');
@@ -84,15 +85,22 @@ List<ArtSource> sourcesInUse(Set<String> on) {
   return pool.isEmpty ? [_abstract] : pool;
 }
 
-/// The art Lumen picks for an album: a hash of its key over the items of [sourcesInUse].
+/// One of [n] by a 32-bit hash, from its high bits (FNV's low bits follow the key's last
+/// characters too closely: `hash % n` left half of a pack unused).
+int pick(int hash, int n) => (hash * n) >> 32;
+
+/// An album's art identity: its key without the album folder, so moving a music folder keeps
+/// the album's automatic art and its Change cover choice. (MusicBrainz keys have no folder.)
+String artKeyOf(String albumKey) {
+  final cut = albumKey.lastIndexOf('\u0000');
+  return albumKey.startsWith('mb\u0000') || albumKey.indexOf('\u0000') == cut ? albumKey : albumKey.substring(0, cut);
+}
+
+/// The art Lumen picks for an album: a hash of its art key picks one of [sourcesInUse]
+/// (each source equally often, however many items it has), then one of its items.
 Art autoArt(String albumKey, Set<String> on) {
-  final pool = sourcesInUse(on);
-  var r = GenerativeCover.seedFor('$albumKey/source') % pool.fold(0, (n, s) => n + s.weight);
-  for (final s in pool) {
-    if (r < s.weight) return s.item(albumKey, 0);
-    r -= s.weight;
-  }
-  return pool.last.item(albumKey, 0);
+  final key = artKeyOf(albumKey), pool = sourcesInUse(on);
+  return pool[pick(GenerativeCover.seedFor('$key/source'), pool.length)].item(key, 0);
 }
 
 /// Whether [key] still names something Lumen can draw (a pack may have been removed).
@@ -112,7 +120,7 @@ String? creditFor(Art art) {
   final pack = artSources.where((s) => s.pack && s.id == key.substring(5, slash)).firstOrNull;
   final c = pack?.credits[key.substring(slash + 1)];
   if (c == null) return null;
-  final by = [c['artist'], c['year']].whereType<Object>().join(', ');
+  final by = '${c['credit'] ?? [c['artist'], c['year']].whereType<Object>().join(', ')}';
   return [c['title'], if (by.isNotEmpty) by].whereType<Object>().join(' — ');
 }
 

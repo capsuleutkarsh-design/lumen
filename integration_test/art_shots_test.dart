@@ -87,10 +87,10 @@ void main() {
     final noArt = lib.albums.firstWhere((a) => a.title == 'Velvet Static');
     nav.push('album', noArt.key);
     await shot('a02_album_generated', 1500);
-    // The image-pack path, with the small sample pack on (the real packs drop in the same way).
-    lib.artSourcesOn = {'sample'};
+    // Abstract on its own (off by default, selectable in Settings).
+    lib.artSourcesOn = {'abstract'};
     nav.go('albums');
-    await shot('a02b_albums_sample_pack', 3000);
+    await shot('a02b_albums_abstract', 3000);
     lib.artSourcesOn = sourcesOn(null);
     nav.go('home');
     await shot('a03_home', 1500);
@@ -108,15 +108,20 @@ void main() {
     await shot('a06_change_cover', 3000);
     await tester.tap(find.descendant(of: find.byType(AlertDialog), matching: find.byType(CoverArt)).at(4));
     await shot('a07_album_after_change', 1500);
-    say('choice stored: ${lib.coverChoices[deep.key]}');
+    say('choice stored: ${lib.coverChoices[artKeyOf(deep.key)]}');
     showCoverPicker(ctx, deep);
     await shot('a08_change_cover_picked', 2000);
     await tester.tap(find.text('Reset to automatic'));
     await settle(500);
-    say('after reset: ${lib.coverChoices[deep.key]}');
-    lib.setCoverChoice(deep.key, 'pack:sample/dunes.jpg'); // a credited pack image: the credit shows
+    say('after reset: ${lib.coverChoices[artKeyOf(deep.key)]}');
+    lib.setCoverChoice(deep.key, 'pack:masterpieces/hokusai_great_wave.jpg'); // a credited pack image: the credit shows
     showCoverPicker(ctx, deep);
     await shot('a09_change_cover_pack_credit', 2000);
+    await tester.tap(find.text('Reset to automatic'));
+    await settle(500);
+    lib.setCoverChoice(deep.key, 'pack:illustrated/illus_002.jpg');
+    showCoverPicker(ctx, deep);
+    await shot('a09c_change_cover_illustrated_credit', 2000);
     await tester.tap(find.text('Reset to automatic'));
     await settle(500);
     nav.go('settings');
