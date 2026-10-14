@@ -46,6 +46,14 @@ android {
 // public at https://github.com/capsuleutkarsh-design/lumen-audio-engine. It replaces the libmpv.so of
 // media_kit_libs_android_audio: the app's own jniLibs win over a dependency's.
 // To update: set the new release tag and the SHA-256 of its zip (from the release's SHA256SUMS.txt).
+// Downloads with curl (in Windows 10+, macOS and Linux), not Java: Java's connect timed out on the
+// owner's network (it tried IPv6 first, and Gradle applies -Djava.net.preferIPv4Stack too late).
+fun curl(url: String, to: File) {
+    to.parentFile.mkdirs()
+    check(ProcessBuilder("curl", "-fsSL", "--retry", "3", "-o", to.path, url).inheritIO().start().waitFor() == 0) {
+        "Could not download $url"
+    }
+}
 val lumenEngineTag = "v2026.10.14-android"
 val lumenEngineSha256 = "a446d0ec91cbbb9d0ffbdddb39381567a592fca9e9a38121394df3dc8c00888a"
 val lumenEngineLibs = layout.buildDirectory.dir("lumen-audio-engine-$lumenEngineTag/lib").get().asFile
@@ -53,11 +61,8 @@ val lumenEngineDone = File("$lumenEngineLibs.ok") // written last, so a half-don
 if (!lumenEngineDone.exists()) {
     val url = "https://github.com/capsuleutkarsh-design/lumen-audio-engine/releases/download/" +
         "$lumenEngineTag/lumen-audio-engine-$lumenEngineTag.zip"
-    // curl (in Windows 10+, macOS and Linux) rather than Java: Java's connect timed out here (IPv6).
-    val file = File("$lumenEngineLibs.zip").apply { parentFile.mkdirs() }
-    check(ProcessBuilder("curl", "-fsSL", "--retry", "3", "-o", file.path, url).inheritIO().start().waitFor() == 0) {
-        "Lumen audio engine: could not download $url"
-    }
+    val file = File("$lumenEngineLibs.zip")
+    curl(url, file)
     val zip = file.readBytes()
     val sha = MessageDigest.getInstance("SHA-256").digest(zip).joinToString("") { "%02x".format(it) }
     check(sha == lumenEngineSha256) { "Lumen audio engine: wrong SHA-256 $sha for $url" }
@@ -71,6 +76,13 @@ if (!lumenEngineDone.exists()) {
     lumenEngineDone.writeText(sha)
 }
 android.sourceSets.getByName("main").jniLibs.srcDir(lumenEngineLibs)
+// media_kit_libs_android_audio (evaluated after :app) downloads these jars with Java, unless they are already
+// where it looks; it still checks their MD5. Only its libmediakitandroidhelper.so is used (libmpv.so is ours).
+val mediaKitJars = rootProject.layout.buildDirectory.dir("media_kit_libs_android_audio/v1.1.8").get().asFile
+for (abi in listOf("arm64-v8a", "armeabi-v7a", "x86_64", "x86")) {
+    val jar = File(mediaKitJars, "default-$abi.jar")
+    if (!jar.exists()) curl("https://github.com/media-kit/libmpv-android-audio-build/releases/download/v1.1.8/${jar.name}", jar)
+}
 
 kotlin {
     compilerOptions {
