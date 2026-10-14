@@ -138,7 +138,7 @@ void main() {
     }
 
     final rock = builtInPresets.firstWhere((p) => p.name == 'Rock').copy()..on = true;
-    expect(await filters('EQ preset Rock', (s) => s.eq = rock), contains('equalizer'));
+    expect(await filters('EQ preset Rock', (s) => s.eq = rock.copy()), contains('equalizer'));
     expect(await filters('Crossfeed', (s) => s.crossfeed = Crossfeed.values.last), contains('bs2b'));
     await filters('Night mode', (s) => s.eq.night = true);
     await filters('Advanced EQ curve', (s) {
@@ -156,14 +156,15 @@ void main() {
     final other = lib.tracks.firstWhere((t) => t.sampleRate > 0 && t.sampleRate != native);
     await engine.playTracks([other]);
     await waitFor(() => engine.playing && engine.position.value > const Duration(milliseconds: 500), what: 'Best quality song');
-    await filters(
+    final best = await filters(
       'Best quality, Rock and crossfeed (${other.sampleRate} Hz song, Android at $native Hz)',
       (s) => s
         ..bestQuality = true
         ..levelling = false
-        ..eq = (rock.copy()..on = true)
+        ..eq = rock.copy()
         ..crossfeed = Crossfeed.values.last,
     );
+    expect(best, allOf(contains('equalizer'), contains('bs2b')));
     expect(await mpv.getProperty('audio-swresample-o'), contains('soxr'));
     expect(await mpv.getProperty('audio-out-params/samplerate'), '$native');
     await engine.playTracks(deep.tracks);
