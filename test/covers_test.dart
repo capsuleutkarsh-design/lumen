@@ -47,7 +47,7 @@ void main() {
     final a = lib.albums.firstWhere((x) => x.title == 'Album A');
     expect(a.cover, isNotNull, reason: 'the small cover is still found');
     expect(lib.db.select('SELECT problem FROM cover_quality WHERE cover = ?', [a.cover]).single['problem'], 'small');
-    expect(art('Album A'), autoArt(a.key, lib.artSourcesOn));
+    expect(art('Album A'), lib.autoArtFor(a.key));
     expect(art('Album B').file, isNotNull);
     expect(art('Album C').generated, isTrue);
     lib.db.close();
@@ -168,6 +168,12 @@ void main() {
       expect(n, inInclusiveRange(900, 1100), reason: '$count');
     }
     expect(used, hasLength(200));
+    // In a library, a pack image an earlier album already shows moves on to the next free one.
+    final taken = <String>{};
+    for (var i = 0; i < 100; i++) {
+      taken.add(freeArt(autoArt('album $i', {'masterpieces'}), taken).key!);
+    }
+    expect(taken, hasLength(100), reason: '100 albums, 100 different paintings');
   });
 
   test('a pack image is drawn square into the cache (a wide one is cropped), from a tiny test-only pack', () async {

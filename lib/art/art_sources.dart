@@ -103,6 +103,20 @@ Art autoArt(String albumKey, Set<String> on) {
   return pool[pick(GenerativeCover.seedFor('$key/source'), pool.length)].item(key, 0);
 }
 
+/// [art], or when [taken] already has that pack image, the pack's next free image.
+Art freeArt(Art art, Set<String> taken) {
+  final key = art.key!;
+  if (!key.startsWith('pack:') || !taken.contains(key)) return art;
+  final slash = key.indexOf('/');
+  final s = artSources.firstWhere((s) => s.pack && s.id == key.substring(5, slash));
+  final at = s.images.indexOf(key.substring(slash + 1));
+  for (var i = 1; i < s.images.length; i++) {
+    final next = 'pack:${s.id}/${s.images[(at + i) % s.images.length]}';
+    if (!taken.contains(next)) return Art.drawn(next);
+  }
+  return art; // every image of the pack is in use: now it repeats
+}
+
 /// Whether [key] still names something Lumen can draw (a pack may have been removed).
 bool knownArt(String key) {
   if (key.startsWith('pack:')) {

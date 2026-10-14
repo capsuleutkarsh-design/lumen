@@ -45,7 +45,7 @@ class _CoverPickerState extends State<_CoverPicker> {
   Widget build(BuildContext context) {
     final a = widget.album, key = artKeyOf(a.key); // the album's art identity (survives a moved folder)
     final current = lib.artFor(key, a.cover);
-    final auto = autoArt(key, lib.artSourcesOn);
+    final auto = lib.autoArtFor(key);
     final credit = creditFor(current);
     final items = _tab.pack
         ? [for (var n = 1; n <= _tab.images.length; n++) _tab.item(key, n)]

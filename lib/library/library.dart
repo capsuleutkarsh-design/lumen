@@ -136,6 +136,7 @@ class Library extends ChangeNotifier {
       for (final r in db.select('SELECT album_key, choice FROM album_covers')) r['album_key'] as String: r['choice'] as String,
     };
     _loadPlaylists();
+    _auto = null;
     _home = null;
     _genres = null;
     _years = null;
@@ -185,8 +186,28 @@ class Library extends ChangeNotifier {
     final choice = coverChoices[artKeyOf(albumKey)];
     if (choice != null && choice != 'original' && knownArt(choice)) return Art.drawn(choice);
     if (cover != null && (choice == 'original' || !lowCovers.contains(cover))) return Art.file(cover);
-    return autoArt(albumKey, artSourcesOn);
+    return autoArtFor(albumKey);
   }
+
+  /// Lumen's own pick for an album (see [artFor]).
+  Art autoArtFor(String albumKey) => _autoArt[artKeyOf(albumKey)] ?? autoArt(albumKey, artSourcesOn);
+
+  /// The automatic art of every album that shows it, picked once per load or change: albums in
+  /// the order they were added, and a pack image an earlier album already shows moves on to the
+  /// pack's next free one. So a library never shows a pack image twice until the pack runs out,
+  /// and a new album never changes the art of older ones.
+  Map<String, Art> get _autoArt => _auto ??= () {
+    final on = artSourcesOn, taken = <String>{}, out = <String, Art>{};
+    int order(Album x, Album y) => x.addedAt != y.addedAt ? x.addedAt.compareTo(y.addedAt) : x.key.compareTo(y.key);
+    for (final a in [...albums]..sort(order)) {
+      final key = artKeyOf(a.key), cover = a.cover;
+      if (out.containsKey(key) || coverChoices.containsKey(key) || (cover != null && !lowCovers.contains(cover))) continue;
+      final art = out[key] = freeArt(autoArt(key, on), taken);
+      taken.add(art.key!);
+    }
+    return out;
+  }();
+  Map<String, Art>? _auto;
 
   /// Settings → Disc & covers: the art sources Lumen picks from (painterly ones by default).
   Set<String> get artSourcesOn => _sourcesOn ??= sourcesOn(setting('artSources'));
@@ -194,6 +215,7 @@ class Library extends ChangeNotifier {
   set artSourcesOn(Set<String> ids) {
     setSetting('artSources', jsonEncode(ids.toList()));
     _sourcesOn = ids;
+    _auto = null;
     notifyListeners();
   }
 
@@ -201,6 +223,7 @@ class Library extends ChangeNotifier {
   /// Only the database changes, never the music files.
   void setCoverChoice(String albumKey, String? choice) {
     albumKey = artKeyOf(albumKey); // the same album in a moved folder keeps it
+    _auto = null;
     if (choice == null) {
       db.execute('DELETE FROM album_covers WHERE album_key = ?', [albumKey]);
       coverChoices.remove(albumKey);
