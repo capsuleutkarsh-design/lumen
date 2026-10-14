@@ -7,6 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
 import 'db.dart';
+import 'lyrics.dart';
 import 'm3u.dart';
 import 'models.dart';
 import 'scanner.dart';
@@ -227,7 +228,7 @@ class Library extends ChangeNotifier {
   /// Imports an M3U/M3U8 file; returns (playlist id, tracks not found in the library).
   (int, int) importM3u(String file) {
     final byPath = {for (final t in tracks) t.path.toLowerCase(): t.id};
-    final paths = parseM3u(File(file).readAsStringSync(), p.dirname(file));
+    final paths = parseM3u(readText(file), p.dirname(file));
     final ids = [for (final x in paths) ?byPath[x.toLowerCase()]];
     return (createPlaylist(p.basenameWithoutExtension(file), ids), paths.length - ids.length);
   }

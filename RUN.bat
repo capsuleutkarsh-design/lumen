@@ -10,8 +10,11 @@ where flutter >nul 2>nul || set "PATH=C:\dev\flutter\bin;%PATH%"
 where flutter >nul 2>nul || (echo Flutter was not found. Install it to C:\dev\flutter. & goto :failed)
 
 echo Getting packages ...
+rem Without Developer Mode the first pub get stops at the plugin links;
+rem link_plugins makes them as junctions, then pub get runs again.
+call flutter pub get >nul 2>nul
+powershell -NoProfile -ExecutionPolicy Bypass -File tool\link_plugins.ps1 >nul || goto :failed
 call flutter pub get || goto :failed
-powershell -NoProfile -ExecutionPolicy Bypass -File tool\link_plugins.ps1 >nul
 
 echo Starting Lumen ...
 call flutter run -d windows || goto :failed

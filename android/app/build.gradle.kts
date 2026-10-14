@@ -15,8 +15,9 @@ android {
     }
 
     defaultConfig {
-        // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.capsuleutkarsh.music_player"
+        // The store identity: fixed for good once the first build is uploaded to Google Play.
+        // (namespace above is only the code package and can be renamed later.)
+        applicationId = "com.capsuleutkarsh.lumen"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion

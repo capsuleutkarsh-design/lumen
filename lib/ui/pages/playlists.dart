@@ -14,7 +14,15 @@ const _m3u = XTypeGroup(label: 'Playlists', extensions: ['m3u8', 'm3u']);
 Future<void> importPlaylist(BuildContext context) async {
   final f = await openFile(acceptedTypeGroups: [_m3u]);
   if (f == null) return;
-  final (id, missing) = lib.importM3u(f.path);
+  (int, int) r;
+  try {
+    r = lib.importM3u(f.path);
+  } catch (e) {
+    debugPrint('M3U import of ${f.path}: $e');
+    if (context.mounted) toast(context, 'Could not read ${f.name}');
+    return;
+  }
+  final (id, missing) = r;
   if (!context.mounted) return;
   toast(context, missing == 0 ? 'Playlist imported' : 'Imported; $missing songs are not in your library');
   nav.push('playlist', id);

@@ -49,11 +49,19 @@ Lumen is inspired by [Wora](https://github.com/playwora/wora), a lovely-looking 
 - **Quick play:** press **Ctrl+K** to search songs, albums and artists.
 - **Lyrics:** synced lyrics from `.lrc` files or embedded tags.
 - **Windows integration:** media keys, the Windows media overlay, and your queue remembered after a restart.
-- **Private:** everything stays on your PC.
+- **Private:** everything stays on your PC. The only internet use is an optional update check, off unless you turn it on in Settings.
+
+## Your data
+
+Lumen keeps its library list, playlists, favourites, play counts, cover thumbnails and a log (`lumen.log`) in **`%APPDATA%\Utkarsh Tripathi\Lumen\`**. *Settings → Data and updates* has buttons that open the folder and the log. Your music files are only read, never changed.
+
+- **Portable copy:** the portable `.zip` has a `portable.txt` next to `lumen.exe`, so it keeps everything in a `userdata` folder beside the program instead. Delete `portable.txt` to use `%APPDATA%` again.
+- **Uninstalling** asks whether to delete this data too; the answer is *keep* unless you choose otherwise.
+- **If Lumen cannot start,** it shows why, with *Open data folder* and *Start fresh*. Start fresh renames the old library to `library.db.broken-<date>` and starts empty; nothing is deleted.
 
 ## Build from source
 
-**The easy way:** double-click **`RUN.bat`** to try the app from the code, or **`BUILD.bat`** to make the program and the installer (it opens the folder when it is done).
+**The easy way:** double-click **`RUN.bat`** to try the app from the code, or **`BUILD.bat`** to check the code and make the program, the installer, the portable zip and `SHA256SUMS.txt` in `build\installer\` (it opens the folder when it is done). The version comes from `pubspec.yaml` only.
 
 You need [Flutter](https://flutter.dev) (stable) and Visual Studio 2022 with *Desktop development with C++*.
 
@@ -62,7 +70,7 @@ flutter pub get
 flutter run -d windows
 ```
 
-To build a release, run `flutter build windows --release`; the program is then in `build\windows\x64\runner\Release\`. To build the installer as well (needs [Inno Setup 6](https://jrsoftware.org/isinfo.php)), run `installer\build_installer.ps1`.
+To build a release, run `flutter build windows --release`; the program is then in `build\windows\x64\runner\Release\`. To build the installer and the zip as well (needs [Inno Setup 6](https://jrsoftware.org/isinfo.php)), run `installer\build_installer.ps1`. Pushing a `v*` tag makes GitHub Actions build them and draft a pre-release (`.github/workflows/ci.yml`).
 
 How v1 was built and tested: [docs/DONE_v1.md](docs/DONE_v1.md) · The plan: [docs/PLAN.md](docs/PLAN.md)
 
