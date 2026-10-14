@@ -10,8 +10,7 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:music_player/art/art_cache.dart';
-import 'package:music_player/art/generative_cover.dart';
+import 'package:music_player/art/art_sources.dart';
 import 'package:music_player/audio/engine.dart';
 import 'package:music_player/library/library.dart';
 import 'package:music_player/library/models.dart';
@@ -476,7 +475,7 @@ void main() {
     addTracks(albums: 1);
     final a = lib.albums.first;
     await pumpOne(tester, SizedBox(width: 200, child: CoverArt.album(a)));
-    expect(tester.widget<ArtImage>(find.byType(ArtImage)).art, Art(null, GenerativeCover.seedFor(a.key)));
+    expect(tester.widget<ArtImage>(find.byType(ArtImage)).art, autoArt(a.key, lib.artSourcesOn));
   });
 
   uiTest('Multi-select bar, Ctrl+A and Esc', (tester) async {

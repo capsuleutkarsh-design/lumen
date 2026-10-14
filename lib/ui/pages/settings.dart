@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../platform/update.dart';
+import '../../art/art_sources.dart';
 import '../app.dart';
 import '../disc.dart';
 import '../theme.dart';
@@ -224,6 +225,31 @@ class SettingsPage extends StatelessWidget {
                       style: T.caption,
                     ),
                     const SizedBox(height: S.x4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SizedBox(width: 140, child: Text('Cover art from', style: T.label)),
+                        Expanded(
+                          child: Wrap(
+                            spacing: S.x2,
+                            runSpacing: S.x2,
+                            children: [
+                              for (final s in artSources.where((s) => s.weight > 0))
+                                PillButton(
+                                  s.name,
+                                  dense: true,
+                                  icon: sourcesInUse(lib.artSourcesOn).contains(s) ? LucideIcons.check : null,
+                                  primary: sourcesInUse(lib.artSourcesOn).contains(s),
+                                  onTap: () => lib.artSourcesOn = lib.artSourcesOn.contains(s.id)
+                                      ? ({...lib.artSourcesOn}..remove(s.id))
+                                      : {...lib.artSourcesOn, s.id},
+                                ),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: S.x3),
                     Text(
                       'Albums without a cover, or with a small or blurry one, get artwork drawn by Lumen. '
                       'Right-click an album and choose Change cover to pick another or keep the original. Your music files are never changed.',

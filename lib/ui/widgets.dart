@@ -7,7 +7,7 @@ import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../art/art_cache.dart';
-import '../art/generative_cover.dart';
+import '../art/art_sources.dart';
 import '../library/models.dart';
 import 'app.dart';
 import 'theme.dart';
@@ -286,8 +286,8 @@ class PillButton extends StatelessWidget {
 /// What to show for a cover that is not an album's (artists, empty playlists): [path] unless
 /// it is low quality, else generated art seeded by [seed]. Null: nothing to show.
 Art? resolveArt(String? path, {String? seed}) {
-  if (path != null && !lib.lowCovers.contains(path)) return Art(path, 0);
-  return seed == null ? null : Art(null, GenerativeCover.seedFor(seed));
+  if (path != null && !lib.lowCovers.contains(path)) return Art.file(path);
+  return seed == null ? null : autoArt(seed, lib.artSourcesOn);
 }
 
 /// A song's album art as an image file: its cover, or the generated art (drawn first if needed).

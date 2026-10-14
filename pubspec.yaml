@@ -57,6 +57,8 @@ flutter:
     - assets/fonts/Inter-OFL.txt
     - docs/study/wora/LICENSE
     - licenses/
+    # Cover art packs (see lib/art/art_sources.dart). Add each new pack folder here.
+    - assets/covers/sample/
   fonts:
     - family: Inter
       fonts:

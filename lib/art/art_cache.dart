@@ -9,28 +9,33 @@ import 'dart:ui' as ui;
 import 'package:flutter/foundation.dart';
 import 'package:flutter/painting.dart';
 import 'package:flutter/scheduler.dart';
+import 'package:flutter/services.dart';
 import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 
 import 'generative_cover.dart';
 
-/// A cover to show: the album's own image [file], or generated art from [seed] when [file] is null.
+/// A cover to show: the album's own image [file], or art Lumen draws, named by [key]:
+/// `<style>@<seed in hex>` (a code style) or `pack:<pack>/<image>` (a bundled image, see art_sources.dart).
 @immutable
 class Art {
-  const Art(this.file, this.seed);
-  final String? file;
-  final int seed;
+  const Art.file(String this.file) : key = null;
+  const Art.drawn(String this.key) : file = null;
+  final String? file, key;
   bool get generated => file == null;
   @override
-  bool operator ==(Object other) => other is Art && other.file == file && other.seed == seed;
+  bool operator ==(Object other) => other is Art && other.file == file && other.key == key;
   @override
-  int get hashCode => Object.hash(file, seed);
+  int get hashCode => Object.hash(file, key);
+  @override
+  String toString() => 'Art(${file ?? key})';
 }
 
 /// A request for generated art. [done] gives the file (null if drawing failed).
 class ArtJob {
-  ArtJob._(this.seed, this.px, this.path);
-  final int seed, px;
+  ArtJob._(this.key, this.px, this.path);
+  final String key;
+  final int px;
   final String path;
   final _done = Completer<String?>();
   Future<String?> get done => _done.future;
@@ -47,12 +52,12 @@ abstract final class ArtCache {
   static String? dir;
 
   /// Bump when the art code changes, so files drawn by older code are not shown (or kept).
-  static const version = 2;
+  static const version = 3;
   static const sizes = [128, 384, 1024];
 
   static int bucket(double px) => sizes.firstWhere((s) => s >= px, orElse: () => sizes.last);
 
-  static String _path(int seed, int px) => p.join(dir!, 'v${version}_${seed.toRadixString(16)}_$px.jpg');
+  static String _path(String key, int px) => p.join(dir!, 'v${version}_${key.replaceAll(RegExp(r'[^\w@.-]'), '_')}_$px.jpg');
 
   /// Sets the folder and removes files drawn by an older [version] (in the background).
   static void init(String folder) {
@@ -78,7 +83,7 @@ abstract final class ArtCache {
   static String? file(Art art, double px) {
     if (art.file != null) return art.file;
     if (dir == null) return null;
-    final path = _path(art.seed, bucket(px));
+    final path = _path(art.key!, bucket(px));
     if (_ready.contains(path)) return path;
     if (!_jobs.containsKey(path) && File(path).existsSync()) {
       _ready.add(path);
@@ -90,9 +95,9 @@ abstract final class ArtCache {
   /// Asks for generated art to be drawn. Call [ArtJob.release] when it is no longer wanted.
   static ArtJob want(Art art, double px) {
     final b = bucket(px);
-    final path = _path(art.seed, b);
+    final path = _path(art.key!, b);
     final job = _jobs.putIfAbsent(path, () {
-      final j = ArtJob._(art.seed, b, path);
+      final j = ArtJob._(art.key!, b, path);
       _queue.add(j);
       return j;
     });
@@ -146,9 +151,7 @@ abstract final class ArtCache {
   static Future<void> _draw(ArtJob job) async {
     Uint8List rgba;
     try {
-      final pic = GenerativeCover(job.seed).record(job.px); // the only part on the UI thread
-      final im = await pic.toImage(job.px, job.px);
-      pic.dispose();
+      final im = await _render(job.key, job.px);
       final data = await im.toByteData(format: ui.ImageByteFormat.rawRgba);
       im.dispose();
       rgba = data!.buffer.asUint8List();
@@ -163,6 +166,41 @@ abstract final class ArtCache {
       _encoded = null;
       _finish(job, ok ? job.path : null);
     });
+  }
+
+  /// Draws a code style (recording it is the only part on the UI thread), or decodes a pack image
+  /// at about [px] (off the UI thread) and crops it square.
+  static Future<ui.Image> _render(String key, int px) async {
+    final rec = ui.PictureRecorder();
+    final c = Canvas(rec);
+    if (key.startsWith('pack:')) {
+      final data = await rootBundle.load('assets/covers/${key.substring(5)}');
+      final codec = await ui.instantiateImageCodecWithSize(
+        await ui.ImmutableBuffer.fromUint8List(data.buffer.asUint8List(data.offsetInBytes, data.lengthInBytes)),
+        getTargetSize: (w, h) {
+          final k = px / (w < h ? w : h);
+          return k >= 1 ? ui.TargetImageSize(width: w, height: h) : ui.TargetImageSize(width: (w * k).ceil(), height: (h * k).ceil());
+        },
+      );
+      final im = (await codec.getNextFrame()).image;
+      codec.dispose();
+      final side = (im.width < im.height ? im.width : im.height).toDouble();
+      c.drawImageRect(
+        im,
+        Rect.fromCenter(center: Offset(im.width / 2, im.height / 2), width: side, height: side),
+        Rect.fromLTWH(0, 0, px.toDouble(), px.toDouble()),
+        Paint()..filterQuality = FilterQuality.high,
+      );
+      im.dispose();
+    } else {
+      final at = key.indexOf('@');
+      GenerativeCover(
+        int.parse(key.substring(at + 1), radix: 16),
+        style: CoverStyle.values.byName(key.substring(0, at)),
+      ).draw(c, px.toDouble());
+    }
+    final pic = rec.endRecording();
+    return pic.toImage(px, px).whenComplete(pic.dispose);
   }
 
   static void _finish(ArtJob job, String? path) {

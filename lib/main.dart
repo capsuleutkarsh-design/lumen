@@ -6,6 +6,7 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import 'art/art_cache.dart';
+import 'art/art_sources.dart';
 import 'audio/engine.dart';
 import 'library/library.dart';
 import 'platform/licence.dart';
@@ -43,6 +44,7 @@ Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error
   final cache = const String.fromEnvironment('MP_DATA').isEmpty ? (await getApplicationCacheDirectory()).path : null;
   lib = Library(await dataDir(), cacheDir: cache)..load();
   ArtCache.init(p.join(p.dirname(lib.coverDir), 'art')); // generated covers, next to the thumbnails
+  await loadArtPacks();
   engine = Engine(lib, silent: silent, logLevel: logLevel);
   await engine.init();
   MediaControls(engine);

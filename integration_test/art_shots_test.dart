@@ -12,6 +12,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:music_player/art/art_sources.dart';
 import 'package:music_player/art/generative_cover.dart';
 import 'package:music_player/main.dart';
 import 'package:music_player/ui/app.dart';
@@ -86,6 +87,11 @@ void main() {
     final noArt = lib.albums.firstWhere((a) => a.title == 'Velvet Static');
     nav.push('album', noArt.key);
     await shot('a02_album_generated', 1500);
+    // The image-pack path, with the small sample pack on (the real packs drop in the same way).
+    lib.artSourcesOn = {'sample'};
+    nav.go('albums');
+    await shot('a02b_albums_sample_pack', 3000);
+    lib.artSourcesOn = sourcesOn(null);
     nav.go('home');
     await shot('a03_home', 1500);
     nav.go('songs');
@@ -108,6 +114,15 @@ void main() {
     await tester.tap(find.text('Reset to automatic'));
     await settle(500);
     say('after reset: ${lib.coverChoices[deep.key]}');
+    lib.setCoverChoice(deep.key, 'pack:sample/dunes.jpg'); // a credited pack image: the credit shows
+    showCoverPicker(ctx, deep);
+    await shot('a09_change_cover_pack_credit', 2000);
+    await tester.tap(find.text('Reset to automatic'));
+    await settle(500);
+    nav.go('settings');
+    await settle(500);
+    await Scrollable.ensureVisible(tester.element(find.text('Disc & covers')));
+    await shot('a09b_settings_disc_covers', 800);
 
     // 3. Now Playing with the disc: CD and vinyl, paused and playing, real and generated art.
     final withArt = lib.albums.firstWhere((a) => a.cover != null && !lib.artFor(a.key, a.cover).generated);
@@ -153,6 +168,12 @@ void main() {
     await shot('a13_np_vinyl_playing_generated', 500);
     discStyle.value = DiscStyle.cd;
     await shot('a14_np_cd_playing_generated', 1500);
+    setAppearance('light');
+    await shot('a15_np_cd_light', 1500);
+    discStyle.value = DiscStyle.vinyl;
+    await shot('a16_np_vinyl_light', 1500);
+    discStyle.value = DiscStyle.cd;
+    setAppearance('dark');
 
     // 4. CPU while the disc spins (this is a debug build: the release figures are lower).
     Future<double> cpu(String what, {int seconds = 15}) async {
@@ -190,6 +211,9 @@ void main() {
     // 5. Disc mode: nothing but the cover and the disc; controls on mouse move.
     nav.setDisc(true);
     await shot('a20_discmode', 1500);
+    setAppearance('light');
+    await shot('a20b_discmode_light', 1500);
+    setAppearance('dark');
     await cpu('Disc mode, playing, CD spinning');
     final mouse = await tester.createGesture(kind: PointerDeviceKind.mouse);
     await mouse.addPointer(location: const Offset(700, 500));
@@ -218,6 +242,9 @@ void main() {
     );
     await setMiniExpanded(true);
     await shot('a31_mini_expanded', 1500);
+    setAppearance('light');
+    await shot('a31b_mini_expanded_light', 1500);
+    setAppearance('dark');
     say('mini expanded: ${await windowManager.getSize()}');
     await setMiniExpanded(false);
     await setMini(false);

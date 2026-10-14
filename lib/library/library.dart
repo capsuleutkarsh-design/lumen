@@ -7,7 +7,7 @@ import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
 import '../art/art_cache.dart';
-import '../art/generative_cover.dart';
+import '../art/art_sources.dart';
 import 'db.dart';
 import 'lyrics.dart';
 import 'm3u.dart';
@@ -175,20 +175,29 @@ class Library extends ChangeNotifier {
   /// Cover thumbnails the scanner found small, blocky or blurry.
   Set<String> lowCovers = {};
 
-  /// Album key -> the user's pick: 'original', or the seed of a generated artwork.
+  /// Album key -> the user's pick: 'original', or the key of an artwork Lumen draws ([Art.key]).
   Map<String, String> coverChoices = {};
 
   /// What an album shows: its own cover, unless it has none or a low-quality one, or the user
-  /// picked generated art (Change cover). Generated art is seeded by the album key.
+  /// picked other art (Change cover). Otherwise Lumen's art, picked by the album key from the
+  /// art sources that are on (art_sources.dart).
   Art artFor(String albumKey, String? cover) {
     final choice = coverChoices[albumKey];
-    final picked = int.tryParse(choice ?? '');
-    if (picked != null) return Art(null, picked);
-    if (cover != null && (choice == 'original' || !lowCovers.contains(cover))) return Art(cover, 0);
-    return Art(null, GenerativeCover.seedFor(albumKey));
+    if (choice != null && choice != 'original' && knownArt(choice)) return Art.drawn(choice);
+    if (cover != null && (choice == 'original' || !lowCovers.contains(cover))) return Art.file(cover);
+    return autoArt(albumKey, artSourcesOn);
   }
 
-  /// Stores the cover picked for an album: 'original', a generated seed, or null for automatic.
+  /// Settings → Disc & covers: the art sources Lumen picks from (painterly ones by default).
+  Set<String> get artSourcesOn => _sourcesOn ??= sourcesOn(setting('artSources'));
+  Set<String>? _sourcesOn;
+  set artSourcesOn(Set<String> ids) {
+    setSetting('artSources', jsonEncode(ids.toList()));
+    _sourcesOn = ids;
+    notifyListeners();
+  }
+
+  /// Stores the cover picked for an album: 'original', an [Art.key], or null for automatic.
   /// Only the database changes, never the music files.
   void setCoverChoice(String albumKey, String? choice) {
     if (choice == null) {

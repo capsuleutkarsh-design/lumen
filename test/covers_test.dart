@@ -5,11 +5,13 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_player/art/art_cache.dart';
+import 'package:music_player/art/art_sources.dart';
 import 'package:music_player/art/generative_cover.dart';
 import 'package:music_player/library/db.dart';
 import 'package:music_player/library/library.dart';
 import 'package:music_player/library/scanner.dart';
 import 'package:music_player/ui/disc.dart';
+import 'package:image/image.dart' as img;
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
@@ -43,7 +45,7 @@ void main() {
     final a = lib.albums.firstWhere((x) => x.title == 'Album A');
     expect(a.cover, isNotNull, reason: 'the small cover is still found');
     expect(lib.db.select('SELECT problem FROM cover_quality WHERE cover = ?', [a.cover]).single['problem'], 'small');
-    expect(art('Album A'), Art(null, GenerativeCover.seedFor(a.key)));
+    expect(art('Album A'), autoArt(a.key, lib.artSourcesOn));
     expect(art('Album B').file, isNotNull);
     expect(art('Album C').generated, isTrue);
     lib.db.close();
@@ -54,14 +56,14 @@ void main() {
     final a = lib.albums.firstWhere((x) => x.title == 'Album A');
     final b = lib.albums.firstWhere((x) => x.title == 'Album B');
     lib.setCoverChoice(a.key, 'original'); // keep the small original
-    lib.setCoverChoice(b.key, '1234'); // a generated one instead of a good cover
+    lib.setCoverChoice(b.key, 'riso@4d2'); // a generated one instead of a good cover
     lib.db.close();
 
     lib = Library(tmp.path)..load();
-    expect(lib.artFor(a.key, a.cover), Art(a.cover, 0));
-    expect(lib.artFor(b.key, b.cover), const Art(null, 1234));
+    expect(lib.artFor(a.key, a.cover), Art.file(a.cover!));
+    expect(lib.artFor(b.key, b.cover), const Art.drawn('riso@4d2'));
     lib.setCoverChoice(b.key, null);
-    expect(lib.artFor(b.key, b.cover), Art(b.cover, 0));
+    expect(lib.artFor(b.key, b.cover), Art.file(b.cover!));
     lib.db.close();
     expect(File(p.join(tmp.path, 'music', 'B', 'cover.jpg')).lengthSync(), jpeg(90, size: 600).length, reason: 'files untouched');
   });
@@ -95,7 +97,7 @@ void main() {
       child: Directionality(
         textDirection: TextDirection.ltr,
         child: Center(
-          child: DiscView(art: const Art(null, 1), playing: playing, size: 200, style: DiscStyle.vinyl),
+          child: DiscView(art: const Art.drawn('mesh@1'), playing: playing, size: 200, style: DiscStyle.vinyl),
         ),
       ),
     );
@@ -121,5 +123,35 @@ void main() {
     await tester.pumpWidget(disc(true, still: true));
     await tester.pump(const Duration(seconds: 1));
     expect(state.spinning, isFalse);
+  });
+
+  test('art sources: painterly packs by default, else the abstract styles the owner approved', () {
+    for (final s in artSources.where((s) => s.pack)) {
+      s.images = [];
+    }
+    expect(sourcesOn(null), {'masterpieces', 'painted', 'illustrated'});
+    // Nothing painterly installed yet: the abstract styles, with each album's own approved style.
+    final art = autoArt('ana|album a|x', sourcesOn(null));
+    final seed = GenerativeCover.seedFor('ana|album a|x');
+    expect(art, Art.drawn('${GenerativeCover.styleOf(seed).name}@${seed.toRadixString(16)}'));
+  });
+
+  test('an image pack: found in the assets, picked by hash, drawn square into the cache, credited', () async {
+    await loadArtPacks();
+    final sample = artSources.firstWhere((s) => s.id == 'sample');
+    expect(sample.images, ['dunes.jpg', 'lanterns.jpg', 'tide.jpg']);
+    final picks = {
+      for (var i = 0; i < 30; i++) autoArt('album $i', {'sample'}),
+    };
+    expect(picks, {for (final f in sample.images) Art.drawn('pack:sample/$f')}, reason: 'every image gets used');
+    expect(creditFor(const Art.drawn('pack:sample/dunes.jpg')), 'Dunes (sample) — Drawn by Lumen, 2026');
+    expect(knownArt('pack:sample/dunes.jpg'), isTrue);
+    expect(knownArt('pack:gone/x.jpg'), isFalse);
+
+    ArtCache.init(p.join(tmp.path, 'art'));
+    final file = await ArtCache.ensure(const Art.drawn('pack:sample/dunes.jpg'), 128); // a 900 x 600 image
+    final im = img.decodeJpg(File(file!).readAsBytesSync())!;
+    expect((im.width, im.height), (128, 128));
+    ArtCache.dir = null;
   });
 }
