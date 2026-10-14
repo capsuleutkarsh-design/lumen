@@ -530,6 +530,9 @@ class Engine extends ChangeNotifier {
     _leaveTrack(manual: false);
     final e = queue.next(auto: true);
     _mpvNext = null;
+    // The new song's clock from now on, not the old song's end (until mpv's next update).
+    _lastPos = Duration.zero;
+    position.value = Duration.zero;
     if (e == null) {
       // The song mpv moved on to was removed and nothing follows: the end.
       await player.stop();

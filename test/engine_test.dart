@@ -118,6 +118,22 @@ void main() {
       }
     }, timeout: const Timeout(Duration(minutes: 2)));
 
+    test("after a gapless hand-over the clock is the new song's at once, never the old song's end", () async {
+      final t = album('Northern Lights');
+      for (var run = 0; run < 3; run++) {
+        final e = await nearEnd([0, 1]);
+        Duration? at;
+        void l() {
+          if (e.current?.id == t[1].id) at ??= e.position.value;
+        }
+        e.addListener(l);
+        await waitFor(() => at != null, timeout: const Duration(seconds: 5));
+        e.removeListener(l);
+        expect(at, lessThan(const Duration(seconds: 1)), reason: 'run $run');
+        await closeEngine(e);
+      }
+    });
+
     test('W4c: removing the last upcoming song during the hand-over ends playback (no replay of the old song)', () async {
       final e = await nearEnd([0, 1]);
       final done = Completer<void>();
