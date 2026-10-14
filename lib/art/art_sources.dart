@@ -46,7 +46,7 @@ class ArtSource {
 /// Every source, in the order the Change cover picker shows them.
 final artSources = [
   ArtSource.pack('masterpieces', 'Masterpieces', painterly: true),
-  ArtSource.styles('painted', 'Painted', const [], painterly: true), // code-painted styles go here
+  ArtSource.styles('painted', 'Painted', GenerativeCover.painted, painterly: true),
   ArtSource.pack('illustrated', 'Illustrated', painterly: true),
   ArtSource.styles('abstract', 'Abstract', const [
     CoverStyle.mesh,

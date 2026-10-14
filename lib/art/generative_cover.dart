@@ -15,7 +15,14 @@ import 'package:flutter/rendering.dart';
 
 import 'palettes.dart';
 
-enum CoverStyle { mesh, halftone, contours, bauhaus, riso, bokeh, flow, stripes, paper, glitch, aurora }
+part 'painted.dart';
+
+enum CoverStyle {
+  mesh, halftone, contours, bauhaus, riso, bokeh, flow, stripes, paper, glitch, aurora,
+  // Painterly styles (painted.dart). New styles go at the end: styleOf only picks among the
+  // abstract ones above, so adding one never changes an album's abstract art.
+  starry, storybook, garden,
+}
 
 class GenerativeCover extends CustomPainter {
   GenerativeCover(this.seed, {CoverStyle? style, this.initials, this.mark = false})
@@ -39,14 +46,17 @@ class GenerativeCover extends CustomPainter {
     return h;
   }
 
-  /// The style a seed gets. There were 12 slots; slot 7 was "rings" (retired at the owner's
-  /// request), so it draws again. Every other album keeps the art the owner approved.
+  /// The abstract style a seed gets. There were 12 slots; slot 7 was "rings" (retired at the owner's
+  /// request), so it draws again among the abstract styles. Every other album keeps the art the owner approved.
   static CoverStyle styleOf(int seed) {
     final r = _Rng(seed ^ 0x5bd1e995);
     final slot = r.i(12);
     const styles = CoverStyle.values;
-    return slot == 7 ? styles[r.i(styles.length)] : styles[slot > 7 ? slot - 1 : slot];
+    return slot == 7 ? styles[r.i(CoverStyle.aurora.index + 1)] : styles[slot > 7 ? slot - 1 : slot];
   }
+
+  /// The code-painted styles, for the painterly art source.
+  static const painted = [CoverStyle.starry, CoverStyle.storybook, CoverStyle.garden];
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -111,6 +121,12 @@ class GenerativeCover extends CustomPainter {
         _glitch(k);
       case CoverStyle.aurora:
         _aurora(k);
+      case CoverStyle.starry:
+        _starry(k);
+      case CoverStyle.storybook:
+        _storybook(k);
+      case CoverStyle.garden:
+        _garden(k);
     }
     if (initials != null && initials!.isNotEmpty) _initials(k, initials!);
     if (mark) _mark(k);

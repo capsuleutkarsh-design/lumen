@@ -1,0 +1,802 @@
+{
+ "vangogh_starry_night.jpg": {
+  "title": "The Starry Night",
+  "artist": "Vincent van Gogh",
+  "year": "1889",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "vangogh_starry_night_rhone.jpg": {
+  "title": "Starry Night Over the Rhône",
+  "artist": "Vincent van Gogh",
+  "year": "1888",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Starry_Night_Over_the_Rhone.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "vangogh_cafe_terrace.jpg": {
+  "title": "Café Terrace at Night",
+  "artist": "Vincent van Gogh",
+  "year": "1888",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Vincent_Willem_van_Gogh_-_Cafe_Terrace_at_Night_(Yorck).jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "vangogh_wheatfield_cypresses.jpg": {
+  "title": "Wheat Field with Cypresses",
+  "artist": "Vincent van Gogh",
+  "year": "1889",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Wheat_Field_with_Cypresses_(National_Gallery_version).jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "vangogh_irises.jpg": {
+  "title": "Irises",
+  "artist": "Vincent van Gogh",
+  "year": "1889",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Irises_(1889).jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "vangogh_almond_blossom.jpg": {
+  "title": "Almond Blossom",
+  "artist": "Vincent van Gogh",
+  "year": "1890",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Almond_blossom_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "vangogh_sunflowers.jpg": {
+  "title": "Sunflowers",
+  "artist": "Vincent van Gogh",
+  "year": "1888",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Sunflowers_(1888,_National_Gallery_London).jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "vangogh_bedroom.jpg": {
+  "title": "The Bedroom",
+  "artist": "Vincent van Gogh",
+  "year": "1888",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_De_slaapkamer_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "vangogh_wheatfield_crows.jpg": {
+  "title": "Wheatfield with Crows",
+  "artist": "Vincent van Gogh",
+  "year": "1890",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Wheatfield_with_crows_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "vangogh_olive_trees.jpg": {
+  "title": "Olive Trees",
+  "artist": "Vincent van Gogh",
+  "year": "1889",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Olive_Trees_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "vangogh_road_cypress_star.jpg": {
+  "title": "Road with Cypress and Star",
+  "artist": "Vincent van Gogh",
+  "year": "1890",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Road_with_Cypress_and_Star_-_c._12-15_May_1890.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "vangogh_sower.jpg": {
+  "title": "The Sower (Sower with Setting Sun)",
+  "artist": "Vincent van Gogh",
+  "year": "1888",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_The_sower_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "vangogh_pink_peach_tree.jpg": {
+  "title": "Peach Tree in Blossom",
+  "artist": "Vincent van Gogh",
+  "year": "1888",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Vincent_Willem_van_Gogh_013.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100)"
+ },
+ "vangogh_boats_saintes_maries.jpg": {
+  "title": "Fishing Boats on the Beach at Les Saintes-Maries-de-la-Mer",
+  "artist": "Vincent van Gogh",
+  "year": "1888",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Vissersboten_op_het_strand_van_Les_Saintes-Maries-de-la-Mer_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "vangogh_green_wheat_cypress.jpg": {
+  "title": "Green Wheat Field with Cypress",
+  "artist": "Vincent van Gogh",
+  "year": "1889",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Vincent_van_Gogh_-_Green_Field_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "vangogh_roses.jpg": {
+  "title": "Roses",
+  "artist": "Vincent van Gogh",
+  "year": "1890",
+  "artistDied": 1890,
+  "source": "https://commons.wikimedia.org/wiki/File:Roses_-_Vincent_van_Gogh.JPG",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "hokusai_great_wave.jpg": {
+  "title": "The Great Wave off Kanagawa",
+  "artist": "Katsushika Hokusai",
+  "year": "c. 1831",
+  "artistDied": 1849,
+  "source": "https://commons.wikimedia.org/wiki/File:Tsunami_by_hokusai_19th_century.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "hokusai_fine_wind.jpg": {
+  "title": "Fine Wind, Clear Morning (Red Fuji)",
+  "artist": "Katsushika Hokusai",
+  "year": "c. 1831",
+  "artistDied": 1849,
+  "source": "https://commons.wikimedia.org/wiki/File:Red_Fuji_southern_wind_clear_morning.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "hokusai_thunderstorm.jpg": {
+  "title": "Rainstorm Beneath the Summit",
+  "artist": "Katsushika Hokusai",
+  "year": "c. 1831",
+  "artistDied": 1849,
+  "source": "https://commons.wikimedia.org/wiki/File:Rainstorm_Beneath_the_Summit_by_Hokusai_(Shimane_Art_Museum).jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "hokusai_kirifuri.jpg": {
+  "title": "Kirifuri Waterfall at Mount Kurokami",
+  "artist": "Katsushika Hokusai",
+  "year": "c. 1832",
+  "artistDied": 1849,
+  "source": "https://commons.wikimedia.org/wiki/File:Katsushika_Hokusai,_Japanese_-_Pilgrims_at_Kirifuri_Waterfall_on_Mount_Kurokami_in_Shimotsuke_Province_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "hokusai_kajikazawa.jpg": {
+  "title": "Kajikazawa in Kai Province",
+  "artist": "Katsushika Hokusai",
+  "year": "c. 1831",
+  "artistDied": 1849,
+  "source": "https://commons.wikimedia.org/wiki/File:Kajikazawa_in_Kai_province.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "hiroshige_plum_park.jpg": {
+  "title": "Plum Park in Kameido",
+  "artist": "Utagawa Hiroshige",
+  "year": "1857",
+  "artistDied": 1858,
+  "source": "https://commons.wikimedia.org/wiki/File:Plum_garden_at_Kameido_(Kameido_umeyashiki)_(CBL_J_2693).jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "hiroshige_sudden_shower.jpg": {
+  "title": "Sudden Shower over Shin-Ōhashi Bridge",
+  "artist": "Utagawa Hiroshige",
+  "year": "1857",
+  "artistDied": 1858,
+  "source": "https://commons.wikimedia.org/wiki/File:Hiroshige_Atake_sous_une_averse_soudaine.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "hiroshige_eagle_fukagawa.jpg": {
+  "title": "Fukagawa Susaki and Jūmantsubo",
+  "artist": "Utagawa Hiroshige",
+  "year": "1857",
+  "artistDied": 1858,
+  "source": "https://commons.wikimedia.org/wiki/File:De_Jumantsubo_vlakte_te_Susaki_bij_Fukagawa.jpeg",
+  "licence": "Public domain (PD-old-100-expired)"
+ },
+ "hiroshige_fireworks.jpg": {
+  "title": "Fireworks at Ryōgoku",
+  "artist": "Utagawa Hiroshige",
+  "year": "1858",
+  "artistDied": 1858,
+  "source": "https://commons.wikimedia.org/wiki/File:Fireworks_at_Ryogoku_(Ryogoku_Hanabi),_No._98_from_One_Hundred_Famous_Views_of_Edo.jpg",
+  "licence": "Public domain (PD-old-100)"
+ },
+ "hiroshige_moon_pine.jpg": {
+  "title": "Moon Pine, Ueno",
+  "artist": "Utagawa Hiroshige",
+  "year": "1857",
+  "artistDied": 1858,
+  "source": "https://commons.wikimedia.org/wiki/File:Ueno_sannai_tsuki_no_matsu_LCCN2008660968.jpg",
+  "licence": "Public domain (PD-old-100-expired)"
+ },
+ "hiroshige_maple_mama.jpg": {
+  "title": "Maple Trees at Mama, Tekona Shrine and Tsugi Bridge",
+  "artist": "Utagawa Hiroshige",
+  "year": "1857",
+  "artistDied": 1858,
+  "source": "https://commons.wikimedia.org/wiki/File:Utagawa_Hiroshige_-_The_maple_leaves_of_Mama,_Tekona_shrine_and_Tsugi_bridge_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "hiroshige_horikiri_iris.jpg": {
+  "title": "Horikiri Iris Garden",
+  "artist": "Utagawa Hiroshige",
+  "year": "1857",
+  "artistDied": 1858,
+  "source": "https://commons.wikimedia.org/wiki/File:Hiroshige,_Horikiri_iris_garden,_1857.jpg",
+  "licence": "Public domain (PD-Japan)"
+ },
+ "klimt_kiss.jpg": {
+  "title": "The Kiss",
+  "artist": "Gustav Klimt",
+  "year": "1907–1908",
+  "artistDied": 1918,
+  "source": "https://commons.wikimedia.org/wiki/File:The_Kiss_-_Gustav_Klimt_-_Google_Cultural_Institute.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "klimt_tree_of_life.jpg": {
+  "title": "The Tree of Life (Stoclet Frieze cartoon)",
+  "artist": "Gustav Klimt",
+  "year": "1910–1911",
+  "artistDied": 1918,
+  "source": "https://commons.wikimedia.org/wiki/File:Klimt_-_Nine_Cartoons_for_the_Stoclet_Frieze-_Part_4,_Part_of_the_tree_of_life_(1910-11).jpg",
+  "licence": "Public domain (PD-old)"
+ },
+ "klimt_beech_grove.jpg": {
+  "title": "Beech Grove I",
+  "artist": "Gustav Klimt",
+  "year": "1902",
+  "artistDied": 1918,
+  "source": "https://commons.wikimedia.org/wiki/File:Gustav_Klimt_-_Beech_Grove_I_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "klimt_sunflowers_garden.jpg": {
+  "title": "Farm Garden with Sunflowers",
+  "artist": "Gustav Klimt",
+  "year": "c. 1907",
+  "artistDied": 1918,
+  "source": "https://commons.wikimedia.org/wiki/File:Klimt_-_Bauerngarten_mit_Sonnenblumen_-_ca1907.jpeg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "klimt_attersee.jpg": {
+  "title": "Attersee",
+  "artist": "Gustav Klimt",
+  "year": "1900",
+  "artistDied": 1918,
+  "source": "https://commons.wikimedia.org/wiki/File:Gustav_Klimt_-_Attersee_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "klimt_birch_forest.jpg": {
+  "title": "Birch Forest",
+  "artist": "Gustav Klimt",
+  "year": "1903",
+  "artistDied": 1918,
+  "source": "https://commons.wikimedia.org/wiki/File:Gustav_Klimt,_Birch_Forest,_1903_-_Paul_G._Allen_Collection.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "klimt_adele.jpg": {
+  "title": "Portrait of Adele Bloch-Bauer I",
+  "artist": "Gustav Klimt",
+  "year": "1907",
+  "artistDied": 1918,
+  "source": "https://commons.wikimedia.org/wiki/File:Gustav_Klimt,_1907,_Adele_Bloch-Bauer_I,_Neue_Galerie_New_York.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "turner_temeraire.jpg": {
+  "title": "The Fighting Temeraire",
+  "artist": "J. M. W. Turner",
+  "year": "1839",
+  "artistDied": 1851,
+  "source": "https://commons.wikimedia.org/wiki/File:The_Fighting_Temeraire,_JMW_Turner,_National_Gallery.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "turner_rain_steam_speed.jpg": {
+  "title": "Rain, Steam and Speed",
+  "artist": "J. M. W. Turner",
+  "year": "1844",
+  "artistDied": 1851,
+  "source": "https://commons.wikimedia.org/wiki/File:Rain_Steam_and_Speed_the_Great_Western_Railway.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "turner_norham_sunrise.jpg": {
+  "title": "Norham Castle, Sunrise",
+  "artist": "J. M. W. Turner",
+  "year": "c. 1845",
+  "artistDied": 1851,
+  "source": "https://commons.wikimedia.org/wiki/File:Joseph_Mallord_William_Turner_-_Norham_Castle,_Sunrise_-_WGA23182.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "turner_sun_setting_lake.jpg": {
+  "title": "Sun Setting over a Lake",
+  "artist": "J. M. W. Turner",
+  "year": "c. 1840",
+  "artistDied": 1851,
+  "source": "https://commons.wikimedia.org/wiki/File:Joseph_Mallord_William_Turner_(1775-1851)_-_Sun_Setting_over_a_Lake_-_N04665_-_National_Gallery.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "turner_red_rigi.jpg": {
+  "title": "The Red Rigi",
+  "artist": "J. M. W. Turner",
+  "year": "1842",
+  "artistDied": 1851,
+  "source": "https://commons.wikimedia.org/wiki/File:J._M._W._Turner_-_The_Red_Rigi_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "turner_snow_storm.jpg": {
+  "title": "Snow Storm: Steam-Boat off a Harbour's Mouth",
+  "artist": "J. M. W. Turner",
+  "year": "1842",
+  "artistDied": 1851,
+  "source": "https://commons.wikimedia.org/wiki/File:Joseph_Mallord_William_Turner_-_Snow_Storm_-_Steam-Boat_off_a_Harbour%27s_Mouth_-_WGA23178.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "friedrich_wanderer.jpg": {
+  "title": "Wanderer above the Sea of Fog",
+  "artist": "Caspar David Friedrich",
+  "year": "c. 1818",
+  "artistDied": 1840,
+  "source": "https://commons.wikimedia.org/wiki/File:Caspar_David_Friedrich_-_Wanderer_above_the_sea_of_fog.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "friedrich_monk_sea.jpg": {
+  "title": "The Monk by the Sea",
+  "artist": "Caspar David Friedrich",
+  "year": "1808–1810",
+  "artistDied": 1840,
+  "source": "https://commons.wikimedia.org/wiki/File:Caspar_David_Friedrich_-_Der_M%C3%B6nch_am_Meer_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "friedrich_moonrise_sea.jpg": {
+  "title": "Moonrise over the Sea",
+  "artist": "Caspar David Friedrich",
+  "year": "1822",
+  "artistDied": 1840,
+  "source": "https://commons.wikimedia.org/wiki/File:Caspar_David_Friedrich_-_Mondaufgang_am_Meer_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "friedrich_two_men_moon.jpg": {
+  "title": "Two Men Contemplating the Moon",
+  "artist": "Caspar David Friedrich",
+  "year": "c. 1825–1830",
+  "artistDied": 1840,
+  "source": "https://commons.wikimedia.org/wiki/File:Friedrich_-_Two_Men_Contemplating_the_Moon.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "friedrich_chalk_cliffs.jpg": {
+  "title": "Chalk Cliffs on Rügen",
+  "artist": "Caspar David Friedrich",
+  "year": "1818",
+  "artistDied": 1840,
+  "source": "https://commons.wikimedia.org/wiki/File:Friedrich,_Caspar_David_-_Kreidefelsen_auf_R%C3%BCgen.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "friedrich_sea_of_ice.jpg": {
+  "title": "The Sea of Ice",
+  "artist": "Caspar David Friedrich",
+  "year": "1823–1824",
+  "artistDied": 1840,
+  "source": "https://commons.wikimedia.org/wiki/File:Friedrich,_Caspar_David_-_Eismeer.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "seurat_grande_jatte.jpg": {
+  "title": "A Sunday on La Grande Jatte",
+  "artist": "Georges Seurat",
+  "year": "1884–1886",
+  "artistDied": 1891,
+  "source": "https://commons.wikimedia.org/wiki/File:A_Sunday_on_La_Grande_Jatte,_Georges_Seurat,_1884.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "seurat_bathers.jpg": {
+  "title": "Bathers at Asnières",
+  "artist": "Georges Seurat",
+  "year": "1884",
+  "artistDied": 1891,
+  "source": "https://commons.wikimedia.org/wiki/File:Baigneurs_a_Asnieres.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "seurat_gravelines.jpg": {
+  "title": "The Channel of Gravelines, Evening",
+  "artist": "Georges Seurat",
+  "year": "1890",
+  "artistDied": 1891,
+  "source": "https://commons.wikimedia.org/wiki/File:Georges-Pierre_Seurat_-_The_Channel_at_Gravelines,_Evening_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "cezanne_sainte_victoire.jpg": {
+  "title": "Mont Sainte-Victoire",
+  "artist": "Paul Cézanne",
+  "year": "1904",
+  "artistDied": 1906,
+  "source": "https://commons.wikimedia.org/wiki/File:Montagne_Sainte-Victoire,_par_Paul_C%C3%A9zanne_108.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100)"
+ },
+ "cezanne_apples.jpg": {
+  "title": "Still Life with Apples",
+  "artist": "Paul Cézanne",
+  "year": "1893–1894",
+  "artistDied": 1906,
+  "source": "https://commons.wikimedia.org/wiki/File:Paul_C%C3%A9zanne_-_Still_Life_with_Apples_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "renoir_moulin_galette.jpg": {
+  "title": "Bal du moulin de la Galette",
+  "artist": "Pierre-Auguste Renoir",
+  "year": "1876",
+  "artistDied": 1919,
+  "source": "https://commons.wikimedia.org/wiki/File:Renoir,_Pierre-Auguste_-_Dance_at_Le_Moulin_de_la_Galette,_1876.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "renoir_luncheon.jpg": {
+  "title": "Luncheon of the Boating Party",
+  "artist": "Pierre-Auguste Renoir",
+  "year": "1880–1881",
+  "artistDied": 1919,
+  "source": "https://commons.wikimedia.org/wiki/File:Pierre-Auguste_Renoir_-_Luncheon_of_the_Boating_Party_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "degas_blue_dancers.jpg": {
+  "title": "Dancers in Blue",
+  "artist": "Edgar Degas",
+  "year": "c. 1890",
+  "artistDied": 1917,
+  "source": "https://commons.wikimedia.org/wiki/File:Edgar_Germain_Hilaire_Degas_076.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "gauguin_arearea.jpg": {
+  "title": "Arearea (Joyfulness)",
+  "artist": "Paul Gauguin",
+  "year": "1892",
+  "artistDied": 1903,
+  "source": "https://commons.wikimedia.org/wiki/File:Paul_Gauguin_-_Arearea_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "gauguin_vision_sermon.jpg": {
+  "title": "Vision after the Sermon",
+  "artist": "Paul Gauguin",
+  "year": "1888",
+  "artistDied": 1903,
+  "source": "https://commons.wikimedia.org/wiki/File:La_vision_apr%C3%A8s_le_sermon_(Paul_Gauguin).jpg",
+  "licence": "Public domain (PD-old-100)"
+ },
+ "gauguin_tahitian_landscape.jpg": {
+  "title": "Tahitian Landscape",
+  "artist": "Paul Gauguin",
+  "year": "1891",
+  "artistDied": 1903,
+  "source": "https://commons.wikimedia.org/wiki/File:Paul_Gauguin_-_Tahitian_Landscape_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "sisley_flood_port_marly.jpg": {
+  "title": "Boat in the Flood at Port-Marly",
+  "artist": "Alfred Sisley",
+  "year": "1876",
+  "artistDied": 1899,
+  "source": "https://commons.wikimedia.org/wiki/File:Alfred_Sisley_-_Boat_in_the_Flood_at_Port_Marly_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "pissarro_boulevard_night.jpg": {
+  "title": "The Boulevard Montmartre at Night",
+  "artist": "Camille Pissarro",
+  "year": "1897",
+  "artistDied": 1903,
+  "source": "https://commons.wikimedia.org/wiki/File:Camille_Pissarro_-_Boulevard_Montmartre_at_Night_-_c_1897_-_National_Gallery_UK.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "morisot_cradle.jpg": {
+  "title": "Summer's Day",
+  "artist": "Berthe Morisot",
+  "year": "1879",
+  "artistDied": 1895,
+  "source": "https://commons.wikimedia.org/wiki/File:Berthe_Morisot_-_Jour_d%27%C3%A9t%C3%A9,_1879.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "caillebotte_rainy_day.jpg": {
+  "title": "Paris Street; Rainy Day",
+  "artist": "Gustave Caillebotte",
+  "year": "1877",
+  "artistDied": 1894,
+  "source": "https://commons.wikimedia.org/wiki/File:Gustave_Caillebotte_-_Paris_Street;_Rainy_Day_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "cross_evening_breeze.jpg": {
+  "title": "The Evening Air",
+  "artist": "Henri-Edmond Cross",
+  "year": "c. 1893",
+  "artistDied": 1910,
+  "source": "https://commons.wikimedia.org/wiki/File:Henri-Edmond_Cross_-_The_Evening_Air_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "redon_flowers_vase.jpg": {
+  "title": "Vase of Flowers",
+  "artist": "Odilon Redon",
+  "year": "c. 1910",
+  "artistDied": 1916,
+  "source": "https://commons.wikimedia.org/wiki/File:Odilon_Redon_-_Vase_of_Flowers_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "rousseau_dream.jpg": {
+  "title": "The Dream",
+  "artist": "Henri Rousseau",
+  "year": "1910",
+  "artistDied": 1910,
+  "source": "https://commons.wikimedia.org/wiki/File:Henri_Rousseau_-_Le_R%C3%AAve_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "rousseau_sleeping_gypsy.jpg": {
+  "title": "The Sleeping Gypsy",
+  "artist": "Henri Rousseau",
+  "year": "1897",
+  "artistDied": 1910,
+  "source": "https://commons.wikimedia.org/wiki/File:La_Boh%C3%A9mienne_endormie.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "rousseau_tiger.jpg": {
+  "title": "Tiger in a Tropical Storm (Surprised!)",
+  "artist": "Henri Rousseau",
+  "year": "1891",
+  "artistDied": 1910,
+  "source": "https://commons.wikimedia.org/wiki/File:Surprised-Rousseau.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "bocklin_isle_dead.jpg": {
+  "title": "Isle of the Dead",
+  "artist": "Arnold Böcklin",
+  "year": "1880",
+  "artistDied": 1901,
+  "source": "https://commons.wikimedia.org/wiki/File:Arnold_B%C3%B6cklin_-_Die_Toteninsel_I_(Basel,_Kunstmuseum).jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "ciurlionis_rex.jpg": {
+  "title": "Rex",
+  "artist": "Mikalojus Konstantinas Čiurlionis",
+  "year": "1909",
+  "artistDied": 1911,
+  "source": "https://commons.wikimedia.org/wiki/File:Mikalojus_Konstantinas_Ciurlionis_-_REX_-_1909.jpg",
+  "licence": "Public domain (PD-old-100)"
+ },
+ "waterhouse_shalott.jpg": {
+  "title": "The Lady of Shalott",
+  "artist": "John William Waterhouse",
+  "year": "1888",
+  "artistDied": 1917,
+  "source": "https://commons.wikimedia.org/wiki/File:John_William_Waterhouse_-_The_Lady_of_Shalott_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "grimshaw_liverpool_quay.jpg": {
+  "title": "Liverpool Quay by Moonlight",
+  "artist": "John Atkinson Grimshaw",
+  "year": "1887",
+  "artistDied": 1893,
+  "source": "https://commons.wikimedia.org/wiki/File:John_Atkinson_Grimshaw_(1836-1893)_-_Liverpool_Quay_by_Moonlight_-_T00902_-_Tate.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "grimshaw_reflections_thames.jpg": {
+  "title": "Reflections on the Thames, Westminster",
+  "artist": "John Atkinson Grimshaw",
+  "year": "1880",
+  "artistDied": 1893,
+  "source": "https://commons.wikimedia.org/wiki/File:Reflections_on_the_Thames,_Westminster_-_Grimshaw,_John_Atkinson.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "whistler_nocturne_falling_rocket.jpg": {
+  "title": "Nocturne in Black and Gold: The Falling Rocket",
+  "artist": "James McNeill Whistler",
+  "year": "1875",
+  "artistDied": 1903,
+  "source": "https://commons.wikimedia.org/wiki/File:Whistler-Nocturne_in_black_and_gold.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "whistler_nocturne_grey_gold.jpg": {
+  "title": "Nocturne: Blue and Silver, Chelsea",
+  "artist": "James McNeill Whistler",
+  "year": "1871",
+  "artistDied": 1903,
+  "source": "https://commons.wikimedia.org/wiki/File:James_Abbott_McNeill_Whistler_-_Nocturne-_Blue_and_Silver_-_Chelsea_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "aivazovsky_ninth_wave.jpg": {
+  "title": "The Ninth Wave",
+  "artist": "Ivan Aivazovsky",
+  "year": "1850",
+  "artistDied": 1900,
+  "source": "https://commons.wikimedia.org/wiki/File:Aivazovsky,_Ivan_-_The_Ninth_Wave.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "balke_north_cape.jpg": {
+  "title": "The North Cape by Moonlight",
+  "artist": "Peder Balke",
+  "year": "1848",
+  "artistDied": 1887,
+  "source": "https://commons.wikimedia.org/wiki/File:Peder_Balke_-_The_North_Cape_by_Moonlight_-_2019.167.4_-_Metropolitan_Museum_of_Art.jpg",
+  "licence": "Public domain (PD-old-auto-expired)"
+ },
+ "homer_northeaster.jpg": {
+  "title": "Northeaster",
+  "artist": "Winslow Homer",
+  "year": "1895",
+  "artistDied": 1910,
+  "source": "https://commons.wikimedia.org/wiki/File:Northeaster_by_Winslow_Homer_1895.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "courbet_wave.jpg": {
+  "title": "The Wave",
+  "artist": "Gustave Courbet",
+  "year": "1869",
+  "artistDied": 1877,
+  "source": "https://commons.wikimedia.org/wiki/File:Gustave_Courbet_-_La_vague_(1869).jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "church_twilight_wilderness.jpg": {
+  "title": "Twilight in the Wilderness",
+  "artist": "Frederic Edwin Church",
+  "year": "1860",
+  "artistDied": 1900,
+  "source": "https://commons.wikimedia.org/wiki/File:Twilight_in_the_Wilderness_by_Frederic_Edwin_Church_(3).jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "church_aurora_borealis.jpg": {
+  "title": "Aurora Borealis",
+  "artist": "Frederic Edwin Church",
+  "year": "1865",
+  "artistDied": 1900,
+  "source": "https://commons.wikimedia.org/wiki/File:Frederic_Edwin_Church_-_Aurora_Borealis_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "bierstadt_sierra_nevada.jpg": {
+  "title": "Among the Sierra Nevada, California",
+  "artist": "Albert Bierstadt",
+  "year": "1868",
+  "artistDied": 1902,
+  "source": "https://commons.wikimedia.org/wiki/File:Albert_Bierstadt_-_Among_the_Sierra_Nevada,_California_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "cole_oxbow.jpg": {
+  "title": "The Oxbow",
+  "artist": "Thomas Cole",
+  "year": "1836",
+  "artistDied": 1848,
+  "source": "https://commons.wikimedia.org/wiki/File:Cole_Thomas_The_Oxbow_(The_Connecticut_River_near_Northampton_1836).jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "levitan_above_eternal_peace.jpg": {
+  "title": "Above Eternal Peace",
+  "artist": "Isaac Levitan",
+  "year": "1894",
+  "artistDied": 1900,
+  "source": "https://commons.wikimedia.org/wiki/File:Isaac_Levitan_-_Au-dessus_du_repos_%C3%A9ternel.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "shishkin_rye.jpg": {
+  "title": "Rye",
+  "artist": "Ivan Shishkin",
+  "year": "1878",
+  "artistDied": 1898,
+  "source": "https://commons.wikimedia.org/wiki/File:Ivan_Ivanovich_Shishkin_-_Rye_field,_1878.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "schiele_four_trees.jpg": {
+  "title": "Four Trees",
+  "artist": "Egon Schiele",
+  "year": "1917",
+  "artistDied": 1918,
+  "source": "https://commons.wikimedia.org/wiki/File:Egon_Schiele_-_Vier_B%C3%A4ume_-_3917_-_%C3%96sterreichische_Galerie_Belvedere.jpg",
+  "licence": "Public domain (PD-old-auto-expired)"
+ },
+ "hammershoi_sunbeams.jpg": {
+  "title": "Dust Motes Dancing in the Sunbeams",
+  "artist": "Vilhelm Hammershøi",
+  "year": "1900",
+  "artistDied": 1916,
+  "source": "https://commons.wikimedia.org/wiki/File:Hammersh%C3%B8i_Dust_motes_dancing.jpg",
+  "licence": "Public domain (PD-old)"
+ },
+ "marc_blue_horses.jpg": {
+  "title": "The Large Blue Horses",
+  "artist": "Franz Marc",
+  "year": "1911",
+  "artistDied": 1916,
+  "source": "https://commons.wikimedia.org/wiki/File:Franz_Marc_-_Die_gro%C3%9Fen_blauen_Pferde_1911.jpg",
+  "licence": "Public domain (PD-old-70)"
+ },
+ "marc_fighting_forms.jpg": {
+  "title": "Fighting Forms",
+  "artist": "Franz Marc",
+  "year": "1914",
+  "artistDied": 1916,
+  "source": "https://commons.wikimedia.org/wiki/File:Marc_-_K%C3%A4mpfende_Formen_PA291382.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "marc_tyrol.jpg": {
+  "title": "Tyrol",
+  "artist": "Franz Marc",
+  "year": "1914",
+  "artistDied": 1916,
+  "source": "https://commons.wikimedia.org/wiki/File:Franz_Marc_-_Tirol_1914.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "marc_deer_forest.jpg": {
+  "title": "Deer in the Forest II",
+  "artist": "Franz Marc",
+  "year": "1914",
+  "artistDied": 1916,
+  "source": "https://commons.wikimedia.org/wiki/File:Franz_Marc_-_Rehe_im_Walde_II_-_2322_-_Staatliche_Kunsthalle_Karlsruhe.jpg",
+  "licence": "Public domain (PD-old-auto-expired)"
+ },
+ "macke_colour_forms.jpg": {
+  "title": "Coloured Composition of Forms",
+  "artist": "August Macke",
+  "year": "1914",
+  "artistDied": 1914,
+  "source": "https://commons.wikimedia.org/wiki/File:August_Macke_-_Colored_Composition_of_Forms,_1914_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100-expired)"
+ },
+ "macke_kairouan.jpg": {
+  "title": "Kairouan III",
+  "artist": "August Macke",
+  "year": "1914",
+  "artistDied": 1914,
+  "source": "https://commons.wikimedia.org/wiki/File:August_Macke_023.jpg",
+  "licence": "Public domain (PD-Art|PD-old-100)"
+ },
+ "korin_irises.jpg": {
+  "title": "Irises (folding screen)",
+  "artist": "Ogata Kōrin",
+  "year": "c. 1701–1702",
+  "artistDied": 1716,
+  "source": "https://commons.wikimedia.org/wiki/File:Irises_screen_2.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "korin_plum_blossoms.jpg": {
+  "title": "Red and White Plum Blossoms",
+  "artist": "Ogata Kōrin",
+  "year": "c. 1710s",
+  "artistDied": 1716,
+  "source": "https://commons.wikimedia.org/wiki/File:Ogata_K%C5%8Drin_-_Red_and_White_Plum_Blossoms.jpg",
+  "licence": "Public domain (PD-Art|PD-Japan)"
+ },
+ "jakuchu_rooster.jpg": {
+  "title": "Black Rooster and Nandina (Colorful Realm of Living Beings)",
+  "artist": "Itō Jakuchū",
+  "year": "c. 1761–1765",
+  "artistDied": 1800,
+  "source": "https://commons.wikimedia.org/wiki/File:It%C5%8D_Jakuch%C5%AB_-_Black_rooster_and_nandin_(Colorful_Realm_of_Living_Beings).jpg",
+  "licence": "Public domain (PD-Art|PD-Japan)"
+ },
+ "durer_young_hare.jpg": {
+  "title": "Young Hare",
+  "artist": "Albrecht Dürer",
+  "year": "1502",
+  "artistDied": 1528,
+  "source": "https://commons.wikimedia.org/wiki/File:Albrecht_D%C3%BCrer_-_Hare,_1502_-_Google_Art_Project.jpg",
+  "licence": "Public domain (PD-Art|PD-old-auto-expired)"
+ },
+ "ruysch_flowers.jpg": {
+  "title": "Flowers in a Vase",
+  "artist": "Rachel Ruysch",
+  "year": "1742",
+  "artistDied": 1750,
+  "source": "https://commons.wikimedia.org/wiki/File:Rachel-Ruysch-National-Gallery-Ireland.jpg",
+  "licence": "Public domain (PD-Art|PD-old-70)"
+ },
+ "haeckel_jellyfish.jpg": {
+  "title": "Discomedusae (Art Forms in Nature, plate 8)",
+  "artist": "Ernst Haeckel",
+  "year": "1904",
+  "artistDied": 1919,
+  "source": "https://commons.wikimedia.org/wiki/File:Haeckel_Discomedusae_8.jpg",
+  "licence": "Public domain (PD-old)"
+ },
+ "haeckel_radiolaria.jpg": {
+  "title": "Phaeodaria (Art Forms in Nature, plate 61)",
+  "artist": "Ernst Haeckel",
+  "year": "1904",
+  "artistDied": 1919,
+  "source": "https://commons.wikimedia.org/wiki/File:Haeckel_Phaeodaria_61.jpg",
+  "licence": "Public domain (PD-old)"
+ },
+ "redoute_rose.jpg": {
+  "title": "Rosa centifolia 'Burgundiaca' (Les Roses)",
+  "artist": "Pierre-Joseph Redouté",
+  "year": "1824",
+  "artistDied": 1840,
+  "source": "https://commons.wikimedia.org/wiki/File:Rosa_centifolia_Burgundiaca.jpg",
+  "licence": "Public domain (PD-old-70-expired)"
+ }
+}

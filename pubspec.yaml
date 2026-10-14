@@ -59,6 +59,7 @@ flutter:
     - licenses/
     # Cover art packs (see lib/art/art_sources.dart). Add each new pack folder here.
     - assets/covers/sample/
+    - assets/covers/masterpieces/
   fonts:
     - family: Inter
       fonts:

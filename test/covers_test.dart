@@ -130,8 +130,11 @@ void main() {
       s.images = [];
     }
     expect(sourcesOn(null), {'masterpieces', 'painted', 'illustrated'});
-    // Nothing painterly installed yet: the abstract styles, with each album's own approved style.
-    final art = autoArt('ana|album a|x', sourcesOn(null));
+    // The painted styles need no pack, so painterly art is there even with no pack installed.
+    final painted = autoArt('ana|album a|x', sourcesOn(null)).key!.split('@').first;
+    expect(GenerativeCover.painted.map((s) => s.name), contains(painted));
+    // Nothing painterly in use (no pack installed, Painted off): the abstract styles, with each album's own approved style.
+    final art = autoArt('ana|album a|x', {'masterpieces'});
     final seed = GenerativeCover.seedFor('ana|album a|x');
     expect(art, Art.drawn('${GenerativeCover.styleOf(seed).name}@${seed.toRadixString(16)}'));
   });
