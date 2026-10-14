@@ -8,7 +8,9 @@ import 'package:path_provider/path_provider.dart';
 import 'art/art_cache.dart';
 import 'art/art_sources.dart';
 import 'audio/engine.dart';
+import 'audio/sound.dart' show fullEngine;
 import 'library/library.dart';
+import 'platform/android.dart';
 import 'platform/licence.dart';
 import 'platform/log.dart';
 import 'platform/media_controls.dart';
@@ -40,6 +42,7 @@ Future<String> dataDir() async {
 Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error}) async {
   WidgetsFlutterBinding.ensureInitialized();
   initMediaKit();
+  if (Platform.isAndroid) fullEngine = false; // media_kit's Android libmpv: no soxr, only the equalizer filter (sound.dart)
   // Cover thumbnails are a cache: Local AppData, except under MP_DATA where test data stays in one folder.
   final cache = const String.fromEnvironment('MP_DATA').isEmpty ? (await getApplicationCacheDirectory()).path : null;
   lib = Library(await dataDir(), cacheDir: cache)..load();
@@ -49,6 +52,13 @@ Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error
   await engine.init();
   await sound.init();
   MediaControls(engine);
+  if (Platform.isAndroid) {
+    // ponytail: AudioService.init runs once per process; Start fresh after it would throw (restart Lumen).
+    await initAndroid();
+    useMusicFolder(lib);
+    await startAndroidMedia(engine);
+    AppLifecycleListener(onResume: lib.rescan); // Android has no recursive folder watch: rescan on return
+  }
   lib.watch();
   lib.rescan(); // background: picks up anything changed while the app was closed
 }

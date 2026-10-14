@@ -16,11 +16,13 @@ import '../audio/sound_control.dart';
 import '../library/library.dart';
 import '../library/models.dart';
 import '../library/tags.dart' show audioExtensions;
+import '../platform/android.dart' show musicAccess;
 import '../platform/window.dart';
 import 'art_accent.dart';
 import 'lyrics_view.dart';
 import 'mini_player.dart';
 import 'now_playing.dart';
+import 'phone.dart';
 import 'pages/albums.dart';
 import 'pages/artists.dart';
 import 'pages/browse.dart';
@@ -314,21 +316,36 @@ class _ShellState extends State<Shell> {
   }
 
   @override
-  Widget build(BuildContext context) =>
-      ListenableBuilder(listenable: nav, builder: (context, _) => nav.mini ? const MiniPlayer() : _shell(context));
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: Listenable.merge([nav, musicAccess]),
+    builder: (context, _) => !musicAccess.value
+        ? const MusicAccess()
+        : nav.mini
+        ? const MiniPlayer()
+        : phoneLayout(context)
+        ? const PhoneShell()
+        : _shell(context),
+  );
+
+  /// Files dropped from Explorer (desktop only).
+  Widget _drop(Widget child) => !isDesktop
+      ? child
+      : DropTarget(
+          onDragEntered: (_) => setState(() => _dragging = true),
+          onDragExited: (_) => setState(() => _dragging = false),
+          onDragDone: (d) {
+            setState(() => _dragging = false);
+            onDrop(context, [for (final f in d.files) f.path], d.globalPosition);
+          },
+          child: child,
+        );
 
   Widget _shell(BuildContext context) => Scaffold(
     backgroundColor: C.bg,
     body: Listener(
       onPointerDown: _pointer,
-      child: DropTarget(
-        onDragEntered: (_) => setState(() => _dragging = true),
-        onDragExited: (_) => setState(() => _dragging = false),
-        onDragDone: (d) {
-          setState(() => _dragging = false);
-          onDrop(context, [for (final f in d.files) f.path], d.globalPosition);
-        },
-        child: ListenableBuilder(
+      child: _drop(
+        ListenableBuilder(
           listenable: nav,
           builder: (context, _) => Stack(
             children: [
@@ -365,7 +382,7 @@ class _ShellState extends State<Shell> {
                                                       switchInCurve: Motion.curve,
                                                       child: KeyedSubtree(
                                                         key: ValueKey(nav.lyrics ? 'lyrics' : nav.top.id),
-                                                        child: nav.lyrics ? const LyricsView() : _page(nav.top),
+                                                        child: nav.lyrics ? const LyricsView() : pageFor(nav.top),
                                                       ),
                                                     ),
                                                   ),
@@ -424,30 +441,30 @@ class _ShellState extends State<Shell> {
       ),
     ),
   );
-
-  Widget _page(Place p) => switch (p.page) {
-    'albums' => const AlbumsPage(),
-    'album' => AlbumPage(p.arg as String),
-    'artists' => const ArtistsPage(),
-    'artist' => ArtistPage(p.arg as String),
-    'songs' => const SongsPage(),
-    'folders' => const FoldersPage(),
-    'playlists' => const PlaylistsPage(),
-    'playlist' => PlaylistPage(p.arg as int),
-    'smart' => SmartPlaylistPage(p.arg as int),
-    'genres' => const GenresPage(),
-    'genre' => GenrePage(p.arg as String),
-    'years' => const YearsPage(),
-    'composers' => const ComposersPage(),
-    'composer' => ComposerPage(p.arg as String),
-    'duplicates' => const DuplicatesPage(),
-    'stats' => const StatsPage(),
-    'favourites' => const FavouritesPage(),
-    'settings' => const SettingsPage(),
-    'sound' => const SoundPage(),
-    _ => const HomePage(),
-  };
 }
+
+Widget pageFor(Place p) => switch (p.page) {
+  'albums' => const AlbumsPage(),
+  'album' => AlbumPage(p.arg as String),
+  'artists' => const ArtistsPage(),
+  'artist' => ArtistPage(p.arg as String),
+  'songs' => const SongsPage(),
+  'folders' => const FoldersPage(),
+  'playlists' => const PlaylistsPage(),
+  'playlist' => PlaylistPage(p.arg as int),
+  'smart' => SmartPlaylistPage(p.arg as int),
+  'genres' => const GenresPage(),
+  'genre' => GenrePage(p.arg as String),
+  'years' => const YearsPage(),
+  'composers' => const ComposersPage(),
+  'composer' => ComposerPage(p.arg as String),
+  'duplicates' => const DuplicatesPage(),
+  'stats' => const StatsPage(),
+  'favourites' => const FavouritesPage(),
+  'settings' => const SettingsPage(),
+  'sound' => const SoundPage(),
+  _ => const HomePage(),
+};
 
 /// Files or folders dropped from Explorer: folders join the library (after
 /// asking); songs already in the library get the play / queue menu.

@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../library/models.dart';
 import '../../library/suggestions.dart';
+import '../../platform/window.dart' show isTouch;
 import '../app.dart';
 import '../theme.dart';
 import '../tracks.dart';
@@ -72,7 +73,7 @@ class HomePage extends StatelessWidget {
                         const SizedBox(width: S.x4),
                         Expanded(
                           child: Text(
-                            'Play a few songs and suggestions will appear here. They come only from what you play on this computer: '
+                            'Play a few songs and suggestions will appear here. They come only from what you play ${isTouch ? 'on this phone' : 'on this computer'}: '
                             'plays count after half a song (or 4 minutes), skips are songs left in the first 30 seconds.',
                             style: T.small,
                           ),

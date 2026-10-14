@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -43,17 +45,18 @@ List<(String, IconData, String, VoidCallback)> playlistActions(BuildContext cont
       if (name != null) lib.renamePlaylist(pl.id, name);
     },
   ),
-  (
-    'export',
-    LucideIcons.upload,
-    'Export as M3U8…',
-    () async {
-      final loc = await getSaveLocation(suggestedName: '${pl.name}.m3u8', acceptedTypeGroups: [_m3u]);
-      if (loc == null) return;
-      lib.exportM3u(pl.id, loc.path);
-      if (context.mounted) toast(context, 'Saved ${loc.path}');
-    },
-  ),
+  if (!Platform.isAndroid) // file_selector can't save files on Android
+    (
+      'export',
+      LucideIcons.upload,
+      'Export as M3U8…',
+      () async {
+        final loc = await getSaveLocation(suggestedName: '${pl.name}.m3u8', acceptedTypeGroups: [_m3u]);
+        if (loc == null) return;
+        lib.exportM3u(pl.id, loc.path);
+        if (context.mounted) toast(context, 'Saved ${loc.path}');
+      },
+    ),
   (
     'delete',
     LucideIcons.trash2,
@@ -102,12 +105,12 @@ class PlaylistsPage extends StatelessWidget {
         ),
         ...smartPlaylistSlivers(context),
         if (lib.playlists.isEmpty)
-          const SliverFillRemaining(
+          SliverFillRemaining(
             hasScrollBody: false,
             child: EmptyState(
               icon: LucideIcons.listMusic,
               title: 'No playlists yet',
-              body: 'Make one with New playlist, or right-click any song and choose Add to playlist.',
+              body: 'Make one with New playlist, or $menuWord any song and choose Add to playlist.',
             ),
           )
         else
@@ -225,12 +228,12 @@ class PlaylistPage extends StatelessWidget {
           ),
           const SliverToBoxAdapter(child: SizedBox(height: S.x4)),
           if (tracks.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               hasScrollBody: false,
               child: EmptyState(
                 icon: LucideIcons.listPlus,
                 title: 'This playlist is empty',
-                body: 'Right-click any song and choose Add to playlist.',
+                body: '${menuWord[0].toUpperCase()}${menuWord.substring(1)} any song and choose Add to playlist.',
               ),
             )
           else

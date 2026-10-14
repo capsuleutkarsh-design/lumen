@@ -1,4 +1,5 @@
 import java.security.MessageDigest
+import java.util.Properties
 import java.util.zip.ZipInputStream
 
 plugins {
@@ -23,7 +24,7 @@ android {
         applicationId = "com.capsuleutkarsh.lumen"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
-        minSdk = flutter.minSdkVersion
+        minSdk = 26 // Android 8
         targetSdk = flutter.targetSdkVersion
         // Uses the version code from pubspec.yaml. When using split APKs, 1000 * ABI_VERSION
         // is added automatically by Flutter. (https://developer.android.com/studio/build/configure-apk-splits#configure-APK-versions)
@@ -33,11 +34,23 @@ android {
         versionName = flutter.versionName
     }
 
+    // Release signing: android/key.properties (never committed) names the keystore and its passwords.
+    // Without it the release APK is signed with the debug key (fine for testing, not for updates).
+    val keys = rootProject.file("key.properties").takeIf { it.exists() }?.let { f -> Properties().apply { f.inputStream().use { load(it) } } }
+    signingConfigs {
+        if (keys != null) {
+            create("release") {
+                storeFile = rootProject.file(keys.getProperty("storeFile"))
+                storePassword = keys.getProperty("storePassword")
+                keyAlias = keys.getProperty("keyAlias")
+                keyPassword = keys.getProperty("keyPassword")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (keys != null) "release" else "debug")
         }
     }
 }
