@@ -1,14 +1,22 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../library/lyrics.dart';
+import '../library/models.dart';
 import 'app.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-/// Big lyrics over the blurred cover; the current line is bright and centred.
+/// The lyrics of [t] (a `.lrc` next to the file, else the LYRICS tag), or null.
+Lyrics? lyricsFor(Track? t) => t == null ? null : loadLyrics(t.path, lib.embeddedLyrics(t.id));
+
+/// Big lyrics over a dark, quiet wash of the cover's colours; the current line
+/// is bright. [embedded] = the side panel of Now Playing (no frame, no glow).
 class LyricsView extends StatefulWidget {
-  const LyricsView({super.key});
+  const LyricsView({super.key, this.embedded = false});
+  final bool embedded;
   @override
   State<LyricsView> createState() => _LyricsViewState();
 }
@@ -41,12 +49,13 @@ class _LyricsViewState extends State<LyricsView> {
     if (t?.id == _trackId) return;
     setState(() {
       _trackId = t?.id;
-      _lyrics = t == null ? null : loadLyrics(t.path, lib.embeddedLyrics(t.id));
+      _lyrics = lyricsFor(t);
       _keys
         ..clear()
         ..addAll(List.generate(_lyrics?.lines.length ?? 0, (_) => GlobalKey()));
       _line = -1;
     });
+    if (_scroll.hasClients) _scroll.jumpTo(0);
     _follow();
   }
 
@@ -56,14 +65,97 @@ class _LyricsViewState extends State<LyricsView> {
     final i = l.lineAt(engine.position.value);
     if (i == _line) return;
     setState(() => _line = i);
-    final ctx = i >= 0 ? _keys[i].currentContext : null;
-    if (ctx != null) Scrollable.ensureVisible(ctx, alignment: 0.4, duration: Motion.normal, curve: Motion.curve);
+    if (i >= 0) _reveal(i, 3);
+  }
+
+  /// Centres line [i]. A line far away is not built yet (after a long seek),
+  /// so jump near it by an estimate first, then settle on it once it exists.
+  void _reveal(int i, int tries) {
+    final ctx = _keys[i].currentContext;
+    if (ctx != null) {
+      Scrollable.ensureVisible(ctx, alignment: 0.4, duration: Motion.slow, curve: Motion.curve);
+      return;
+    }
+    if (tries <= 0 || !_scroll.hasClients) return;
+    final pos = _scroll.position;
+    // Step from a line that is built, by that line's height per line.
+    final ref = _keys.indexWhere((k) => k.currentContext != null);
+    final h = ref < 0 ? 60.0 : (_keys[ref].currentContext!.findRenderObject() as RenderBox).size.height;
+    _scroll.jumpTo((pos.pixels + (i - max(ref, 0)) * h).clamp(0.0, pos.maxScrollExtent));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted && _line == i) _reveal(i, tries - 1);
+    });
   }
 
   @override
   Widget build(BuildContext context) {
     final t = engine.current;
     final l = _lyrics;
+    final seed = t == null ? null : '${t.album}\u0000${t.albumArtist}';
+    final style = widget.embedded ? T.lyric.copyWith(fontSize: 24) : T.lyric;
+    Widget body;
+    if (t == null) {
+      body = const EmptyState(icon: LucideIcons.micVocal, title: 'Nothing playing', body: 'Play a song to see its lyrics here.');
+    } else if (l == null) {
+      body = const EmptyState(
+        icon: LucideIcons.micVocal,
+        title: 'No lyrics for this song',
+        body: 'Put a .lrc file with the same name next to the song, or add a LYRICS tag, and they will show here.',
+      );
+    } else {
+      body = ShaderMask(
+        shaderCallback: (r) => const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: [Colors.transparent, Colors.black, Colors.black, Colors.transparent],
+          stops: [0, 0.14, 0.82, 1],
+        ).createShader(r),
+        blendMode: BlendMode.dstIn,
+        child: LayoutBuilder(
+          builder: (context, c) => ListView.builder(
+            controller: _scroll,
+            padding: EdgeInsets.symmetric(horizontal: widget.embedded ? S.x2 : S.x16, vertical: c.maxHeight * 0.4),
+            itemCount: l.lines.length,
+            itemBuilder: (_, i) {
+              final (time, words) = l.lines[i];
+              final text = Text(words.isEmpty ? '♪' : words);
+              if (!l.synced) {
+                // Plain lyrics: calm and fully readable; nothing to click.
+                return Padding(
+                  key: _keys[i],
+                  padding: const EdgeInsets.symmetric(vertical: S.x1),
+                  child: DefaultTextStyle(
+                    style: style.copyWith(fontWeight: FontWeight.w500, color: C.text.withValues(alpha: 0.88)),
+                    child: text,
+                  ),
+                );
+              }
+              final current = i == _line;
+              return Padding(
+                key: _keys[i],
+                padding: const EdgeInsets.symmetric(vertical: S.x2),
+                child: Clickable(
+                  onTap: () => engine.seek(time),
+                  hover: Colors.transparent,
+                  pressed: Colors.transparent,
+                  radius: R.small,
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: AnimatedDefaultTextStyle(
+                      duration: Motion.slow,
+                      curve: Motion.curve,
+                      style: style.copyWith(color: current ? C.text : C.text.withValues(alpha: i < _line ? 0.2 : 0.34)),
+                      child: text,
+                    ),
+                  ),
+                ),
+              );
+            },
+          ),
+        ),
+      );
+    }
+    if (widget.embedded) return body;
     return ClipRRect(
       borderRadius: BorderRadius.circular(R.panel),
       child: Container(
@@ -74,61 +166,22 @@ class _LyricsViewState extends State<LyricsView> {
         ),
         child: Stack(
           children: [
-            CoverGlow(t?.cover, opacity: 0.35),
-            if (t == null)
-              const EmptyState(icon: LucideIcons.micVocal, title: 'Nothing playing', body: 'Play a song to see its lyrics here.')
-            else if (l == null)
-              EmptyState(
-                icon: LucideIcons.micVocal,
-                title: 'No lyrics for this song',
-                body: 'Put a .lrc file with the same name next to “${t.title}”, or add a LYRICS tag, and they will show here.',
-              )
-            else
-              ShaderMask(
-                shaderCallback: (r) => const LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: [Colors.transparent, Colors.black, Colors.black, Colors.transparent],
-                  stops: [0, 0.12, 0.85, 1],
-                ).createShader(r),
-                blendMode: BlendMode.dstIn,
-                child: ListView.builder(
-                  controller: _scroll,
-                  padding: const EdgeInsets.symmetric(horizontal: S.x12 + S.x4, vertical: 200),
-                  itemCount: l.lines.length,
-                  itemBuilder: (_, i) {
-                    final (time, words) = l.lines[i];
-                    final current = !l.synced || i == _line;
-                    return Padding(
-                      key: _keys[i],
-                      padding: const EdgeInsets.symmetric(vertical: S.x3),
-                      child: Clickable(
-                        onTap: l.synced ? () => engine.seek(time) : null,
-                        hover: Colors.transparent,
-                        pressed: Colors.transparent,
-                        radius: R.small,
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: AnimatedDefaultTextStyle(
-                            duration: Motion.normal,
-                            curve: Motion.curve,
-                            style: l.synced
-                                ? T.lyric.copyWith(color: current ? C.text : C.text.withValues(alpha: i < _line ? 0.22 : 0.38))
-                                : T.lyric.copyWith(fontSize: 24, color: C.text.withValues(alpha: 0.85)),
-                            child: Text(words.isEmpty ? '♪' : words),
-                          ),
-                        ),
-                      ),
-                    );
-                  },
+            // A dark, quiet wash of the cover's colours (like Wora), not a loud glow.
+            CoverGlow(t?.cover, seed: seed, opacity: 0.3, blur: 90),
+            const Positioned.fill(
+              child: DecoratedBox(
+                decoration: BoxDecoration(
+                  gradient: RadialGradient(center: Alignment(0.4, 0.5), radius: 1.3, colors: [Color(0xF2000000), Color(0x8C000000)]),
                 ),
               ),
+            ),
+            body,
             if (l != null)
               Positioned(
                 right: S.x5,
                 bottom: S.x5,
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: S.x3, vertical: S.x1 + 2),
+                  padding: const EdgeInsets.symmetric(horizontal: S.x3, vertical: S.x1),
                   decoration: BoxDecoration(
                     color: C.raised3,
                     borderRadius: BorderRadius.circular(R.pill),

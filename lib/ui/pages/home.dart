@@ -47,6 +47,7 @@ class HomePage extends StatelessWidget {
       final h = lib.home;
       final played = h.mostPlayed.isNotEmpty;
       return CustomScrollView(
+        key: const PageStorageKey('home'),
         slivers: [
           SliverToBoxAdapter(
             child: PageHeader(
@@ -67,7 +68,7 @@ class HomePage extends StatelessWidget {
                     padding: const EdgeInsets.all(S.x5),
                     child: Row(
                       children: [
-                        const Icon(LucideIcons.sparkles, size: 20, color: C.accent),
+                        const Icon(LucideIcons.sparkles, size: 20, color: C.dim),
                         const SizedBox(width: S.x4),
                         Expanded(
                           child: Text(
@@ -92,7 +93,7 @@ class HomePage extends StatelessWidget {
             ..._tracks('Not played in a while', 'Songs you played often, but not in the last 30 days', h.notLately),
             ..._albums('Recently added', 'Newest in your library', h.recentlyAdded),
           ],
-          const SliverToBoxAdapter(child: SizedBox(height: S.x6)),
+          const SliverToBoxAdapter(child: SizedBox(height: S.x16)),
         ],
       );
     },

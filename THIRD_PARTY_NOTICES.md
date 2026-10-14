@@ -15,6 +15,9 @@ Lumen uses and credits the following work.
 | [window_manager](https://pub.dev/packages/window_manager), screen_retriever | Frameless window | MIT |
 | [image](https://pub.dev/packages/image) | Cover thumbnails | MIT |
 | [file_selector](https://pub.dev/packages/file_selector), [path_provider](https://pub.dev/packages/path_provider), [path](https://pub.dev/packages/path) | Folder/file pickers, app data folder, paths | BSD 3-Clause (Flutter / Dart authors) |
+| [desktop_drop](https://pub.dev/packages/desktop_drop) | Drag and drop from Explorer | Apache 2.0 |
+| [dbus](https://pub.dev/packages/dbus) (Dart), pulled in by desktop_drop for Linux | Unmodified; not used on Windows. Source: pub.dev | Mozilla Public License 2.0 |
+| [xml](https://pub.dev/packages/xml), [petitparser](https://pub.dev/packages/petitparser), pulled in by dbus | | MIT |
 | [Flutter](https://flutter.dev) engine and framework | UI toolkit | BSD 3-Clause |
 
 The full licence texts of the Dart and Flutter packages are kept in each package and are bundled into the app by Flutter (`NOTICES` in the build output).

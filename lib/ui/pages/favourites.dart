@@ -14,6 +14,7 @@ class FavouritesPage extends StatelessWidget {
     builder: (context, _) {
       final tracks = lib.favouriteTracks;
       return CustomScrollView(
+        key: const PageStorageKey('favourites'),
         slivers: [
           SliverToBoxAdapter(
             child: PageHeader(
@@ -34,8 +35,8 @@ class FavouritesPage extends StatelessWidget {
               ),
             )
           else
-            SliverTracks(tracks),
-          const SliverToBoxAdapter(child: SizedBox(height: S.x6)),
+            SliverTracks(tracks, primary: true),
+          const SliverToBoxAdapter(child: SizedBox(height: S.x16)),
         ],
       );
     },
