@@ -15,7 +15,14 @@ import 'package:flutter/rendering.dart';
 
 import 'palettes.dart';
 
-enum CoverStyle { mesh, halftone, contours, bauhaus, riso, bokeh, flow, rings, stripes, paper, glitch, aurora }
+part 'painted.dart';
+
+enum CoverStyle {
+  mesh, halftone, contours, bauhaus, riso, bokeh, flow, rings, stripes, paper, glitch, aurora,
+  // Painterly styles (painted.dart). New styles go at the end: styleOf only picks among the first 12,
+  // so adding one never changes an album's abstract art.
+  starry, storybook, garden,
+}
 
 class GenerativeCover extends CustomPainter {
   GenerativeCover(this.seed, {CoverStyle? style, this.initials, this.mark = false})
@@ -39,7 +46,11 @@ class GenerativeCover extends CustomPainter {
     return h;
   }
 
-  static CoverStyle styleOf(int seed) => CoverStyle.values[_Rng(seed ^ 0x5bd1e995).i(CoverStyle.values.length)];
+  /// The abstract style a seed gets (one of the first 12, as approved in phase 1).
+  static CoverStyle styleOf(int seed) => CoverStyle.values[_Rng(seed ^ 0x5bd1e995).i(CoverStyle.aurora.index + 1)];
+
+  /// The code-painted styles, for the painterly art source.
+  static const painted = [CoverStyle.starry, CoverStyle.storybook, CoverStyle.garden];
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -106,6 +117,12 @@ class GenerativeCover extends CustomPainter {
         _glitch(k);
       case CoverStyle.aurora:
         _aurora(k);
+      case CoverStyle.starry:
+        _starry(k);
+      case CoverStyle.storybook:
+        _storybook(k);
+      case CoverStyle.garden:
+        _garden(k);
     }
     if (initials != null && initials!.isNotEmpty) _initials(k, initials!);
     if (mark) _mark(k);

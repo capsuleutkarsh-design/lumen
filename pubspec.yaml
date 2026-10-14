@@ -45,6 +45,7 @@ flutter:
   uses-material-design: true
   assets:
     - assets/brand/lumen_256.png
+    - assets/covers/masterpieces/
   fonts:
     - family: Inter
       fonts:
