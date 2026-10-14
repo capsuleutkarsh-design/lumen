@@ -96,8 +96,8 @@ class QueuePanel extends StatelessWidget {
       selected: current,
       radius: R.small + 2,
       padding: const EdgeInsets.symmetric(horizontal: S.x2),
-      child: SizedBox(
-        height: 52,
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(minHeight: 52),
         child: Row(
           children: [
             if (dragIndex != null)
@@ -111,7 +111,7 @@ class QueuePanel extends StatelessWidget {
                   ),
                 ),
               ),
-            CoverArt(t.cover, size: 36, radius: R.small - 2),
+            CoverArt.track(t, size: 36, radius: R.tiny + 2),
             const SizedBox(width: S.x3),
             Expanded(
               child: Column(

@@ -37,6 +37,7 @@ dependencies:
   ffi: ^2.2.0
   crypto: ^3.0.7
   screen_retriever: ^0.2.2
+  desktop_drop: ^0.8.4
 
 dev_dependencies:
   flutter_test:

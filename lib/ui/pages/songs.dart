@@ -16,8 +16,11 @@ class SongsPage extends StatefulWidget {
 }
 
 class _SongsPageState extends State<SongsPage> {
-  String _by = 'title';
-  bool _desc = false;
+  // Kept across navigation.
+  String get _by => nav.memo['songs.by'] as String? ?? 'title';
+  set _by(String v) => nav.memo['songs.by'] = v;
+  bool get _desc => nav.memo['songs.desc'] == true;
+  set _desc(bool v) => nav.memo['songs.desc'] = v;
 
   static int _cmpStr(String a, String b) => a.toLowerCase().compareTo(b.toLowerCase());
 
@@ -39,7 +42,7 @@ class _SongsPageState extends State<SongsPage> {
     final active = _by == key;
     final w = Clickable(
       onTap: () => _sort(key),
-      radius: R.small - 2,
+      radius: R.tiny + 2,
       hover: C.raised2,
       padding: const EdgeInsets.symmetric(vertical: S.x1, horizontal: 2),
       child: Row(
@@ -72,7 +75,9 @@ class _SongsPageState extends State<SongsPage> {
           ..clear()
           ..addAll(r);
       }
+      selection.primary = tracks;
       return CustomScrollView(
+        key: const PageStorageKey('songs'),
         slivers: [
           SliverToBoxAdapter(
             child: PageHeader(
@@ -92,34 +97,37 @@ class _SongsPageState extends State<SongsPage> {
                 Container(
                   color: C.bg,
                   padding: const EdgeInsets.symmetric(horizontal: S.x2),
-                  child: Row(
-                    children: [
-                      const SizedBox(width: 40 + S.x3),
-                      _head('Title', 'title', flex: 5),
-                      const SizedBox(width: S.x4),
-                      _head('Artist', 'artist', flex: 3),
-                      const SizedBox(width: S.x4),
-                      _head('Album', 'album', flex: 3),
-                      _head('Year', 'year', width: 56),
-                      const SizedBox(width: S.x4),
-                      _head('Format', 'format', width: 104),
-                      const SizedBox(width: 32),
-                      _head('Time', 'time', width: 52, align: TextAlign.right),
-                      const SizedBox(width: 32),
-                    ],
+                  // The same columns the rows show at this width (they drop out in a small window).
+                  child: LayoutBuilder(
+                    builder: (context, c) {
+                      final cols = TrackCols(c.maxWidth, table: true, album: true, badge: true);
+                      return Row(
+                        children: [
+                          const SizedBox(width: 40 + S.x3),
+                          _head('Title', 'title', flex: 5),
+                          if (cols.artist) ...[const SizedBox(width: S.x4), _head('Artist', 'artist', flex: 3)],
+                          if (cols.album) ...[const SizedBox(width: S.x4), _head('Album', 'album', flex: 3)],
+                          if (cols.year) _head('Year', 'year', width: 56),
+                          if (cols.badge) ...[const SizedBox(width: S.x4), _head('Format', 'format', width: 104)],
+                          const SizedBox(width: 32),
+                          _head('Time', 'time', width: 48, align: TextAlign.right),
+                          const SizedBox(width: 32),
+                        ],
+                      );
+                    },
                   ),
                 ),
               ),
             ),
             SliverFixedExtentList(
-              itemExtent: TrackRow.height,
+              itemExtent: TrackRow.extentOf(context),
               delegate: SliverChildBuilderDelegate(
                 (_, i) => TrackRow(track: tracks[i], list: tracks, index: i, table: true),
                 childCount: tracks.length,
               ),
             ),
           ],
-          const SliverToBoxAdapter(child: SizedBox(height: S.x6)),
+          const SliverToBoxAdapter(child: SizedBox(height: S.x16)),
         ],
       );
     },
@@ -130,9 +138,9 @@ class _HeaderDelegate extends SliverPersistentHeaderDelegate {
   _HeaderDelegate(this.child);
   final Widget child;
   @override
-  double get minExtent => 36;
+  double get minExtent => 40;
   @override
-  double get maxExtent => 36;
+  double get maxExtent => 40;
   @override
   Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) => DecoratedBox(
     decoration: const BoxDecoration(

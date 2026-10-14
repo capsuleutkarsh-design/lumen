@@ -7,14 +7,20 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../library/library.dart';
 import '../library/models.dart';
 import 'app.dart';
+import 'pages/artists.dart';
 import 'theme.dart';
+import 'tracks.dart';
 import 'widgets.dart';
 
 class _Hit {
-  _Hit(this.kind, this.title, this.subtitle, this.cover, this.open, {this.round = false});
+  _Hit(this.kind, this.title, this.subtitle, this.cover, this.open, this.tracks, {this.round = false, this.seed, this.song});
   final String kind, title, subtitle;
-  final String? cover;
+  final String? cover, seed;
   final VoidCallback open;
+
+  /// What Play next / Add to queue / the right-click menu act on.
+  final List<Track> tracks;
+  final Track? song;
   final bool round;
 }
 
@@ -31,6 +37,15 @@ class _SearchConsoleState extends State<SearchConsole> {
   final _scroll = ScrollController();
   List<(String, List<_Hit>)> _groups = [];
   int _sel = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    // Focus the box even if Tab moved the focus elsewhere before the console opened.
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) _focus.requestFocus();
+    });
+  }
 
   List<_Hit> get _flat => [for (final g in _groups) ...g.$2];
 
@@ -65,10 +80,18 @@ class _SearchConsoleState extends State<SearchConsole> {
             'Albums',
             [
               for (final a in albums)
-                _Hit('Album', a.title, '${a.artist} · ${a.badge}', a.cover, () {
-                  close();
-                  nav.push('album', a.key);
-                }),
+                _Hit(
+                  'Album',
+                  a.title,
+                  '${a.artist} · ${a.badge}',
+                  a.cover,
+                  () {
+                    close();
+                    nav.push('album', a.key);
+                  },
+                  a.tracks,
+                  seed: '${a.title}\u0000${a.artist}',
+                ),
             ],
           ),
         if (artists.isNotEmpty)
@@ -79,13 +102,15 @@ class _SearchConsoleState extends State<SearchConsole> {
                 _Hit(
                   'Artist',
                   a.name,
-                  '${plural(a.albums.length, 'album')} · ${plural(a.albums.fold(0, (n, x) => n + x.tracks.length) + a.appearsOn.length, 'song')}',
+                  artistMeta(a),
                   a.cover,
                   () {
                     close();
                     nav.push('artist', a.name);
                   },
+                  artistTracks(a),
                   round: true,
+                  seed: a.name,
                 ),
             ],
           ),
@@ -94,10 +119,21 @@ class _SearchConsoleState extends State<SearchConsole> {
             'Songs',
             [
               for (final t in songs)
-                _Hit('Song', t.title, '${t.artist} · ${t.album}', t.cover, () {
-                  close();
-                  engine.playTracks([t]);
-                }),
+                _Hit(
+                  'Song',
+                  t.title,
+                  '${t.artist} · ${t.album}',
+                  t.cover,
+                  () {
+                    close();
+                    // Play the song's album from this song, so what comes next makes sense.
+                    final album = lib.albumByKey[t.albumKey]?.tracks ?? [t];
+                    engine.playTracks(album, album.indexOf(t).clamp(0, album.length - 1));
+                  },
+                  [t],
+                  song: t,
+                  seed: '${t.album}\u0000${t.albumArtist}',
+                ),
             ],
           ),
       ];
@@ -107,8 +143,8 @@ class _SearchConsoleState extends State<SearchConsole> {
   KeyEventResult _key(FocusNode _, KeyEvent e) {
     if (e is KeyUpEvent) return KeyEventResult.ignored;
     final n = _flat.length;
-    if (e.logicalKey == LogicalKeyboardKey.escape) {
-      nav.setSearch(false);
+    if (e.logicalKey == LogicalKeyboardKey.enter && n > 0 && shift) {
+      _playNext(_flat[_sel]);
     } else if (e.logicalKey == LogicalKeyboardKey.arrowDown && n > 0) {
       setState(() => _sel = (_sel + 1) % n);
       _reveal();
@@ -121,6 +157,19 @@ class _SearchConsoleState extends State<SearchConsole> {
       return KeyEventResult.ignored;
     }
     return KeyEventResult.handled;
+  }
+
+  void _playNext(_Hit h) {
+    nav.setSearch(false);
+    queueTracks(context, h.tracks, next: true);
+  }
+
+  void _menu(_Hit h, Offset at) {
+    if (h.song != null) {
+      showTrackMenu(context, at, h.tracks);
+    } else {
+      showCollectionMenu(context, at, h.tracks);
+    }
   }
 
   void _reveal() {
@@ -152,84 +201,102 @@ class _SearchConsoleState extends State<SearchConsole> {
   Widget build(BuildContext context) {
     var i = 0;
     return Positioned.fill(
-      child: GestureDetector(
-        onTap: () => nav.setSearch(false),
-        child: BackdropFilter(
-          filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
-          child: Container(
-            color: const Color(0x99000000),
-            alignment: const Alignment(0, -0.45),
-            child: GestureDetector(
-              onTap: () {},
-              child: TweenAnimationBuilder<double>(
-                tween: Tween(begin: 0.97, end: 1),
-                duration: Motion.normal,
-                curve: Motion.curve,
-                builder: (_, s, child) => Transform.scale(scale: s, child: child),
-                child: Container(
-                  width: 640,
-                  constraints: const BoxConstraints(maxHeight: 520),
-                  decoration: BoxDecoration(
-                    color: C.raised1,
-                    borderRadius: BorderRadius.circular(R.panel),
-                    border: Border.all(color: C.borderStrong),
-                    boxShadow: const [BoxShadow(color: Color(0xAA000000), blurRadius: 60, offset: Offset(0, 20))],
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Padding(
-                        padding: const EdgeInsets.fromLTRB(S.x5, S.x2, S.x3, S.x2),
-                        child: Row(
-                          children: [
-                            const Icon(LucideIcons.search, size: 18, color: C.dim),
-                            const SizedBox(width: S.x3),
-                            Expanded(
-                              child: TextField(
-                                controller: _text,
-                                focusNode: _focus,
-                                autofocus: true,
-                                onChanged: _search,
-                                style: T.heading.copyWith(fontWeight: FontWeight.w400),
-                                decoration: const InputDecoration(
-                                  hintText: 'Search songs, albums and artists',
-                                  filled: false,
-                                  border: InputBorder.none,
-                                  enabledBorder: InputBorder.none,
-                                  focusedBorder: InputBorder.none,
-                                ),
-                              ),
-                            ),
-                            IconBtn(LucideIcons.x, size: 16, tooltip: 'Close  (Esc)', onTap: () => nav.setSearch(false)),
-                          ],
-                        ),
+      top: TitleBar.height, // the title bar stays usable
+      child: FocusScope(
+        autofocus: true,
+        // Esc closes from anywhere in the console, even after Tab.
+        onKeyEvent: (_, e) {
+          if (e is KeyDownEvent && e.logicalKey == LogicalKeyboardKey.escape) {
+            nav.setSearch(false);
+            return KeyEventResult.handled;
+          }
+          return KeyEventResult.ignored;
+        },
+        child: GestureDetector(
+          onTap: () => nav.setSearch(false),
+          // Clipped, so the blur stops below the title bar.
+          child: ClipRect(
+            child: BackdropFilter(
+              filter: ui.ImageFilter.blur(sigmaX: 24, sigmaY: 24),
+              child: Container(
+                color: C.scrim,
+                alignment: Alignment.topCenter,
+                // A fixed top: the box stays put when results appear.
+                padding: EdgeInsets.only(top: MediaQuery.sizeOf(context).height * 0.12),
+                child: GestureDetector(
+                  onTap: () {},
+                  child: TweenAnimationBuilder<double>(
+                    tween: Tween(begin: 0.97, end: 1),
+                    duration: Motion.normal,
+                    curve: Motion.curve,
+                    builder: (_, s, child) => Transform.scale(scale: s, child: child),
+                    child: Container(
+                      width: 640,
+                      margin: const EdgeInsets.symmetric(horizontal: S.x4),
+                      constraints: BoxConstraints(maxHeight: MediaQuery.sizeOf(context).height * 0.7),
+                      decoration: BoxDecoration(
+                        color: C.raised1,
+                        borderRadius: BorderRadius.circular(R.panel),
+                        border: Border.all(color: C.borderStrong),
+                        boxShadow: const [BoxShadow(color: C.shadow, blurRadius: 60, offset: Offset(0, 20))],
                       ),
-                      Container(height: 1, color: C.border),
-                      if (_text.text.trim().isEmpty)
-                        _hint('Type to search. Use ↑ ↓ to move, Enter to open, Esc to close.')
-                      else if (_groups.isEmpty)
-                        _hint('Nothing matches “${_text.text.trim()}”.')
-                      else
-                        Flexible(
-                          child: ListView(
-                            controller: _scroll,
-                            shrinkWrap: true,
-                            padding: const EdgeInsets.all(S.x2),
-                            children: [
-                              for (final g in _groups) ...[
-                                SizedBox(
-                                  height: 32,
-                                  child: Padding(
-                                    padding: const EdgeInsets.fromLTRB(S.x3, S.x3, 0, 0),
-                                    child: Text(g.$1, style: T.caption),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Padding(
+                            padding: const EdgeInsets.fromLTRB(S.x5, S.x2, S.x3, S.x2),
+                            child: Row(
+                              children: [
+                                const Icon(LucideIcons.search, size: 18, color: C.dim),
+                                const SizedBox(width: S.x3),
+                                Expanded(
+                                  child: TextField(
+                                    controller: _text,
+                                    focusNode: _focus,
+                                    autofocus: true,
+                                    onChanged: _search,
+                                    style: T.heading.copyWith(fontWeight: FontWeight.w400),
+                                    decoration: const InputDecoration(
+                                      hintText: 'Search songs, albums and artists',
+                                      filled: false,
+                                      border: InputBorder.none,
+                                      enabledBorder: InputBorder.none,
+                                      focusedBorder: InputBorder.none,
+                                    ),
                                   ),
                                 ),
-                                for (final h in g.$2) _row(h, i++ == _sel),
+                                IconBtn(LucideIcons.x, size: 16, tooltip: 'Close  (Esc)', onTap: () => nav.setSearch(false)),
                               ],
-                            ],
+                            ),
                           ),
-                        ),
-                    ],
+                          Container(height: 1, color: C.border),
+                          if (_text.text.trim().isEmpty)
+                            _hint('Type to search. ↑ ↓ to move, Enter to open or play, Shift+Enter to play next, Esc to close.')
+                          else if (_groups.isEmpty)
+                            _hint('Nothing matches “${_text.text.trim()}”.')
+                          else
+                            Flexible(
+                              child: ListView(
+                                controller: _scroll,
+                                shrinkWrap: true,
+                                padding: const EdgeInsets.all(S.x2),
+                                children: [
+                                  for (final g in _groups) ...[
+                                    SizedBox(
+                                      height: 32,
+                                      child: Padding(
+                                        padding: const EdgeInsets.fromLTRB(S.x3, S.x3, 0, 0),
+                                        child: Text(g.$1, style: T.caption),
+                                      ),
+                                    ),
+                                    for (final h in g.$2) _row(h, i++ == _sel),
+                                  ],
+                                ],
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
                   ),
                 ),
               ),
@@ -247,15 +314,23 @@ class _SearchConsoleState extends State<SearchConsole> {
 
   Widget _row(_Hit h, bool selected) => Clickable(
     onTap: h.open,
+    onSecondaryTapDown: (d) => _menu(h, d.globalPosition),
     selected: selected,
     hover: C.raised3,
-    radius: R.panel - S.x2,
+    radius: R.card - S.x1,
     padding: const EdgeInsets.symmetric(horizontal: S.x2),
     child: SizedBox(
       height: 56,
       child: Row(
         children: [
-          CoverArt(h.cover, size: 40, radius: R.small - 2, round: h.round),
+          CoverArt(
+            h.cover,
+            size: 40,
+            radius: R.tiny + 2,
+            round: h.round,
+            seed: h.seed,
+            label: h.round ? h.title : (h.song?.album ?? h.title),
+          ),
           const SizedBox(width: S.x3),
           Expanded(
             child: Column(
@@ -277,7 +352,13 @@ class _SearchConsoleState extends State<SearchConsole> {
               ],
             ),
           ),
-          if (selected) const Icon(LucideIcons.cornerDownLeft, size: 14, color: C.faint),
+          if (selected) ...[
+            Text(h.song != null ? 'Play' : 'Open', style: T.caption),
+            const Padding(
+              padding: EdgeInsets.only(left: S.x2, right: S.x1),
+              child: Icon(LucideIcons.cornerDownLeft, size: 14, color: C.faint),
+            ),
+          ],
         ],
       ),
     ),

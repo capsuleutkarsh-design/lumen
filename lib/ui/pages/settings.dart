@@ -8,6 +8,29 @@ import '../theme.dart';
 import '../widgets.dart';
 import 'credits.dart';
 
+/// Asks for a folder and adds it to the library (Settings, the empty Home, drag and drop).
+Future<void> addMusicFolder() async {
+  final dir = await getDirectoryPath(confirmButtonText: 'Use this folder');
+  if (dir != null && !lib.folders.contains(dir)) lib.folders = [...lib.folders, dir];
+}
+
+/// "s32 96000 Hz" -> "32-bit · 96 kHz".
+String friendlyFormat(String mpv) {
+  final m = RegExp(r'^(\w+)\s+(\d+)').firstMatch(mpv);
+  if (m == null) return mpv;
+  final bits = switch (m.group(1)!) {
+    'u8' => '8-bit',
+    's16' => '16-bit',
+    's24' => '24-bit',
+    's32' => '32-bit',
+    'float' => '32-bit float',
+    'double' => '64-bit float',
+    final f => f,
+  };
+  final k = int.parse(m.group(2)!) / 1000;
+  return '$bits · ${k == k.roundToDouble() ? k.round() : k} kHz';
+}
+
 class SettingsPage extends StatelessWidget {
   const SettingsPage({super.key});
 
@@ -33,6 +56,7 @@ class SettingsPage extends StatelessWidget {
     builder: (context, _) {
       final folders = lib.folders;
       return ListView(
+        key: const PageStorageKey('settings'),
         padding: EdgeInsets.zero,
         children: [
           const PageHeader('Settings'),
@@ -83,15 +107,7 @@ class SettingsPage extends StatelessWidget {
                     const SizedBox(height: S.x2),
                     Row(
                       children: [
-                        PillButton(
-                          'Add folder',
-                          icon: LucideIcons.folderPlus,
-                          primary: true,
-                          onTap: () async {
-                            final dir = await getDirectoryPath(confirmButtonText: 'Use this folder');
-                            if (dir != null && !folders.contains(dir)) lib.folders = [...folders, dir];
-                          },
-                        ),
+                        PillButton('Add folder', icon: LucideIcons.folderPlus, primary: true, onTap: addMusicFolder),
                         const SizedBox(width: S.x3),
                         PillButton('Rescan now', icon: LucideIcons.refreshCw, onTap: folders.isEmpty ? null : lib.rescan),
                         const SizedBox(width: S.x4),
@@ -100,8 +116,8 @@ class SettingsPage extends StatelessWidget {
                             valueListenable: lib.scan,
                             builder: (_, s, _) => Text(
                               s != null
-                                  ? (s.$2 == 0 ? 'Checking for changes…' : 'Reading ${s.$1} of ${s.$2} new or changed files…')
-                                  : '${plural(lib.tracks.length, 'song')} · ${plural(lib.albums.length, 'album')}${lib.lastScan == null ? '' : ' · last scan: ${lib.lastScan}'}',
+                                  ? (s.$2 == 0 ? 'Checking for new music…' : 'Reading ${fmtInt(s.$1)} of ${fmtInt(s.$2)} songs…')
+                                  : '${plural(lib.tracks.length, 'song')} · ${plural(lib.albums.length, 'album')}${lib.lastScan == null ? '' : ' · up to date'}',
                               style: T.caption,
                             ),
                           ),
@@ -181,7 +197,7 @@ class SettingsPage extends StatelessWidget {
                     ),
                     if (engine.outputFormat.isNotEmpty) ...[
                       const SizedBox(height: S.x3),
-                      Text('Now sending: ${engine.outputFormat}', style: T.caption),
+                      Text('Playing at ${friendlyFormat(engine.outputFormat)}', style: T.caption),
                     ],
                   ]),
                   _card('Keyboard', null, [
@@ -189,9 +205,12 @@ class SettingsPage extends StatelessWidget {
                       ('Space', 'Play / pause'),
                       ('Ctrl + ← / →', 'Previous / next song'),
                       ('← / →', 'Back / forward 5 seconds'),
-                      ('Ctrl + K', 'Search'),
+                      ('Ctrl + K', 'Search (Shift + Enter plays next)'),
                       ('Ctrl + L', 'Lyrics'),
-                      ('Esc', 'Back'),
+                      ('↑ / ↓, Enter', 'Move through songs, play'),
+                      ('Ctrl + A', 'Select all songs'),
+                      ('Menu key', 'Right-click menu (or Shift + F10)'),
+                      ('Esc', 'Back, close Now Playing, clear selection'),
                     ])
                       Padding(
                         padding: const EdgeInsets.only(bottom: S.x2),

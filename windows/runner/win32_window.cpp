@@ -1,7 +1,11 @@
 #include "win32_window.h"
 
+#include <commctrl.h>
 #include <dwmapi.h>
 #include <flutter_windows.h>
+#include <windowsx.h>
+
+#pragma comment(lib, "comctl32.lib")
 
 #include "resource.h"
 
@@ -216,6 +220,30 @@ Win32Window::MessageHandler(HWND hwnd,
     case WM_DWMCOLORIZATIONCOLORCHANGED:
       UpdateTheme(hwnd);
       return 0;
+
+    // Snap Layouts: the custom maximise button answers HTMAXBUTTON.
+    case WM_NCHITTEST: {
+      POINT pt{GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
+      if (HitMaxButton(pt)) return HTMAXBUTTON;
+      break;
+    }
+    case WM_NCMOUSEMOVE:
+      SetMaxHover(wparam == HTMAXBUTTON);
+      break;
+    case WM_NCMOUSELEAVE:
+      SetMaxHover(false);
+      break;
+    case WM_NCLBUTTONDOWN:
+    case WM_NCLBUTTONDBLCLK:
+      if (wparam == HTMAXBUTTON) return 0;  // no classic button press
+      break;
+    case WM_NCLBUTTONUP:
+      if (wparam == HTMAXBUTTON) {
+        SetMaxHover(false);
+        ShowWindow(hwnd, IsZoomed(hwnd) ? SW_RESTORE : SW_MAXIMIZE);
+        return 0;
+      }
+      break;
   }
 
   return DefWindowProc(window_handle_, message, wparam, lparam);
@@ -238,8 +266,44 @@ Win32Window* Win32Window::GetThisFromHandle(HWND const window) noexcept {
       GetWindowLongPtr(window, GWLP_USERDATA));
 }
 
+bool Win32Window::HitMaxButton(POINT pt) {
+  if (window_handle_ == nullptr) return false;
+  ScreenToClient(window_handle_, &pt);
+  RECT client;
+  GetClientRect(window_handle_, &client);
+  const double scale = GetDpiForWindow(window_handle_) / 96.0;
+  // Matches lib/ui/app.dart: three 46 x 40 buttons at the top right of the
+  // view; maximise is the middle one.
+  return pt.y >= 0 && pt.y < 40 * scale && pt.x >= client.right - 92 * scale &&
+         pt.x < client.right - 46 * scale;
+}
+
+void Win32Window::SetMaxHover(bool hover) {
+  if (hover == max_hover_) return;
+  max_hover_ = hover;
+  if (hover) {
+    TRACKMOUSEEVENT track{sizeof(track), TME_LEAVE | TME_NONCLIENT,
+                          window_handle_, 0};
+    TrackMouseEvent(&track);
+  }
+  OnMaxButtonHover(hover);
+}
+
+LRESULT CALLBACK Win32Window::ChildProc(HWND window, UINT message,
+                                        WPARAM wparam, LPARAM lparam,
+                                        UINT_PTR id, DWORD_PTR self) noexcept {
+  if (message == WM_NCHITTEST) {
+    POINT pt{GET_X_LPARAM(lparam), GET_Y_LPARAM(lparam)};
+    if (reinterpret_cast<Win32Window*>(self)->HitMaxButton(pt)) {
+      return HTTRANSPARENT;
+    }
+  }
+  return DefSubclassProc(window, message, wparam, lparam);
+}
+
 void Win32Window::SetChildContent(HWND content) {
   child_content_ = content;
+  SetWindowSubclass(content, ChildProc, 1, reinterpret_cast<DWORD_PTR>(this));
   SetParent(content, window_handle_);
   RECT frame = GetClientArea();
 

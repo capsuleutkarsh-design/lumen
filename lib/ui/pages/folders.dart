@@ -17,7 +17,15 @@ class FoldersPage extends StatefulWidget {
 }
 
 class _FoldersPageState extends State<FoldersPage> {
-  String? _dir; // null = the library folders themselves
+  /// The open folder (null = the library folders themselves); kept across navigation.
+  String? get _dir => nav.memo['folders.dir'] as String?;
+  set _dir(String? v) => nav.memo['folders.dir'] = v;
+
+  /// Every song in [dir] and below it.
+  List<Track> _under(String dir) => [
+    for (final t in lib.tracks)
+      if (t.folder == dir || p.isWithin(dir, t.folder)) t,
+  ]..sort(compareAlbumOrder);
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
@@ -49,14 +57,31 @@ class _FoldersPageState extends State<FoldersPage> {
         }
       }
       return CustomScrollView(
+        key: PageStorageKey('folders/$dir'),
         slivers: [
           SliverToBoxAdapter(
             child: PageHeader(
               'Folders',
               subtitle: dir ?? 'Your library folders',
-              trailing: here.isEmpty
+              trailing: dir == null
                   ? null
-                  : PillButton('Play folder', icon: LucideIcons.play, primary: true, onTap: () => engine.playTracks(here)),
+                  : Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        if (here.isNotEmpty)
+                          PillButton('Play folder', icon: LucideIcons.play, primary: true, onTap: () => engine.playTracks(here)),
+                        const SizedBox(width: S.x2),
+                        // Everything in this folder and below: play, shuffle, queue, add to a playlist.
+                        Builder(
+                          builder: (b) => IconBtn(
+                            LucideIcons.ellipsis,
+                            color: C.text,
+                            tooltip: 'More',
+                            onTap: () => showCollectionMenu(b, below(b), _under(dir)),
+                          ),
+                        ),
+                      ],
+                    ),
             ),
           ),
           if (dir != null)
@@ -86,7 +111,9 @@ class _FoldersPageState extends State<FoldersPage> {
             itemCount: names.length,
             itemBuilder: (_, i) => Clickable(
               onTap: () => setState(() => _dir = names[i]),
-              radius: R.small + 2,
+              onSecondaryTapDown: (d) => showCollectionMenu(context, d.globalPosition, _under(names[i])),
+              semanticLabel: 'Folder ${p.basename(names[i])}',
+              radius: R.small,
               padding: const EdgeInsets.symmetric(horizontal: S.x2),
               child: SizedBox(
                 height: 52,
@@ -95,7 +122,7 @@ class _FoldersPageState extends State<FoldersPage> {
                     Container(
                       width: 40,
                       height: 40,
-                      decoration: BoxDecoration(color: C.raised2, borderRadius: BorderRadius.circular(R.small - 2)),
+                      decoration: BoxDecoration(color: C.raised2, borderRadius: BorderRadius.circular(R.tiny + 2)),
                       child: const Icon(LucideIcons.folder, size: 18, color: C.dim),
                     ),
                     const SizedBox(width: S.x3),
@@ -117,9 +144,9 @@ class _FoldersPageState extends State<FoldersPage> {
           ),
           if (here.isNotEmpty) ...[
             if (names.isNotEmpty) const SliverToBoxAdapter(child: SectionTitle('Songs in this folder')),
-            SliverTracks(here),
+            SliverTracks(here, primary: true),
           ],
-          const SliverToBoxAdapter(child: SizedBox(height: S.x6)),
+          const SliverToBoxAdapter(child: SizedBox(height: S.x16)),
         ],
       );
     },
@@ -132,7 +159,7 @@ class _FoldersPageState extends State<FoldersPage> {
         )
       : Clickable(
           onTap: () => setState(() => _dir = target),
-          radius: R.small - 2,
+          radius: R.tiny + 2,
           padding: const EdgeInsets.symmetric(horizontal: S.x2, vertical: S.x1),
           child: Text(label, style: T.small),
         );

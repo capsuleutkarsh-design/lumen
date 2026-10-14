@@ -71,6 +71,11 @@ class Win32Window {
   // Called when Destroy is called.
   virtual void OnDestroy();
 
+  // Called when the pointer enters or leaves the maximise button of the
+  // custom (Flutter-drawn) title bar, which this window answers for so that
+  // Windows 11 shows Snap Layouts there.
+  virtual void OnMaxButtonHover(bool hover) {}
+
  private:
   friend class WindowClassRegistrar;
 
@@ -89,6 +94,18 @@ class Win32Window {
 
   // Update the window frame's theme to match the system theme.
   static void UpdateTheme(HWND const window);
+
+  // Whether |screen_point| is over the title bar's maximise button.
+  bool HitMaxButton(POINT screen_point);
+  void SetMaxHover(bool hover);
+
+  // Lets hit tests over the maximise button fall through the Flutter view to
+  // this window (HTTRANSPARENT), which then answers HTMAXBUTTON.
+  static LRESULT CALLBACK ChildProc(HWND window, UINT message, WPARAM wparam,
+                                    LPARAM lparam, UINT_PTR id,
+                                    DWORD_PTR self) noexcept;
+
+  bool max_hover_ = false;
 
   bool quit_on_close_ = false;
 

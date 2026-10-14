@@ -2,6 +2,8 @@
 
 #include <optional>
 
+#include <flutter/standard_method_codec.h>
+
 #include "flutter/generated_plugin_registrant.h"
 #include "media_controls.h"
 
@@ -27,6 +29,9 @@ bool FlutterWindow::OnCreate() {
   }
   RegisterPlugins(flutter_controller_->engine());
   media_controls_ = std::make_unique<MediaControls>(GetHandle(), flutter_controller_->engine()->messenger());
+  title_bar_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
+      flutter_controller_->engine()->messenger(), "lumen/titlebar",
+      &flutter::StandardMethodCodec::GetInstance());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 
   flutter_controller_->engine()->SetNextFrameCallback([&]() {
@@ -41,7 +46,15 @@ bool FlutterWindow::OnCreate() {
   return true;
 }
 
+void FlutterWindow::OnMaxButtonHover(bool hover) {
+  if (title_bar_) {
+    title_bar_->InvokeMethod(
+        "maxHover", std::make_unique<flutter::EncodableValue>(hover));
+  }
+}
+
 void FlutterWindow::OnDestroy() {
+  title_bar_ = nullptr;
   media_controls_ = nullptr;
   if (flutter_controller_) {
     flutter_controller_ = nullptr;

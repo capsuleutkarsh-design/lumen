@@ -2,7 +2,9 @@
 #define RUNNER_FLUTTER_WINDOW_H_
 
 #include <flutter/dart_project.h>
+#include <flutter/encodable_value.h>
 #include <flutter/flutter_view_controller.h>
+#include <flutter/method_channel.h>
 
 #include <memory>
 
@@ -22,6 +24,7 @@ class FlutterWindow : public Win32Window {
   void OnDestroy() override;
   LRESULT MessageHandler(HWND window, UINT const message, WPARAM const wparam,
                          LPARAM const lparam) noexcept override;
+  void OnMaxButtonHover(bool hover) override;
 
  private:
   // The project to run.
@@ -32,6 +35,9 @@ class FlutterWindow : public Win32Window {
 
   // Windows media overlay + media keys.
   std::unique_ptr<MediaControls> media_controls_;
+
+  // Tells the Dart title bar when the maximise button is hovered (Snap Layouts).
+  std::unique_ptr<flutter::MethodChannel<flutter::EncodableValue>> title_bar_;
 };
 
 #endif  // RUNNER_FLUTTER_WINDOW_H_
