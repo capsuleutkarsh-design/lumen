@@ -166,7 +166,7 @@ class _NowPlayingInfo extends StatefulWidget {
 class _NowPlayingInfoState extends State<_NowPlayingInfo> {
   bool _hover = false;
   @override
-  Widget build(BuildContext context) => ListenableBuilder(listenable: Listenable.merge([engine, lib]), builder: (context, _) => _build());
+  Widget build(BuildContext context) => ListenableBuilder(listenable: Listenable.merge([engine, lib, sound]), builder: (context, _) => _build());
 
   Widget _build() {
     final t = engine.current;
@@ -219,10 +219,7 @@ class _NowPlayingInfoState extends State<_NowPlayingInfo> {
                 _Link(t.artist, T.small, () => nav.push('artist', t.artist)),
                 const SizedBox(height: S.x1),
                 Tooltip(
-                  message: engine.outputFormat.isEmpty
-                      ? 'File format'
-                      : 'Output: ${engine.outputFormat}${engine.exclusive ? ' · exclusive' : ''}'
-                            '${engine.exclusive && (engine.muted || engine.volume < 100) ? ' · not bit-perfect below 100 % volume' : ''}',
+                  message: engine.outputFormat.isEmpty ? 'File format' : sound.summary,
                   child: FormatBadge(t.badge),
                 ),
               ],

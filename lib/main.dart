@@ -47,6 +47,7 @@ Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error
   await loadArtPacks();
   engine = Engine(lib, silent: silent, logLevel: logLevel);
   await engine.init();
+  await sound.init();
   MediaControls(engine);
   lib.watch();
   lib.rescan(); // background: picks up anything changed while the app was closed
@@ -75,7 +76,10 @@ Future<void> start(String data) async {
   try {
     await boot();
     loadAppearance();
-    await setupWindow(lib, engine.shutdown, background: C.bg);
+    await setupWindow(lib, () {
+      sound.save();
+      return engine.shutdown();
+    }, background: C.bg);
     runApp(const App());
     trayItems.add(('Mini player', () => setMini(!nav.mini)));
     setupTray(lib, engine).catchError((Object e) => log('Tray icon: $e')); // Lumen works without it

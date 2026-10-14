@@ -12,6 +12,7 @@ import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 
 import '../audio/engine.dart';
+import '../audio/sound_control.dart';
 import '../library/library.dart';
 import '../library/models.dart';
 import '../library/tags.dart' show audioExtensions;
@@ -30,6 +31,7 @@ import 'pages/playlists.dart';
 import 'pages/settings.dart';
 import 'pages/smart_playlists.dart';
 import 'pages/songs.dart';
+import 'pages/sound.dart';
 import 'pages/stats_page.dart';
 import 'player_bar.dart';
 import 'queue_panel.dart';
@@ -41,6 +43,11 @@ import 'widgets.dart';
 // The app's two long-lived objects, set up in main().
 late Library lib;
 late Engine engine;
+
+/// The Sound page's settings, applied to [engine] (boot() calls init). Follows [engine]
+/// when a test swaps it; a fresh one has the default settings.
+Sound get sound => _sound != null && identical(_sound!.engine, engine) ? _sound! : _sound = Sound(lib, engine);
+Sound? _sound;
 final nav = Nav();
 
 class Place {
@@ -437,6 +444,7 @@ class _ShellState extends State<Shell> {
     'stats' => const StatsPage(),
     'favourites' => const FavouritesPage(),
     'settings' => const SettingsPage(),
+    'sound' => const SoundPage(),
     _ => const HomePage(),
   };
 }
@@ -735,6 +743,7 @@ class Rail extends StatelessWidget {
                     const Spacer(),
                     const SizedBox(height: S.x6),
                     item('search', LucideIcons.search, 'Search  (Ctrl+K)', () => nav.setSearch(true)),
+                    item('sound', LucideIcons.slidersVertical, 'Sound', () => nav.go('sound'), active: !nav.lyrics && current == 'sound'),
                     item(
                       'settings',
                       LucideIcons.settings,
