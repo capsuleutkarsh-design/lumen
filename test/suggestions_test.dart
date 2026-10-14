@@ -39,7 +39,7 @@ void main() {
     skip(7, 10), skip(7, 9), skip(7, 8),
     play(3, 1), // played lately: excluded from "because"
   ];
-  final h = suggest(tracks, albums, events, now);
+  final h = suggest(tracks, albums, statsFrom(events), now);
 
   test('play and skip rules', () {
     expect(ListenRules.counts(const Duration(minutes: 2), const Duration(minutes: 4)), isTrue);
@@ -77,5 +77,24 @@ void main() {
     expect(h.because[0].why, contains('Same artist'));
     expect(h.because[1].why, startsWith('From Ana'));
     expect(h.because[2].why, startsWith('Jazz from the 2010s'));
+  });
+
+  test('because you played: album artist ignores case; an untagged seed does not match every untagged track', () {
+    final ts = [
+      t(1, 'ana', 'Blue', aa: 'ana'),
+      t(2, 'Bo', 'Mix', aa: 'ANA'),
+      t(3, 'Unknown artist', 'X', genre: 'Rock'),
+      t(4, 'Unknown artist', 'Y', genre: 'Pop'),
+    ];
+    final al = [
+      for (final x in ts) Album(x.albumKey, [x]),
+    ];
+    expect(
+      [
+        for (final p in suggest(ts, al, statsFrom([play(1, 1)]), now).because) p.item.id,
+      ],
+      [2],
+    );
+    expect(suggest(ts, al, statsFrom([play(3, 1)]), now).because, isEmpty);
   });
 }

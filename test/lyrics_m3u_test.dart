@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:music_player/library/lyrics.dart';
 import 'package:music_player/library/m3u.dart';
@@ -14,6 +16,20 @@ void main() {
     final plain = parseLyrics('Just words\nMore words');
     expect(plain.synced, isFalse);
     expect(plain.lines.length, 2);
+  });
+
+  test('LRC: a UTF-16 file reads right; a 20-digit stamp is not a stamp', () {
+    final tmp = Directory.systemTemp.createTempSync('mp_lrc');
+    const s = '[00:01.00]Héllo';
+    File('${tmp.path}/song.lrc').writeAsBytesSync([
+      0xFF,
+      0xFE,
+      for (final c in s.codeUnits) ...[c & 0xFF, c >> 8],
+    ]);
+    final l = loadLyrics('${tmp.path}/song.flac', null)!;
+    tmp.deleteSync(recursive: true);
+    expect([l.synced, l.lines.single.$2], [true, 'Héllo']);
+    expect(parseLyrics('[99999999999999999999:00.00]x').synced, isFalse);
   });
 
   test('M3U8 export and import round trip with relative paths', () {

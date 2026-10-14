@@ -18,8 +18,9 @@ class Lyrics {
   }
 }
 
-final _stamp = RegExp(r'\[(\d+):(\d+)(?:[.:](\d+))?\]');
-final _offset = RegExp(r'^\[offset:\s*([+-]?\d+)\]', caseSensitive: false);
+// Bounded digit counts: a garbage 20-digit stamp is not a stamp (and cannot overflow int.parse).
+final _stamp = RegExp(r'\[(\d{1,4}):(\d{1,2})(?:[.:](\d{1,3}))?\]');
+final _offset = RegExp(r'^\[offset:\s*([+-]?\d{1,7})\]', caseSensitive: false);
 
 /// LRC text (with [mm:ss.xx] stamps) becomes synced lyrics; anything else is
 /// shown as plain lines.
@@ -49,15 +50,21 @@ Lyrics parseLyrics(String text) {
 Lyrics? loadLyrics(String trackPath, String? embedded) {
   final lrc = File('${p.withoutExtension(trackPath)}.lrc');
   if (lrc.existsSync()) {
-    final bytes = lrc.readAsBytesSync();
-    String text;
-    try {
-      text = utf8.decode(bytes);
-    } on FormatException {
-      text = latin1.decode(bytes);
-    }
-    return parseLyrics(text.replaceFirst('\uFEFF', ''));
+    return parseLyrics(decodeText(lrc.readAsBytesSync()).replaceFirst('\uFEFF', ''));
   }
   if (embedded != null && embedded.trim().isNotEmpty) return parseLyrics(embedded);
   return null;
+}
+
+/// Text file bytes: UTF-16 with a byte order mark, else UTF-8, else Latin-1.
+String decodeText(List<int> b) {
+  if (b.length >= 2 && ((b[0] == 0xFF && b[1] == 0xFE) || (b[0] == 0xFE && b[1] == 0xFF))) {
+    final le = b[0] == 0xFF;
+    return String.fromCharCodes([for (var i = 2; i + 1 < b.length; i += 2) le ? b[i] | (b[i + 1] << 8) : (b[i] << 8) | b[i + 1]]);
+  }
+  try {
+    return utf8.decode(b);
+  } on FormatException {
+    return latin1.decode(b);
+  }
 }

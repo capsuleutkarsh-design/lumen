@@ -39,17 +39,18 @@ String ago(DateTime t, DateTime now) {
   return '${d.inDays ~/ 30} months ago';
 }
 
-class _Stat {
-  int plays = 0, skips = 0;
+/// One track's listening: plays, skips and the last (non-skipped) play.
+class PlayStat {
+  PlayStat([this.plays = 0, this.skips = 0, this.last]);
+  int plays, skips;
   DateTime? last;
 }
 
-HomeData suggest(List<Track> tracks, List<Album> albums, List<PlayEvent> events, DateTime now, {int limit = 12}) {
-  final byId = {for (final t in tracks) t.id: t};
-  final stats = <int, _Stat>{};
+/// Adds up play events (the database does this in SQL; see Library.home).
+Map<int, PlayStat> statsFrom(Iterable<PlayEvent> events) {
+  final stats = <int, PlayStat>{};
   for (final e in events) {
-    if (!byId.containsKey(e.trackId)) continue;
-    final s = stats.putIfAbsent(e.trackId, _Stat.new);
+    final s = stats.putIfAbsent(e.trackId, PlayStat.new);
     if (e.skipped) {
       s.skips++;
     } else {
@@ -57,6 +58,15 @@ HomeData suggest(List<Track> tracks, List<Album> albums, List<PlayEvent> events,
       if (s.last == null || e.at.isAfter(s.last!)) s.last = e.at;
     }
   }
+  return stats;
+}
+
+HomeData suggest(List<Track> tracks, List<Album> albums, Map<int, PlayStat> allStats, DateTime now, {int limit = 12}) {
+  final byId = {for (final t in tracks) t.id: t};
+  final stats = {
+    for (final e in allStats.entries)
+      if (byId.containsKey(e.key)) e.key: e.value,
+  };
   final h = HomeData();
   String times(int n) => n == 1 ? 'once' : '$n times';
 
@@ -121,10 +131,12 @@ HomeData suggest(List<Track> tracks, List<Album> albums, List<PlayEvent> events,
       }
     }
 
-    final low = seed.artist.toLowerCase();
-    tier((t) => t.artist.toLowerCase() == low, 'Same artist as “${seed.title}”: ${seed.artist}');
-    if (seed.albumArtist != variousArtists) {
-      tier((t) => t.albumArtist == seed.albumArtist, 'From ${seed.albumArtist}, like “${seed.title}”');
+    // An untagged seed ("Unknown artist") would match every untagged track: skip those tiers.
+    const unknown = 'unknown artist';
+    final low = seed.artist.toLowerCase(), lowAa = seed.albumArtist.toLowerCase();
+    if (low != unknown) tier((t) => t.artist.toLowerCase() == low, 'Same artist as “${seed.title}”: ${seed.artist}');
+    if (seed.albumArtist != variousArtists && lowAa != unknown) {
+      tier((t) => t.albumArtist.toLowerCase() == lowAa, 'From ${seed.albumArtist}, like “${seed.title}”');
     }
     if (seed.genre != null && decade(seed) != null) {
       tier(
