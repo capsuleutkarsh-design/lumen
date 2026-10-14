@@ -417,6 +417,7 @@ class Library extends ChangeNotifier {
   /// Rescans (incrementally) a moment after anything changes in a library folder.
   /// A watcher that fails, or a folder that appears later (drive plugged in), is picked up again.
   void watch() {
+    if (Platform.isAndroid) return; // no recursive watch there: the app rescans on resume and on pull-to-refresh
     _watching = true;
     for (final w in _watchers) {
       w.cancel();

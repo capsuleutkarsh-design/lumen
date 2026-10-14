@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import '../platform/window.dart' show isTouch;
+
 /// One set of colours. [Palette.dark] is Lumen's look; [Palette.light] is the
 /// same design on paper. Text, dim, faint and the accent are at least 4.5:1 on
 /// every surface in both (test/extras_test.dart checks it).
@@ -185,6 +187,7 @@ ThemeData buildTheme() {
     dividerTheme: DividerThemeData(color: C.borderStrong, thickness: 1),
     textTheme: TextTheme(bodyMedium: T.body, bodySmall: T.small, labelLarge: T.label),
     tooltipTheme: TooltipThemeData(
+      triggerMode: isTouch ? TooltipTriggerMode.manual : null, // a long press opens menus there, not tooltips
       waitDuration: const Duration(milliseconds: 400),
       textStyle: T.caption.copyWith(color: C.text),
       padding: const EdgeInsets.symmetric(horizontal: S.x2, vertical: S.x1),

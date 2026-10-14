@@ -294,11 +294,29 @@ double headroomDb(Eq eq, double fs) {
 // ------------------------------------------------------------ the filter chain
 
 class DeviceInfo {
-  const DeviceInfo({this.id = 'auto', this.name = 'System default', this.exclusive = false, this.volume = 100, this.muted = false, this.outFormat = '', this.outRate = 0, this.outChannels = 0});
+  const DeviceInfo({
+    this.id = 'auto',
+    this.name = 'System default',
+    this.exclusive = false,
+    this.volume = 100,
+    this.muted = false,
+    this.outFormat = '',
+    this.outRate = 0,
+    this.outChannels = 0,
+    this.android = false,
+    this.bluetooth = false,
+    this.nativeRate = 0,
+  });
   final String id, name, outFormat;
   final bool exclusive, muted;
   final double volume;
   final int outRate, outChannels;
+
+  /// Android: its mixer always sits between Lumen and the device; Bluetooth adds a lossy codec.
+  final bool android, bluetooth;
+
+  /// Android: the rate the output runs at (0 = unknown).
+  final int nativeRate;
 }
 
 class SourceInfo {
@@ -312,6 +330,12 @@ class SourceInfo {
   /// The queue plays an album in order (not shuffled): ReplayGain Auto uses album gain.
   final bool albumInOrder;
 }
+
+/// Lumen's own libmpv: soxr and every FFmpeg filter the Sound page uses. media_kit's Android libmpv has
+/// no soxr (asking for it leaves mpv with no audio at all) and, of those filters, only `equalizer`; boot()
+/// turns this off there. Then Best quality uses swresample's best settings, and the chain keeps only the
+/// EQ's peak bands. Set it back to true when Lumen's own Android engine is in.
+bool fullEngine = true;
 
 const limiterDb = -0.3;
 const limiter = 'alimiter@lim=limit=0.966051:level=0';
@@ -344,6 +368,14 @@ int upsampleRate(Upsample u, int src) {
     _ => cd ? 352800 : 384000, // mpv's WASAPI picks the highest rate the device takes when this one isn't
   };
   return to > src ? to : 0;
+}
+
+/// The rate Lumen sends on Android (0 = the song's own): Best quality converts to the output's own rate
+/// with soxr; otherwise the song's rate up to 96 kHz (higher rates go to 88.2 / 96 kHz, the same family).
+int androidRate(SoundSettings s, DeviceInfo d, int src) {
+  if (s.bestQuality && d.nativeRate > 0) return d.nativeRate == src ? 0 : d.nativeRate;
+  if (src <= 96000) return 0;
+  return src % 11025 == 0 ? 88200 : 96000;
 }
 
 /// The ReplayGain mode mpv gets.
@@ -389,14 +421,20 @@ double? rgGainDb(SoundSettings s, SourceInfo src) {
     }
     if (eq.night) f.add('acompressor@night=threshold=0.063:ratio=3:attack=10:release=250:makeup=2');
   }
-  if (f.isNotEmpty && (s.bestQuality || (eq.on && eq.limit))) f.add(limiter);
-  if (f.isNotEmpty) f.insert(0, 'aformat=sample_fmts=fltp'); // 32-bit float processing: a boost can't clip inside the chain
-  final up = d.exclusive ? upsampleRate(s.upsample, src.rate) : 0;
+  // ponytail: no headroom or limiter without the full engine, so big EQ boosts can clip there.
+  if (!fullEngine) f.retainWhere((x) => x.startsWith('equalizer@'));
+  if (fullEngine && f.isNotEmpty && (s.bestQuality || (eq.on && eq.limit))) f.add(limiter);
+  if (fullEngine && f.isNotEmpty) f.insert(0, 'aformat=sample_fmts=fltp'); // 32-bit float processing: a boost can't clip inside the chain
+  final up = d.exclusive ? upsampleRate(s.upsample, src.rate) : (d.android ? androidRate(s, d, src.rate) : 0);
   return (
     chain: f.join(','),
     options: {
       // soxr at very high quality (28 bits), TPDF dither when the output is integer.
-      'audio-swresample-o': s.bestQuality ? 'resampler=soxr,precision=28,dither_method=triangular' : '',
+      'audio-swresample-o': !s.bestQuality
+          ? ''
+          : fullEngine
+          ? 'resampler=soxr,precision=28,dither_method=triangular'
+          : 'filter_size=32,phase_shift=10,dither_method=triangular',
       'audio-samplerate': '$up',
       'audio-buffer': s.largeBuffer ? '1.0' : '0.2',
       'replaygain': rgMode(s, src),
@@ -495,12 +533,19 @@ bool sameSamples(String src, int srcBits, String out) {
     steps.add('Volume ${d.volume.round()} %');
   }
   final resampled = d.outRate > 0 && src.rate > 0 && d.outRate != src.rate;
-  if (resampled) steps.add(s.bestQuality ? 'soxr' : 'resampler');
+  if (resampled) steps.add(s.bestQuality && fullEngine ? 'soxr' : 'resampler');
   if (d.outRate > 0) steps.add('${khz(d.outRate)} ${formatName(d.outFormat)}');
+  if (d.android) steps.add(d.nativeRate > 0 ? 'Android mixer (${khz(d.nativeRate)})' : 'Android mixer');
+  if (d.bluetooth) steps.add('Bluetooth codec');
   steps.add('${d.name}${d.exclusive ? ' (exclusive)' : ''}');
 
   if (d.outFormat.isEmpty || src.format.isEmpty) why.add('nothing is playing');
-  if (!d.exclusive) why.add('shared mode: Windows mixes the sound');
+  if (d.android) {
+    why.add('Android mixes the sound');
+  } else if (!d.exclusive) {
+    why.add('shared mode: Windows mixes the sound');
+  }
+  if (d.bluetooth) why.add('Bluetooth sends it through a lossy codec (LDAC, aptX, AAC or SBC)');
   if (d.muted) why.add('muted');
   if (!d.muted && d.volume < 100) why.add('volume is ${d.volume.round()} %, not 100 %');
   if (chain.contains('dynaudnorm@')) why.add('volume levelling is on');

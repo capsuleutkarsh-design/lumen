@@ -7,6 +7,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../audio/sound.dart';
+import '../../platform/android.dart';
 import '../../platform/log.dart' show openPath;
 import '../app.dart';
 import '../theme.dart';
@@ -25,14 +26,14 @@ class SoundPage extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         const PageHeader('Sound', subtitle: 'How your music reaches your ears'),
-        const _Narrow(child: SignalPathPanel()),
-        const SizedBox(height: S.x4),
+        if (!Platform.isAndroid) ...[const _Narrow(child: SignalPathPanel()), const SizedBox(height: S.x4)],
         Expanded(
           child: ListView(
             key: const PageStorageKey('sound'),
             padding: EdgeInsets.zero,
             // Not const: the sections read [sound] and [engine], so they rebuild with this builder.
             children: [
+              if (Platform.isAndroid) ...[const SignalPathPanel(), const SizedBox(height: S.x4)], // scrolls with the page
               _Narrow(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -247,6 +248,7 @@ class _Output extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final s = sound.s;
+    if (Platform.isAndroid) return _androidOutput(s);
     return _card('Output', null, [
       _labelled(
         'Output device',
@@ -313,6 +315,66 @@ class _Output extends StatelessWidget {
     ]);
   }
 }
+
+/// Android: where the sound goes (no device picker or exclusive mode there), Best quality and the buffer.
+Widget _androidOutput(SoundSettings s) {
+  final r = audioRoute.value;
+  return _card('Output', null, [
+    _labelled(
+      'Playing on',
+      Text(
+        [
+          r?.name ?? 'Phone speaker',
+          if (r != null && r.product.isNotEmpty && r.kind != 'speaker') r.product,
+          if (engine.outRate > 0) 'Lumen sends ${friendlyFormat(engine.outputFormat)}',
+          if ((r?.nativeRate ?? 0) > 0) 'Android mixes at ${khz(r!.nativeRate)}',
+        ].join(' · '),
+        style: T.small,
+      ),
+    ),
+    if (r != null && r.bluetooth)
+      Container(
+        key: const ValueKey('ldacTip'),
+        margin: const EdgeInsets.only(bottom: S.x4),
+        padding: const EdgeInsets.all(S.x4),
+        decoration: BoxDecoration(
+          color: C.raised2,
+          borderRadius: BorderRadius.circular(R.small + 2),
+          border: Border.all(color: C.border),
+        ),
+        child: Text(bluetoothTip, style: T.small),
+      ),
+    if (!fullEngine)
+      Padding(
+        padding: const EdgeInsets.only(bottom: S.x4),
+        child: Text(
+          'This first Android version runs the EQ’s peak bands (the graphic EQ, and the peaks of an AutoEQ profile) and ReplayGain. '
+          'Shelves, filters and curves, crossfeed, levelling, night mode and the limiter need Lumen’s own Android sound engine, '
+          'which comes in an update; until then they are left out of the signal path.',
+          style: T.caption,
+        ),
+      ),
+    _switchRow(
+      'Best quality on this device',
+      'Converts to the rate Android plays at with the best resampler${fullEngine ? ' (soxr, highest quality)' : ''}, so Android never does a rough '
+          'conversion. Works in 32-bit float, lowers the level just enough for EQ boosts, and a gentle limiter stops peaks '
+          'just below full scale. Off, Lumen sends each song at its own rate (up to 96 kHz).',
+      s.bestQuality,
+      (v) => sound.change((s) => s.bestQuality = v),
+    ),
+    _labelled(
+      'Buffer',
+      Choice([false, true], (b) => b ? 'Large' : 'Normal', s.largeBuffer, (b) => sound.change((s) => s.largeBuffer = b)),
+      caption: 'Choose Large if the sound drops out or crackles when the phone is busy.',
+    ),
+  ]);
+}
+
+/// Shown while Bluetooth headphones play: apps can't choose the codec; the phone's developer options can.
+const bluetoothTip =
+    'For the best Bluetooth sound with LDAC: Settings → Developer options → Bluetooth audio codec: LDAC, '
+    'sample rate 96 kHz, bits 24, LDAC playback quality: Optimized for audio quality (990 kbps). '
+    'Bluetooth codecs (LDAC too) are lossy, so Bluetooth is never bit-perfect.';
 
 // ------------------------------------------------------------ equalizer
 
@@ -402,6 +464,7 @@ class _EqualizerState extends State<_Equalizer> {
           ),
         ),
         const SizedBox(height: S.x4),
+        if (!Platform.isAndroid) // Android has no device picker to switch with
         _switchRow(
           'Remember the EQ for each output device',
           'Each device keeps its own EQ, and Lumen switches when you change device: your headphones\' correction only on the headphones.',
@@ -568,7 +631,7 @@ class _EqualizerState extends State<_Equalizer> {
         const PopupMenuDivider(height: 8),
         item('autoeq', 'Headphone correction (AutoEQ)…', icon: LucideIcons.headphones),
         item('import', 'Import presets (JSON)…', icon: LucideIcons.import),
-        if (s.presets.isNotEmpty) item('export', 'Export my presets (JSON)…', icon: LucideIcons.share),
+        if (s.presets.isNotEmpty && !Platform.isAndroid) item('export', 'Export my presets (JSON)…', icon: LucideIcons.share),
       ],
     );
     if (v == null || !mounted) return;

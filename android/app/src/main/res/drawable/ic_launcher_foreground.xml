@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The L with two sound bars of assets/brand/lumen.svg (512 units), scaled into the 66 dp safe zone. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="108dp" android:height="108dp"
+    android:viewportWidth="108" android:viewportHeight="108">
+    <group android:scaleX="0.16" android:scaleY="0.16" android:translateX="12.7" android:translateY="13">
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M172,108a32,32 0,0 1,32 32v232a32,32 0,0 1,-32 32a32,32 0,0 1,-32 -32v-232a32,32 0,0 1,32 -32z"/>
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M172,340h172a32,32 0,0 1,0 64h-172a32,32 0,0 1,0 -64z"/>
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M264,212a24,24 0,0 1,24 24v52a24,24 0,0 1,-48 0v-52a24,24 0,0 1,24 -24z"/>
+        <path android:fillColor="#FFFFFFFF"
+            android:pathData="M340,158a24,24 0,0 1,24 24v106a24,24 0,0 1,-48 0v-106a24,24 0,0 1,24 -24z"/>
+    </group>
+</vector>

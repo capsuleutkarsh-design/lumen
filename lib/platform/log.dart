@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/foundation.dart';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as p;
 
 File? _file;
@@ -49,5 +50,7 @@ void log(String text) {
   } catch (_) {}
 }
 
-/// Opens a folder, a file (with its default app) or a web address.
-void openPath(String target) => Process.run('explorer.exe', [target]);
+/// Opens a folder, a file (with its default app) or a web address. Android: web addresses only.
+void openPath(String target) => Platform.isAndroid
+    ? const MethodChannel('lumen/android').invokeMethod('open', target).catchError((Object e) => log('open: $e'))
+    : Process.run('explorer.exe', [target]);

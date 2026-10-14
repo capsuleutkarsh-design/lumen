@@ -79,13 +79,14 @@ class DataAndUpdates extends StatelessWidget {
       children: [
         SelectableText('Your library, playlists, play counts and the log are kept in ${lib.dataDir}', style: T.small),
         const SizedBox(height: S.x3),
-        Row(
-          children: [
-            PillButton('Open data folder', icon: LucideIcons.folderOpen, onTap: () => openPath(lib.dataDir)),
-            const SizedBox(width: S.x3),
-            PillButton('Open log', icon: LucideIcons.fileText, onTap: () => openPath(p.join(lib.dataDir, 'lumen.log'))),
-          ],
-        ),
+        if (!Platform.isAndroid) // the app's own folder: no file manager can open it there
+          Row(
+            children: [
+              PillButton('Open data folder', icon: LucideIcons.folderOpen, onTap: () => openPath(lib.dataDir)),
+              const SizedBox(width: S.x3),
+              PillButton('Open log', icon: LucideIcons.fileText, onTap: () => openPath(p.join(lib.dataDir, 'lumen.log'))),
+            ],
+          ),
         const SizedBox(height: S.x4),
         Row(
           children: [

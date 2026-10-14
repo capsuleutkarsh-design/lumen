@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/foundation.dart';
 
 import '../library/library.dart';
+import '../platform/android.dart';
 import 'engine.dart';
 import 'sound.dart';
 
@@ -26,10 +27,25 @@ class Sound extends ChangeNotifier {
     s = SoundSettings.parse(lib.setting('sound'));
     _device = engine.device;
     engine.addListener(_onEngine);
+    audioRoute.addListener(_onRoute);
     await apply();
   }
 
   DeviceInfo get device {
+    final r = audioRoute.value;
+    if (r != null) {
+      return DeviceInfo(
+        name: r.name,
+        volume: engine.volume,
+        muted: engine.muted,
+        outFormat: engine.outFormat,
+        outRate: engine.outRate,
+        outChannels: engine.outChannels,
+        android: true,
+        bluetooth: r.bluetooth,
+        nativeRate: r.nativeRate,
+      );
+    }
     final d = engine.devices.where((d) => d.name == engine.device).firstOrNull;
     return DeviceInfo(
       id: engine.device,
@@ -129,9 +145,16 @@ class Sound extends ChangeNotifier {
     apply();
   }
 
+  /// Android: headphones or Bluetooth came or went (Best quality follows the new output's rate).
+  void _onRoute() {
+    notifyListeners();
+    apply();
+  }
+
   @override
   void dispose() {
     engine.removeListener(_onEngine);
+    audioRoute.removeListener(_onRoute);
     _applyTimer?.cancel();
     _saveTimer?.cancel();
     super.dispose();

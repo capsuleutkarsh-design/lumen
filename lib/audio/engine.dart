@@ -86,6 +86,7 @@ class Engine extends ChangeNotifier {
   Stream<String> get messages => _messages.stream;
   final _messages = StreamController<String>.broadcast();
   void _say(String m) {
+    debugPrint('engine: $m'); // in lumen.log too, for bug reports
     if (!_messages.isClosed) _messages.add(m);
   }
 
@@ -133,9 +134,18 @@ class Engine extends ChangeNotifier {
     await _mpv.setProperty('gapless-audio', 'weak'); // gapless whenever formats match; never resample to force it
     await _mpv.setProperty('prefetch-playlist', 'yes');
     await _mpv.setProperty('audio-display', 'no');
-    if (silent) await _mpv.setProperty('ao', 'null');
+    if (silent) {
+      await _mpv.setProperty('ao', 'null');
+    } else if (Platform.isAndroid) {
+      // AudioTrack first (media_kit picks OpenSL ES, which runs at a fixed rate); AAudio and OpenSL ES as fallbacks.
+      await _mpv.setProperty('ao', 'audiotrack,aaudio,opensles');
+      await _mpv.setProperty('cache-on-disk', 'no'); // no cache folder there ("Failed to create file cache")
+      // Float to AudioTrack: otherwise it gets 16 bits, and 24-bit files would lose theirs.
+      await _mpv.setProperty('audiotrack-pcm-float', 'yes');
+      await _mpv.setProperty('audio-format', 'float');
+    }
     device = lib.setting('audio_device') ?? 'auto';
-    exclusive = lib.setting('exclusive') == '1';
+    exclusive = !Platform.isAndroid && lib.setting('exclusive') == '1'; // WASAPI only
     volume = double.tryParse(lib.setting('volume') ?? '') ?? 100;
     muted = lib.setting('muted') == '1';
     // The saved device is gone (USB DAC unplugged): the system default for this session.

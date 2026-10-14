@@ -3,6 +3,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../art/art_cache.dart';
 import '../../library/models.dart';
+import '../../platform/window.dart' show isTouch;
 import '../app.dart';
 import '../cover_picker.dart';
 import '../theme.dart';
@@ -297,7 +298,7 @@ class NoMusic extends StatelessWidget {
         icon: LucideIcons.folderOpen,
         title: none ? 'Add your music folder' : 'No songs found',
         body: none
-            ? 'Choose the folder where your music lives, or drop it on this window. Nothing is copied or changed; Lumen only reads it.'
+            ? 'Choose the folder where your music lives${isTouch ? '' : ', or drop it on this window'}. Nothing is copied or changed; Lumen only reads it.'
             : 'Lumen found no audio files in your folders. Check them in Settings.',
         action: none
             ? const PillButton('Choose folder', primary: true, icon: LucideIcons.folderPlus, onTap: addMusicFolder)

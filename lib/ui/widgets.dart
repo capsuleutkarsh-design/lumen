@@ -9,6 +9,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../art/art_cache.dart';
 import '../art/art_sources.dart';
 import '../library/models.dart';
+import '../platform/window.dart' show isTouch;
 import 'app.dart';
 import 'theme.dart';
 
@@ -23,6 +24,10 @@ String fmtLong(Duration d) {
   final m = d.inMinutes;
   return m >= 60 ? '${m ~/ 60} h ${m % 60} min' : '$m min';
 }
+
+/// The words for a touch screen or a mouse ("Tap" / "Double-click", "long-press" / "right-click").
+String get tapWord => isTouch ? 'Tap' : 'Double-click';
+String get menuWord => isTouch ? 'long-press' : 'right-click';
 
 String plural(int n, String word) => '${fmtInt(n)} $word${n == 1 ? '' : 's'}';
 
@@ -171,9 +176,13 @@ class _ClickableState extends State<Clickable> {
         onPointerDown: _node == null ? null : (_) => _node!.requestFocus(),
         child: GestureDetector(
           behavior: HitTestBehavior.opaque,
-          onTap: widget.onTap,
-          onDoubleTap: widget.onDoubleTap,
+          // Touch: a tap does what a double-click does (play), a long press opens the right-click menu.
+          onTap: isTouch ? widget.onDoubleTap ?? widget.onTap : widget.onTap,
+          onDoubleTap: isTouch ? null : widget.onDoubleTap,
           onSecondaryTapDown: widget.onSecondaryTapDown,
+          onLongPressStart: isTouch && widget.onSecondaryTapDown != null
+              ? (d) => widget.onSecondaryTapDown!(TapDownDetails(globalPosition: d.globalPosition))
+              : null,
           onTapDown: _enabled ? (_) => setState(() => _down = true) : null,
           onTapUp: (_) => setState(() => _down = false),
           onTapCancel: () => setState(() => _down = false),
@@ -218,8 +227,8 @@ class IconBtn extends StatelessWidget {
     child: Opacity(
       opacity: onTap == null ? 0.4 : 1,
       child: SizedBox(
-        width: box,
-        height: box,
+        width: isTouch ? max(box, 48) : box, // a finger needs 48 dp
+        height: isTouch ? max(box, 48) : box,
         child: Stack(
           alignment: Alignment.center,
           children: [

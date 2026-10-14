@@ -104,7 +104,9 @@ class _NowPlayingState extends State<NowPlaying> {
                           _GlassBtn(
                             LucideIcons.micVocal,
                             _showLyrics ? 'Hide lyrics' : 'Show lyrics',
-                            () => setState(() => nav.memo['np.lyrics'] = !_showLyrics),
+                            () => MediaQuery.sizeOf(context).width < 880
+                                ? nav.toggleLyrics()
+                                : setState(() => nav.memo['np.lyrics'] = !_showLyrics),
                             active: _showLyrics,
                           ),
                         const SizedBox(width: S.x2),
@@ -118,7 +120,7 @@ class _NowPlayingState extends State<NowPlaying> {
                     ),
                     Expanded(
                       child: t == null
-                          ? const EmptyState(icon: LucideIcons.music, title: 'Nothing playing', body: 'Double-click any song to play it.')
+                          ? EmptyState(icon: LucideIcons.music, title: 'Nothing playing', body: '$tapWord any song to play it.')
                           : LayoutBuilder(
                               builder: (context, c) {
                                 final side = _hasLyrics && _showLyrics && c.maxWidth >= 880;
@@ -160,6 +162,77 @@ class _Player extends StatelessWidget {
     final size = min(min((maxW - S.x8) / wide, maxH - below), 560.0).clamp(160.0, 560.0);
     // The column is at least wide enough for the controls; the cover keeps its left edge.
     final width = min(max(size * wide, 360.0), maxW);
+    // A phone on its side: the disc beside the song and the controls, so nothing needs scrolling.
+    final sideways = maxH < 480 && maxW > maxH * 1.5;
+    final discSize = sideways ? min(maxH - S.x8, (maxW * 0.45) / wide) : size;
+    final cover = ArtAccentBuilder(
+      builder: (context, accent) => DiscView(
+        art: lib.artFor(t.albumKey, t.cover),
+        id: t.id,
+        playing: engine.playing,
+        size: discSize,
+        style: style,
+        glow: accent,
+        onCoverMenu: (d) => nowPlayingCoverMenu(context, d.globalPosition, t),
+      ),
+    );
+    final info = <Widget>[
+      Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(t.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: T.title),
+                const SizedBox(height: S.x1),
+                Text(
+                  [t.artist, if (t.album.isNotEmpty) t.album].join(' · '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: T.body.copyWith(color: C.dim),
+                ),
+              ],
+            ),
+          ),
+          IconBtn(
+            fav ? Icons.favorite_rounded : LucideIcons.heart,
+            size: 20,
+            box: 44,
+            color: fav ? C.accent : C.text,
+            tooltip: fav ? 'Remove from Favourites' : 'Add to Favourites',
+            onTap: () => lib.toggleFavourite(t.id),
+          ),
+        ],
+      ),
+      const SizedBox(height: S.x4),
+      const SeekBar(big: true),
+      const SizedBox(height: S.x2),
+      const Center(
+        child: FittedBox(fit: BoxFit.scaleDown, child: Transport(big: true)),
+      ),
+      const SizedBox(height: S.x3),
+      Row(
+        children: [
+          Flexible(child: FormatBadge(t.badge)),
+          const Spacer(),
+          const SizedBox(width: 168, child: VolumeControl()),
+        ],
+      ),
+    ];
+    if (sideways) {
+      return Row(
+        children: [
+          cover,
+          const SizedBox(width: S.x8),
+          Expanded(
+            child: SingleChildScrollView(
+              child: Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisSize: MainAxisSize.min, children: info),
+            ),
+          ),
+        ],
+      );
+    }
     return SingleChildScrollView(
       child: SizedBox(
         width: width,
@@ -167,61 +240,9 @@ class _Player extends StatelessWidget {
           crossAxisAlignment: CrossAxisAlignment.start,
           mainAxisSize: MainAxisSize.min,
           children: [
-            // The glow under the cover takes the art's colour (coral without one).
-            ArtAccentBuilder(
-              builder: (context, accent) => DiscView(
-                art: lib.artFor(t.albumKey, t.cover),
-                id: t.id,
-                playing: engine.playing,
-                size: size,
-                style: style,
-                glow: accent,
-                onCoverMenu: (d) => nowPlayingCoverMenu(context, d.globalPosition, t),
-              ),
-            ),
+            cover,
             const SizedBox(height: S.x6),
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(t.title, maxLines: 2, overflow: TextOverflow.ellipsis, style: T.title),
-                      const SizedBox(height: S.x1),
-                      Text(
-                        [t.artist, if (t.album.isNotEmpty) t.album].join(' · '),
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                        style: T.body.copyWith(color: C.dim),
-                      ),
-                    ],
-                  ),
-                ),
-                IconBtn(
-                  fav ? Icons.favorite_rounded : LucideIcons.heart,
-                  size: 20,
-                  box: 44,
-                  color: fav ? C.accent : C.text,
-                  tooltip: fav ? 'Remove from Favourites' : 'Add to Favourites',
-                  onTap: () => lib.toggleFavourite(t.id),
-                ),
-              ],
-            ),
-            const SizedBox(height: S.x4),
-            const SeekBar(big: true),
-            const SizedBox(height: S.x2),
-            const Center(
-              child: FittedBox(fit: BoxFit.scaleDown, child: Transport(big: true)),
-            ),
-            const SizedBox(height: S.x3),
-            Row(
-              children: [
-                Flexible(child: FormatBadge(t.badge)),
-                const Spacer(),
-                const SizedBox(width: 168, child: VolumeControl()),
-              ],
-            ),
+            ...info,
           ],
         ),
       ),
@@ -278,82 +299,90 @@ class _DiscModeState extends State<DiscMode> {
     builder: (context, _) {
       final t = engine.current;
       final art = t == null ? null : lib.artFor(t.albumKey, t.cover);
-      return MouseRegion(
-        onHover: (_) => _poke(),
-        cursor: _controls ? MouseCursor.defer : SystemMouseCursors.none,
-        child: Material(
-          color: C.bg,
-          child: Stack(
-            children: [
-              CoverGlow(art, opacity: 0.7, blur: 120),
-              Positioned.fill(
-                child: DecoratedBox(
-                  decoration: BoxDecoration(gradient: RadialGradient(radius: 1.2, colors: [C.veil(0.35), C.veil(0.85)])),
-                ),
-              ),
-              Positioned.fill(child: dragArea(const SizedBox.expand())),
-              if (art != null)
-                Center(
-                  child: LayoutBuilder(
-                    builder: (context, c) {
-                      final wide = DiscView.widthFor(1, discStyle.value);
-                      final size = min(c.maxHeight * 0.62, c.maxWidth * 0.8 / wide);
-                      return Padding(
-                        // Optically centred: the disc side carries less weight than the cover.
-                        padding: EdgeInsets.only(left: size * (wide - 1) * 0.15),
-                        child: DiscView(
-                          art: art,
-                          id: t!.id,
-                          playing: engine.playing,
-                          size: size,
-                          style: discStyle.value,
-                          onCoverMenu: (d) => nowPlayingCoverMenu(context, d.globalPosition, t),
-                        ),
-                      );
-                    },
+      return GestureDetector(
+        onTap: _poke,
+        child: MouseRegion(
+          onHover: (_) => _poke(),
+          cursor: _controls ? MouseCursor.defer : SystemMouseCursors.none,
+          child: Material(
+            color: C.bg,
+            child: Stack(
+              children: [
+                CoverGlow(art, opacity: 0.7, blur: 120),
+                Positioned.fill(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(gradient: RadialGradient(radius: 1.2, colors: [C.veil(0.35), C.veil(0.85)])),
                   ),
                 ),
-              Positioned(
-                left: 0,
-                right: 0,
-                bottom: S.x8,
-                child: IgnorePointer(
-                  ignoring: !_controls,
-                  child: AnimatedOpacity(
-                    opacity: _controls ? 1 : 0,
-                    duration: Motion.slow,
-                    child: Center(
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: C.glass,
-                          borderRadius: BorderRadius.circular(R.pill),
-                          border: Border.all(color: C.glassBorder),
-                        ),
-                        child: Padding(
-                          padding: const EdgeInsets.all(S.x1),
-                          child: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              IconBtn(LucideIcons.skipBack, color: C.text, tooltip: 'Previous', onTap: t == null ? null : engine.previous),
-                              IconBtn(
-                                engine.playing ? LucideIcons.pause : LucideIcons.play,
-                                color: C.text,
-                                tooltip: engine.playing ? 'Pause  (Space)' : 'Play  (Space)',
-                                onTap: t == null ? null : engine.togglePlay,
-                              ),
-                              IconBtn(LucideIcons.skipForward, color: C.text, tooltip: 'Next', onTap: t == null ? null : engine.next),
-                              if (isDesktop)
-                                IconBtn(LucideIcons.expand, color: C.text, tooltip: 'Full screen  (F11)', onTap: toggleFullScreen),
-                              IconBtn(LucideIcons.x, color: C.text, tooltip: 'Leave disc mode  (Esc)', onTap: () => nav.setDisc(false)),
-                            ],
+                Positioned.fill(child: dragArea(const SizedBox.expand())),
+                if (art != null)
+                  Center(
+                    child: LayoutBuilder(
+                      builder: (context, c) {
+                        final wide = DiscView.widthFor(1, discStyle.value);
+                        final size = min(c.maxHeight * 0.62, c.maxWidth * 0.8 / wide);
+                        return Padding(
+                          // Optically centred: the disc side carries less weight than the cover.
+                          padding: EdgeInsets.only(left: size * (wide - 1) * 0.15),
+                          child: DiscView(
+                            art: art,
+                            id: t!.id,
+                            playing: engine.playing,
+                            size: size,
+                            style: discStyle.value,
+                            onCoverMenu: (d) => nowPlayingCoverMenu(context, d.globalPosition, t),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                Positioned(
+                  left: 0,
+                  right: 0,
+                  bottom: S.x8,
+                  child: IgnorePointer(
+                    ignoring: !_controls,
+                    child: AnimatedOpacity(
+                      opacity: _controls ? 1 : 0,
+                      duration: Motion.slow,
+                      child: Center(
+                        child: DecoratedBox(
+                          decoration: BoxDecoration(
+                            color: C.glass,
+                            borderRadius: BorderRadius.circular(R.pill),
+                            border: Border.all(color: C.glassBorder),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(S.x1),
+                            child: Row(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                IconBtn(
+                                  LucideIcons.skipBack,
+                                  color: C.text,
+                                  tooltip: 'Previous',
+                                  onTap: t == null ? null : engine.previous,
+                                ),
+                                IconBtn(
+                                  engine.playing ? LucideIcons.pause : LucideIcons.play,
+                                  color: C.text,
+                                  tooltip: engine.playing ? 'Pause  (Space)' : 'Play  (Space)',
+                                  onTap: t == null ? null : engine.togglePlay,
+                                ),
+                                IconBtn(LucideIcons.skipForward, color: C.text, tooltip: 'Next', onTap: t == null ? null : engine.next),
+                                if (isDesktop)
+                                  IconBtn(LucideIcons.expand, color: C.text, tooltip: 'Full screen  (F11)', onTap: toggleFullScreen),
+                                IconBtn(LucideIcons.x, color: C.text, tooltip: 'Leave disc mode  (Esc)', onTap: () => nav.setDisc(false)),
+                              ],
+                            ),
                           ),
                         ),
                       ),
                     ),
                   ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       );

@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../library/models.dart';
+import '../platform/window.dart' show isTouch;
 import 'app.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -89,7 +90,7 @@ PopupMenuItem<String> menuItem(String v, IconData icon, String label, {String? h
       Icon(icon, size: 16, color: C.dim),
       const SizedBox(width: S.x3),
       Expanded(child: Text(label, style: T.label)),
-      if (hint != null) ...[const SizedBox(width: S.x4), Text(hint, style: T.caption)],
+      if (hint != null && !isTouch) ...[const SizedBox(width: S.x4), Text(hint, style: T.caption)],
     ],
   ),
 );
@@ -335,7 +336,7 @@ class _TrackRowState extends State<TrackRow> {
   void _select(PointerDownEvent e) {
     _pointer = true; // the focus change this click causes is not a keyboard move
     WidgetsBinding.instance.addPostFrameCallback((_) => _pointer = false);
-    if (e.buttons != kPrimaryMouseButton) return;
+    if (e.buttons != kPrimaryMouseButton || isTouch) return; // touch: a tap plays; a long press selects for its menu
     selection.click(widget.list, widget.index, toggle: ctrl, range: shift);
   }
 

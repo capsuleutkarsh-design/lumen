@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 
 import '../../platform/tray.dart';
@@ -23,7 +25,7 @@ class ThemeSettings extends StatelessWidget {
             SizedBox(width: 124, child: Text('Colours', style: T.label)),
             Segmented(
               value: mode,
-              options: const [('dark', 'Dark'), ('light', 'Light'), ('system', 'Follow Windows')],
+              options: [('dark', 'Dark'), ('light', 'Light'), ('system', Platform.isAndroid ? 'Follow the phone' : 'Follow Windows')],
               onChanged: setAppearance,
             ),
           ],

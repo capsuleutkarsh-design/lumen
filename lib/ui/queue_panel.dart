@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../audio/queue.dart';
+import '../platform/window.dart' show isTouch;
 import 'app.dart';
 import 'theme.dart';
 import 'widgets.dart';
@@ -33,11 +34,11 @@ class QueuePanel extends StatelessWidget {
               ),
             ),
             if (cur == null)
-              const Expanded(
+              Expanded(
                 child: EmptyState(
                   icon: LucideIcons.listMusic,
                   title: 'The queue is empty',
-                  body: 'Double-click a song, or right-click it and choose Play next or Add to queue.',
+                  body: '$tapWord a song, or $menuWord it and choose Play next or Add to queue.',
                 ),
               )
             else ...[
@@ -62,10 +63,23 @@ class QueuePanel extends StatelessWidget {
                     final j = q.items.indexOf(upcoming[to]);
                     if (i > q.index && j > q.index) engine.moveInQueue(i, j);
                   },
-                  itemBuilder: (_, i) => KeyedSubtree(
-                    key: ValueKey(upcoming[i].uid),
-                    child: _entry(context, upcoming[i], dragIndex: i),
-                  ),
+                  itemBuilder: (_, i) => isTouch
+                      // Touch: swipe a song away to take it out of the queue.
+                      ? Dismissible(
+                          key: ValueKey(upcoming[i].uid),
+                          direction: DismissDirection.endToStart,
+                          background: Container(
+                            alignment: Alignment.centerRight,
+                            padding: const EdgeInsets.only(right: S.x5),
+                            child: Icon(LucideIcons.trash2, size: 18, color: C.accent),
+                          ),
+                          onDismissed: (_) => _remove(context, upcoming[i]),
+                          child: _entry(context, upcoming[i], dragIndex: i),
+                        )
+                      : KeyedSubtree(
+                          key: ValueKey(upcoming[i].uid),
+                          child: _entry(context, upcoming[i], dragIndex: i),
+                        ),
                 ),
               ),
             ],
@@ -85,6 +99,12 @@ class QueuePanel extends StatelessWidget {
     if (name == null || !context.mounted) return;
     engine.saveQueueAsPlaylist(name);
     toast(context, "Saved the queue as '$name'");
+  }
+
+  void _remove(BuildContext context, Entry e) {
+    final t = lib.byId[e.trackId];
+    engine.removeFromQueue(engine.queue.items.indexOf(e));
+    toast(context, "Removed '${t?.title ?? 'the song'}'", action: 'Undo', onAction: engine.undoRemove);
   }
 
   Widget _entry(BuildContext context, Entry e, {bool current = false, int? dragIndex}) {
@@ -134,17 +154,7 @@ class QueuePanel extends StatelessWidget {
                 child: PlayingBars(playing: engine.playing),
               )
             else
-              IconBtn(
-                LucideIcons.x,
-                size: 14,
-                box: 28,
-                color: C.faint,
-                tooltip: 'Remove from queue',
-                onTap: () {
-                  engine.removeFromQueue(engine.queue.items.indexOf(e));
-                  toast(context, "Removed '${t.title}'", action: 'Undo', onAction: engine.undoRemove);
-                },
-              ),
+              IconBtn(LucideIcons.x, size: 14, box: 28, color: C.faint, tooltip: 'Remove from queue', onTap: () => _remove(context, e)),
           ],
         ),
       ),
@@ -154,6 +164,6 @@ class QueuePanel extends StatelessWidget {
             padding: const EdgeInsets.symmetric(horizontal: S.x2),
             child: row,
           )
-        : Tooltip(message: 'Double-click to play now', waitDuration: const Duration(seconds: 1), child: row);
+        : Tooltip(message: '$tapWord to play now', waitDuration: const Duration(seconds: 1), child: row);
   }
 }
