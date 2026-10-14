@@ -1,6 +1,9 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:ffi';
+import 'dart:io';
 
+import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
 import 'package:media_kit/media_kit.dart' hide Track;
 import 'package:path/path.dart' as p;
@@ -9,6 +12,38 @@ import '../library/library.dart';
 import '../library/models.dart';
 import '../library/suggestions.dart';
 import 'queue.dart';
+
+/// MediaKit.ensureInitialized, minus a crash at start in debug builds (tests, `flutter run`).
+/// media_kit keeps a pointer file per process id in %TEMP% (to free its players on hot restart)
+/// and never deletes it. A later process that gets the same id reads the dead process's pointer
+/// and crashes with an access violation: the flaky "setUpAll did not complete" test runs. So a
+/// file older than this process is dropped first; one written by this process (hot restart) stays.
+void initMediaKit({String? libmpv}) {
+  if (kDebugMode && Platform.isWindows) dropStalePointerFile();
+  MediaKit.ensureInitialized(libmpv: libmpv);
+}
+
+/// Deletes media_kit's pointer file for this process id if an earlier process wrote it.
+void dropStalePointerFile() {
+  final f = File(p.join(Directory.systemTemp.path, 'com.alexmercerind.media_kit.NativeReferenceHolder.$pid'));
+  if (f.existsSync() && f.lastModifiedSync().isBefore(processStart())) f.deleteSync();
+}
+
+/// When this process started (Windows).
+DateTime processStart() {
+  final k32 = DynamicLibrary.open('kernel32.dll');
+  final self = k32.lookupFunction<IntPtr Function(), int Function()>('GetCurrentProcess')();
+  final times = calloc<Uint64>(4); // creation, exit, kernel, user (FILETIME: 100 ns since 1601)
+  try {
+    k32.lookupFunction<
+      Int32 Function(IntPtr, Pointer<Uint64>, Pointer<Uint64>, Pointer<Uint64>, Pointer<Uint64>),
+      int Function(int, Pointer<Uint64>, Pointer<Uint64>, Pointer<Uint64>, Pointer<Uint64>)
+    >('GetProcessTimes')(self, times, times + 1, times + 2, times + 3);
+    return DateTime.utc(1601).add(Duration(microseconds: times.value ~/ 10));
+  } finally {
+    calloc.free(times);
+  }
+}
 
 /// Stop after the current song, or at the end of the queue (even with repeat on).
 enum StopAfter { none, song, queue }
@@ -129,7 +164,9 @@ class Engine extends ChangeNotifier {
       if (pl.index < 1 || _mpvNext == null) return;
       final g = _gen;
       _serial(() async {
-        if (g == _gen) await _autoAdvanced(); // else a manual load since made it stale
+        if (g != _gen) return; // a manual load since made it stale
+        await _autoAdvanced();
+        await _verify();
       });
     });
     player.stream.error.listen(_onError);
@@ -248,7 +285,10 @@ class Engine extends ChangeNotifier {
     notifyListeners();
     if (wasEmpty && queue.current != null) return _load();
     _save();
-    return _serial(_syncNext);
+    return _serial(() async {
+      await _syncNext();
+      await _verify();
+    });
   }
 
   Future<void> jump(int i) {
@@ -428,8 +468,12 @@ class Engine extends ChangeNotifier {
     final want = stopAfter == StopAfter.song || (stopAfter == StopAfter.queue && last) ? null : queue.peekNext();
     if (identical(want, _mpvNext) || queue.current == null) return;
     final old = _mpvNext;
-    // mpv already moved on to the preloaded track: the queued hand-over sorts it out.
-    if (old != null && await _playingPos() != 0) return;
+    if (old != null) {
+      final at = await _playingPos();
+      // mpv already moved on to the preloaded track: hand over now. Its playlist event may be
+      // long gone (a hand-over that ran while mpv was between files had nothing to do).
+      if (at != 0) return at > 0 ? _autoAdvanced() : null;
+    }
     final t = lib.byId[want?.trackId];
     _mpvNext = t == null ? null : want;
     // Add before removing, so mpv never meets the end of its list in between.
@@ -437,7 +481,46 @@ class Engine extends ChangeNotifier {
     if (old != null) await player.remove(1);
   }
 
-  Future<int> _playingPos() async => int.tryParse(await _mpv.getProperty('playlist-playing-pos')) ?? -1;
+  Future<int> _playingPos() async => (await _mpvList()).$1;
+
+  /// mpv's playlist in one read, so its two parts belong together: (the entry playing, every file).
+  /// Between two files (just after the playing entry was removed, say) no entry plays for a
+  /// moment: wait for the next one to start instead of reading that moment as "nothing plays".
+  Future<(int, List<String>)> _mpvList() async {
+    for (var i = 0; ; i++) {
+      final list = (jsonDecode(await _mpv.getProperty('playlist')) as List).cast<Map<String, dynamic>>();
+      final at = list.indexWhere((e) => e['playing'] == true);
+      if (at >= 0 || i == 100 || await _mpv.getProperty('idle-active') == 'yes') return (at, [for (final e in list) '${e['filename']}']);
+      await Future<void>.delayed(const Duration(milliseconds: 10));
+    }
+  }
+
+  /// After every queue edit and hand-over: mpv plays the queue's current song as entry 0 and
+  /// holds exactly the preload the engine expects. A lost race is put right here.
+  Future<void> _verify() async {
+    if (current == null || _ended) return;
+    var (at, files) = await _mpvList();
+    if (at > 0 && _mpvNext != null) {
+      await _autoAdvanced();
+      (at, files) = await _mpvList();
+    }
+    final t = current;
+    if (at < 0 || t == null || _ended) return; // nothing plays: the end and error paths own that
+    bool same(String file, String? path) => path != null && p.equals(file.replaceFirst(r'\\?\', ''), path);
+    if (at != 0 || !same(files[0], t.path)) {
+      debugPrint("engine: mpv played '${files[at]}', the queue says '${t.path}': reloading");
+      return _open(play: playing, start: position.value);
+    }
+    final next = lib.byId[_mpvNext?.trackId]?.path;
+    if (files.length != (next == null ? 1 : 2) || (next != null && !same(files[1], next))) {
+      debugPrint('engine: mpv preloaded ${files.skip(1).toList()}, the queue says $next: preloading again');
+      for (var i = files.length - 1; i >= 1; i--) {
+        await player.remove(i);
+      }
+      _mpvNext = null;
+      await _syncNext();
+    }
+  }
 
   /// mpv moved on to the preloaded track by itself: no gap, no reload.
   Future<void> _autoAdvanced() async {

@@ -10,6 +10,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_kit/media_kit.dart';
+import 'package:music_player/audio/engine.dart';
 
 const dll = r'build\windows\x64\runner\Release\libmpv-2.dll';
 
@@ -32,7 +33,7 @@ File sineWav(String path) {
 
 void main() {
   test('our engine: filters, bs2b and soxr work', () async {
-    MediaKit.ensureInitialized(libmpv: File(dll).absolute.path);
+    initMediaKit(libmpv: File(dll).absolute.path);
     final wav = sineWav('${Directory.systemTemp.createTempSync('lumen_engine').path}\\sine.wav');
     final player = Player(configuration: const PlayerConfiguration(logLevel: MPVLogLevel.warn));
     final mpv = player.platform as NativePlayer;

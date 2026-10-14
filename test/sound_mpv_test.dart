@@ -110,7 +110,7 @@ void main() {
   final skip = File(dll).existsSync() ? null : 'build the release first';
   setUpAll(() async {
     if (skip != null) return;
-    MediaKit.ensureInitialized(libmpv: dll);
+    initMediaKit(libmpv: dll);
     final data = Directory.systemTemp.createTempSync('lumen_sound_');
     final tones = Directory(p.join(data.path, 'tones'))..createSync();
     final given = Platform.environment['MP_TONES'];

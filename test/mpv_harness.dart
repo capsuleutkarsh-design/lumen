@@ -28,7 +28,7 @@ final _engines = <Engine>[];
 final _moved = <int, String>{};
 
 Future<void> setUpLibrary() async {
-  MediaKit.ensureInitialized(libmpv: dll);
+  initMediaKit(libmpv: dll);
   data = Directory.systemTemp.createTempSync('lumen_test_').path;
   lib = Library(data)..load();
   lib.setSetting('folders', jsonEncode([testlib]));

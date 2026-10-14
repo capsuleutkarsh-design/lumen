@@ -4,6 +4,7 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:music_player/audio/engine.dart';
 import 'package:music_player/library/lyrics.dart';
 import 'package:music_player/library/m3u.dart';
 import 'package:music_player/main.dart';
@@ -14,6 +15,20 @@ import 'package:music_player/ui/pages/credits.dart';
 import 'package:path/path.dart' as p;
 
 void main() {
+  test("media_kit's pointer file from an earlier process with this id is dropped; this process's own stays", () {
+    final f = File(p.join(Directory.systemTemp.path, 'com.alexmercerind.media_kit.NativeReferenceHolder.$pid'));
+    expect(processStart().isBefore(DateTime.now()), isTrue);
+    expect(DateTime.now().difference(processStart()), lessThan(const Duration(hours: 1)));
+    f.writeAsStringSync('123456'); // a dead process's pointer
+    f.setLastModifiedSync(DateTime(2026, 1, 1));
+    dropStalePointerFile();
+    expect(f.existsSync(), isFalse);
+    f.writeAsStringSync('123456'); // written by this process (hot restart): kept
+    dropStalePointerFile();
+    expect(f.existsSync(), isTrue);
+    f.deleteSync();
+  });
+
   test('window restore: only bounds that are on a connected display', () {
     const screens = [Rect.fromLTWH(0, 0, 1920, 1032), Rect.fromLTWH(1920, 0, 2560, 1400)];
     expect(restorableBounds([100, 80, 1360, 860, 0], screens), const Rect.fromLTWH(100, 80, 1360, 860));
