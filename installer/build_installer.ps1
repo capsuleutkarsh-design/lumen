@@ -33,7 +33,7 @@ if ($LASTEXITCODE) { throw "ISCC failed" }
 $stage = "build\portable\Lumen"
 if (Test-Path build\portable) { Remove-Item -Recurse -Force build\portable }   # a plain folder made here, no junctions
 New-Item -ItemType Directory -Force $stage | Out-Null
-Copy-Item "$release\lumen.exe", "$release\*.dll", LICENSE.md, THIRD_PARTY_NOTICES.md, assets\fonts\Inter-OFL.txt $stage
+Copy-Item "$release\lumen.exe", "$release\*.dll", "$release\*.txt", LICENSE.md, THIRD_PARTY_NOTICES.md, assets\fonts\Inter-OFL.txt $stage
 Copy-Item -Recurse "$release\data" $stage
 Set-Content -Encoding ascii "$stage\portable.txt" @(
   'Portable mode: Lumen keeps its library, playlists, play counts and log in the "userdata"',

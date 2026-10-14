@@ -45,6 +45,7 @@ Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{
 [Files]
 Source: "{#SrcDir}\lumen.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcDir}\*.dll"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrcDir}\*.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcDir}\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
 Source: "..\LICENSE.md"; DestDir: "{app}"; Flags: ignoreversion
 Source: "..\THIRD_PARTY_NOTICES.md"; DestDir: "{app}"; Flags: ignoreversion

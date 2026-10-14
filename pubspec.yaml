@@ -54,6 +54,7 @@ flutter:
     - THIRD_PARTY_NOTICES.md
     - assets/fonts/Inter-OFL.txt
     - docs/study/wora/LICENSE
+    - licenses/
   fonts:
     - family: Inter
       fonts:
