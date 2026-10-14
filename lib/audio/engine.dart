@@ -42,7 +42,7 @@ class Engine extends ChangeNotifier {
 
   /// What the decoder gives (mpv `audio-params`; bits from the file's tags).
   String srcFormat = '';
-  int srcRate = 0, srcBits = 0;
+  int srcRate = 0, srcBits = 0, srcChannels = 0;
 
   /// e.g. "s32 96000 Hz": the real output format (bit-perfect check).
   String get outputFormat => outFormat.isEmpty ? '' : '$outFormat $outRate Hz';
@@ -53,6 +53,9 @@ class Engine extends ChangeNotifier {
   void _say(String m) {
     if (!_messages.isClosed) _messages.add(m);
   }
+
+  /// A message from elsewhere (the Sound page's per-device EQ switch).
+  void say(String m) => _say(m);
 
   /// Sleep timer: the volume fades out over the last 10 s, then playback pauses.
   DateTime? sleepAt;
@@ -137,6 +140,7 @@ class Engine extends ChangeNotifier {
     player.stream.audioParams.listen((a) {
       srcFormat = a.format ?? '';
       srcRate = a.sampleRate ?? 0;
+      srcChannels = a.channelCount ?? 0;
       srcBits = current?.bitDepth ?? 0;
       notifyListeners();
     });
@@ -359,13 +363,20 @@ class Engine extends ChangeNotifier {
   /// An mpv `af` chain in lavfi syntax, e.g. "equalizer=f=100:t=q:w=1:g=3".
   /// Empty = no filters: the clean bit-perfect path. The caller persists it.
   /// A chain mpv can't build is dropped (filters off) with a message.
+  /// Labelled `@lumen`, so `af-command lumen ...` can change a running filter without rebuilding the chain.
   Future<void> setAudioFilters(String lavfiChain) {
     final chain = lavfiChain.trim();
-    return setOption('af', chain.isEmpty ? '' : 'lavfi=[$chain]');
+    return setOption('af', chain.isEmpty ? '' : '@lumen:lavfi=[$chain]');
   }
 
   /// Any mpv option or property (e.g. "replaygain"). The caller persists it.
   Future<void> setOption(String name, String value) => _serial(() => _mpv.setProperty(name, value));
+
+  /// Reads an mpv property ('' when it is unavailable).
+  Future<String> getOption(String name) => _mpv.getProperty(name);
+
+  /// An mpv command, in order with the other mpv calls (e.g. af-command).
+  Future<void> command(List<String> args) => _serial(() => _mpv.command(args));
 
   Future<void> setDevice(String name) {
     _deviceFailed = false;

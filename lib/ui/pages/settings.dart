@@ -2,6 +2,8 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+export '../../audio/sound.dart' show friendlyFormat;
+
 import '../../platform/update.dart';
 import '../app.dart';
 import '../theme.dart';
@@ -12,23 +14,6 @@ import 'credits.dart';
 Future<void> addMusicFolder() async {
   final dir = await getDirectoryPath(confirmButtonText: 'Use this folder');
   if (dir != null && !lib.folders.contains(dir)) lib.folders = [...lib.folders, dir];
-}
-
-/// "s32 96000 Hz" -> "32-bit · 96 kHz".
-String friendlyFormat(String mpv) {
-  final m = RegExp(r'^(\w+)\s+(\d+)').firstMatch(mpv);
-  if (m == null) return mpv;
-  final bits = switch (m.group(1)!) {
-    'u8' => '8-bit',
-    's16' => '16-bit',
-    's24' => '24-bit',
-    's32' => '32-bit',
-    'float' => '32-bit float',
-    'double' => '64-bit float',
-    final f => f,
-  };
-  final k = int.parse(m.group(2)!) / 1000;
-  return '$bits · ${k == k.roundToDouble() ? k.round() : k} kHz';
 }
 
 class SettingsPage extends StatelessWidget {
@@ -139,66 +124,8 @@ class SettingsPage extends StatelessWidget {
                       ),
                     ],
                   ]),
-                  _card('Sound output', null, [
-                    Row(
-                      children: [
-                        const SizedBox(width: 140, child: Text('Output device', style: T.label)),
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: S.x3),
-                            decoration: BoxDecoration(
-                              color: C.raised2,
-                              borderRadius: BorderRadius.circular(R.small + 2),
-                              border: Border.all(color: C.border),
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: engine.devices.any((d) => d.name == engine.device) ? engine.device : null,
-                                hint: Text(engine.device == 'auto' ? 'System default' : engine.device, style: T.label),
-                                isExpanded: true,
-                                dropdownColor: C.raised2,
-                                borderRadius: BorderRadius.circular(R.small + 2),
-                                style: T.label,
-                                icon: const Icon(LucideIcons.chevronDown, size: 16, color: C.dim),
-                                items: [
-                                  for (final d in engine.devices)
-                                    DropdownMenuItem(
-                                      value: d.name,
-                                      child: Text(d.name == 'auto' ? 'System default' : d.description, overflow: TextOverflow.ellipsis),
-                                    ),
-                                ],
-                                onChanged: (v) => v == null ? null : engine.setDevice(v),
-                              ),
-                            ),
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: S.x4),
-                    Row(
-                      children: [
-                        const Expanded(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text('Exclusive mode (bit-perfect)', style: T.label),
-                              SizedBox(height: 2),
-                              Text(
-                                'The player takes the device for itself and sends the file\'s samples unchanged, at its own sample rate. '
-                                'Other apps go quiet while it plays. Keep the volume at 100% for bit-perfect output.',
-                                style: T.small,
-                              ),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(width: S.x4),
-                        Switch(value: engine.exclusive, onChanged: engine.setExclusive),
-                      ],
-                    ),
-                    if (engine.outputFormat.isNotEmpty) ...[
-                      const SizedBox(height: S.x3),
-                      Text('Playing at ${friendlyFormat(engine.outputFormat)}', style: T.caption),
-                    ],
+                  _card('Sound', 'Output device, exclusive mode, the equalizer, headphone correction and ReplayGain.', [
+                    PillButton('Open Sound settings', icon: LucideIcons.slidersVertical, onTap: () => nav.go('sound')),
                   ]),
                   _card('Keyboard', null, [
                     for (final (k, v) in const [

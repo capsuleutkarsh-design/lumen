@@ -40,6 +40,7 @@ Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error
   lib = Library(await dataDir(), cacheDir: cache)..load();
   engine = Engine(lib, silent: silent, logLevel: logLevel);
   await engine.init();
+  await sound.init();
   MediaControls(engine);
   lib.watch();
   lib.rescan(); // background: picks up anything changed while the app was closed
@@ -67,7 +68,10 @@ Future<void> main(List<String> args) async {
 Future<void> start(String data) async {
   try {
     await boot();
-    await setupWindow(lib, engine.shutdown);
+    await setupWindow(lib, () {
+      sound.save();
+      return engine.shutdown();
+    });
     runApp(const App());
     if (lib.setting('updateCheck') == '1') checkForUpdate();
   } catch (e, s) {
