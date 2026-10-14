@@ -22,12 +22,14 @@ class HomeData {
 }
 
 /// Listening rules: a play counts after half the track or 4 minutes of actual
-/// listening; leaving a track before 30 s is a skip.
+/// listening; leaving a track after hearing 1 s but before 30 s (counting
+/// [before], heard before a restart) is a skip.
 class ListenRules {
   static const countAfter = Duration(minutes: 4);
   static const skipBefore = Duration(seconds: 30);
   static bool counts(Duration listened, Duration length) => listened >= countAfter || (length > Duration.zero && listened * 2 >= length);
-  static bool isSkip(Duration listened) => listened < skipBefore;
+  static bool isSkip(Duration heard, [Duration before = Duration.zero]) =>
+      heard >= const Duration(seconds: 1) && heard + before < skipBefore;
 }
 
 String ago(DateTime t, DateTime now) {

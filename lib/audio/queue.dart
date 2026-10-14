@@ -44,6 +44,8 @@ class PlayQueue {
     original = [for (final id in trackIds) Entry(id)];
     items = List.of(original);
     index = items.isEmpty ? -1 : start.clamp(0, items.length - 1);
+    _nextCycle = null;
+    _removed = null;
     if (shuffle) _shuffleAroundCurrent();
   }
 
@@ -82,14 +84,41 @@ class PlayQueue {
     _nextCycle = null;
   }
 
-  /// Remove any entry except the current one.
-  void remove(int i) {
-    if (i == index) return;
+  /// Remove any entry except the current one ([undoRemove] puts it back).
+  void remove(int i, {bool undoable = true}) {
+    if (i == index || i < 0 || i >= items.length) return;
     final e = items.removeAt(i);
+    _removed = undoable ? (e, i, original.indexOf(e)) : null;
     original.remove(e);
     history.remove(e);
     if (i < index) index--;
     _nextCycle = null;
+  }
+
+  (Entry, int, int)? _removed;
+  bool get canUndo => _removed != null;
+
+  /// Put back the last removed entry where it was.
+  void undoRemove() {
+    final r = _removed;
+    if (r == null) return;
+    _removed = null;
+    final (e, i, o) = r;
+    final at = i.clamp(0, items.length);
+    items.insert(at, e);
+    original.insert(o.clamp(0, original.length), e);
+    if (at <= index) index++;
+    _nextCycle = null;
+  }
+
+  /// Everything except the current entry goes.
+  void clear() {
+    final cur = current;
+    items = [?cur];
+    original = List.of(items);
+    index = items.isEmpty ? -1 : 0;
+    _nextCycle = null;
+    _removed = null;
   }
 
   /// Jump to an entry (click in the queue).
@@ -97,6 +126,7 @@ class PlayQueue {
     if (i == index || i < 0 || i >= items.length) return;
     _leave();
     index = i;
+    _nextCycle = null;
   }
 
   /// What plays after the current track ends on its own (for gapless preload).
@@ -192,15 +222,20 @@ class PlayQueue {
   }
 
   // Persistence: track ids + positions; entries get new identities on load.
-  Map<String, Object?> toJson() => {
-    'items': [for (final e in items) e.trackId],
-    'original': [for (final e in original) items.indexOf(e)],
+  Map<String, Object?> toJson() {
+    final at = {for (var i = 0; i < items.length; i++) items[i]: i};
+    return {
+      'items': [for (final e in items) e.trackId],
+      'original': [for (final e in original) at[e] ?? -1],
     'index': index,
     'shuffle': shuffle,
-    'repeat': repeat.index,
-  };
+      'repeat': repeat.index,
+    };
+  }
 
-  void restore(Map<String, Object?> j, bool Function(int trackId) exists) {
+  /// Returns false when the saved current track left the library (the next
+  /// one becomes current, from its start).
+  bool restore(Map<String, Object?> j, bool Function(int trackId) exists) {
     final ids = (j['items'] as List).cast<int>();
     items = [for (final id in ids) Entry(id)];
     final order = (j['original'] as List).cast<int>();
@@ -211,15 +246,15 @@ class PlayQueue {
     index = (j['index'] as int).clamp(-1, items.length - 1);
     shuffle = j['shuffle'] as bool;
     repeat = Repeat.values[j['repeat'] as int];
-    // Drop tracks that left the library.
-    for (var i = items.length - 1; i >= 0; i--) {
-      if (!exists(items[i].trackId)) {
-        if (i == index) index = -1;
-        original.remove(items[i]);
-        items.removeAt(i);
-        if (i < index) index--;
-      }
-    }
-    if (index < 0 && items.isNotEmpty) index = 0;
+    _nextCycle = null;
+    _removed = null;
+    // Drop tracks that left the library; a gone current track hands over to the next one.
+    final kept = current != null && exists(current!.trackId);
+    final before = index < 0 ? 0 : items.take(index).where((e) => exists(e.trackId)).length;
+    final gone = {for (final e in items) if (!exists(e.trackId)) e};
+    items.removeWhere(gone.contains);
+    original.removeWhere(gone.contains);
+    index = items.isEmpty ? -1 : before.clamp(0, items.length - 1);
+    return kept;
   }
 }

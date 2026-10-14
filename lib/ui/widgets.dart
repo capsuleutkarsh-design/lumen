@@ -451,10 +451,17 @@ Future<bool> confirm(BuildContext context, String title, String body, {String ac
     ) ??
     false;
 
-void toast(BuildContext context, String text) {
+void toast(BuildContext context, String text, {String? action, VoidCallback? onAction}) {
   ScaffoldMessenger.of(context)
     ..hideCurrentSnackBar()
-    ..showSnackBar(SnackBar(content: Text(text), width: 360, duration: const Duration(seconds: 2)));
+    ..showSnackBar(
+      SnackBar(
+        content: Text(text),
+        width: 360,
+        duration: Duration(seconds: action == null ? 2 : 4),
+        action: action == null ? null : SnackBarAction(label: action, onPressed: onAction ?? () {}),
+      ),
+    );
 }
 
 /// True when a text field has keyboard focus (so global keys stay out of the way).

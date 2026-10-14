@@ -1,13 +1,38 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../audio/engine.dart';
 import '../audio/queue.dart';
 import 'app.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-class PlayerBar extends StatelessWidget {
+class PlayerBar extends StatefulWidget {
   const PlayerBar({super.key});
+  @override
+  State<PlayerBar> createState() => _PlayerBarState();
+}
+
+class _PlayerBarState extends State<PlayerBar> {
+  StreamSubscription<String>? _messages;
+
+  @override
+  void initState() {
+    super.initState();
+    // The engine's messages (a song can't be played, the device is gone, ...) as toasts.
+    _messages = engine.messages.listen((m) {
+      if (mounted) toast(context, m);
+    });
+  }
+
+  @override
+  void dispose() {
+    _messages?.cancel();
+    super.dispose();
+  }
+
   @override
   Widget build(BuildContext context) => Panel(
     padding: const EdgeInsets.symmetric(horizontal: S.x4, vertical: S.x3),
@@ -54,7 +79,8 @@ class PlayerBar extends StatelessWidget {
                                 Tooltip(
                                   message: engine.outputFormat.isEmpty
                                       ? 'File format'
-                                      : 'Output: ${engine.outputFormat}${engine.exclusive ? ' · exclusive' : ''}',
+                                      : 'Output: ${engine.outputFormat}${engine.exclusive ? ' · exclusive' : ''}'
+                                            '${engine.exclusive && (engine.muted || engine.volume < 100) ? ' · not bit-perfect below 100 % volume' : ''}',
                                   child: FormatBadge(t.badge),
                                 ),
                               ],
@@ -122,6 +148,15 @@ class PlayerBar extends StatelessWidget {
                   children: [
                     IconBtn(LucideIcons.micVocal, size: 17, active: nav.lyrics, tooltip: 'Lyrics  (Ctrl+L)', onTap: nav.toggleLyrics),
                     IconBtn(LucideIcons.listMusic, size: 17, active: nav.queue, tooltip: 'Queue', onTap: nav.toggleQueue),
+                    Builder(
+                      builder: (b) => IconBtn(
+                        LucideIcons.moon,
+                        size: 17,
+                        active: engine.sleepAt != null || engine.stopAfter != StopAfter.none,
+                        tooltip: _sleepTip(),
+                        onTap: () => _sleepMenu(b),
+                      ),
+                    ),
                     const SizedBox(width: S.x2),
                     IconBtn(
                       engine.muted || engine.volume == 0
@@ -140,6 +175,7 @@ class PlayerBar extends StatelessWidget {
                           if (engine.muted) engine.toggleMute();
                           engine.setVolume(v);
                         },
+                        onChangeEnd: (_) => engine.saveVolume(),
                       ),
                     ),
                   ],
@@ -151,6 +187,40 @@ class PlayerBar extends StatelessWidget {
       ),
     ),
   );
+
+  String _sleepTip() {
+    final at = engine.sleepAt;
+    if (at != null) return 'Sleep timer: pauses at ${TimeOfDay.fromDateTime(at).format(context)}';
+    return switch (engine.stopAfter) {
+      StopAfter.song => 'Stops after this song',
+      StopAfter.queue => 'Stops at the end of the queue',
+      StopAfter.none => 'Sleep timer',
+    };
+  }
+
+  Future<void> _sleepMenu(BuildContext b) async {
+    final box = b.findRenderObject()! as RenderBox;
+    final at = box.localToGlobal(Offset.zero);
+    final on = engine.sleepAt != null || engine.stopAfter != StopAfter.none;
+    PopupMenuItem<int> item(int v, String label) => PopupMenuItem(value: v, height: 36, child: Text(label, style: T.label));
+    final v = await showMenu<int>(
+      context: context,
+      position: RelativeRect.fromLTRB(at.dx, at.dy - 8, at.dx + box.size.width, at.dy),
+      items: [
+        for (final m in [15, 30, 45, 60]) item(m, '$m minutes'),
+        item(-1, 'End of this song'),
+        item(-2, 'End of the queue'),
+        if (on) ...[const PopupMenuDivider(height: 8), item(0, 'Turn off')],
+      ],
+    );
+    if (v == null) return;
+    engine.sleepIn(v > 0 ? Duration(minutes: v) : null);
+    engine.setStopAfter(switch (v) {
+      -1 => StopAfter.song,
+      -2 => StopAfter.queue,
+      _ => StopAfter.none,
+    });
+  }
 }
 
 class _PlayButton extends StatelessWidget {
