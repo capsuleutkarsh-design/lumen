@@ -17,6 +17,7 @@ import '../library/models.dart';
 import '../library/tags.dart' show audioExtensions;
 import '../platform/window.dart';
 import 'lyrics_view.dart';
+import 'mini_player.dart';
 import 'now_playing.dart';
 import 'pages/albums.dart';
 import 'pages/artists.dart';
@@ -52,6 +53,9 @@ class Nav extends ChangeNotifier {
   bool get canBack => _stack.length > 1;
   bool lyrics = false, queue = false, search = false, nowPlaying = false;
 
+  /// Disc mode (only the cover and the spinning disc), and the mini player.
+  bool disc = false, mini = false, miniExpanded = false;
+
   /// Per-page choices that survive navigation (sort order, open folder).
   final memo = <String, Object?>{};
 
@@ -78,6 +82,7 @@ class Nav extends ChangeNotifier {
   }
 
   void back() {
+    if (disc) return setDisc(false);
     if (nowPlaying) {
       nowPlaying = false;
     } else if (lyrics) {
@@ -114,6 +119,19 @@ class Nav extends ChangeNotifier {
 
   void setNowPlaying(bool v) {
     nowPlaying = v;
+    notifyListeners();
+  }
+
+  void setDisc(bool v) {
+    disc = v;
+    if (!v) leaveFullScreen();
+    notifyListeners();
+  }
+
+  /// Use [setMini] in mini_player.dart: it also reshapes the window.
+  void setMini(bool v, {bool? expanded}) {
+    mini = v;
+    miniExpanded = expanded ?? miniExpanded;
     notifyListeners();
   }
 }
@@ -197,6 +215,12 @@ class _AppState extends State<App> {
       nav.toggleLyrics();
     } else if (ctrl && k == LogicalKeyboardKey.keyA) {
       selection.selectAll();
+    } else if (k == LogicalKeyboardKey.keyD && !ctrl && !nav.mini) {
+      nav.setDisc(!nav.disc);
+    } else if (k == LogicalKeyboardKey.f11 && nav.disc) {
+      toggleFullScreen();
+    } else if (k == LogicalKeyboardKey.escape && nav.disc) {
+      nav.setDisc(false);
     } else if (k == LogicalKeyboardKey.escape && nav.nowPlaying) {
       nav.setNowPlaying(false);
     } else if (k == LogicalKeyboardKey.escape && selection.length > 0) {
@@ -240,7 +264,10 @@ class _ShellState extends State<Shell> {
   }
 
   @override
-  Widget build(BuildContext context) => Scaffold(
+  Widget build(BuildContext context) =>
+      ListenableBuilder(listenable: nav, builder: (context, _) => nav.mini ? const MiniPlayer() : _shell(context));
+
+  Widget _shell(BuildContext context) => Scaffold(
     backgroundColor: C.bg,
     body: Listener(
       onPointerDown: _pointer,
@@ -255,70 +282,75 @@ class _ShellState extends State<Shell> {
           listenable: nav,
           builder: (context, _) => Stack(
             children: [
-              Column(
-                children: [
-                  const TitleBar(),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.fromLTRB(S.x4, 0, S.x4, S.x4),
-                      child: Row(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          FocusTraversalGroup(child: const Rail()),
-                          const SizedBox(width: S.x4),
-                          Expanded(
-                            child: Column(
-                              children: [
-                                Expanded(
-                                  child: LayoutBuilder(
-                                    builder: (context, c) => Row(
-                                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                                      children: [
-                                        Expanded(
-                                          child: FocusTraversalGroup(
-                                            child: Stack(
-                                              children: [
-                                                Positioned.fill(
-                                                  child: AnimatedSwitcher(
-                                                    duration: Motion.normal,
-                                                    switchInCurve: Motion.curve,
-                                                    child: KeyedSubtree(
-                                                      key: ValueKey(nav.lyrics ? 'lyrics' : nav.top.id),
-                                                      child: nav.lyrics ? const LyricsView() : _page(nav.top),
+              // Under Now Playing or Disc mode the window is covered: its animations
+              // (the playing bars in a list) pause, so nothing draws there for nothing.
+              TickerMode(
+                enabled: !nav.nowPlaying && !nav.disc,
+                child: Column(
+                  children: [
+                    const TitleBar(),
+                    Expanded(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(S.x4, 0, S.x4, S.x4),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            FocusTraversalGroup(child: const Rail()),
+                            const SizedBox(width: S.x4),
+                            Expanded(
+                              child: Column(
+                                children: [
+                                  Expanded(
+                                    child: LayoutBuilder(
+                                      builder: (context, c) => Row(
+                                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                                        children: [
+                                          Expanded(
+                                            child: FocusTraversalGroup(
+                                              child: Stack(
+                                                children: [
+                                                  Positioned.fill(
+                                                    child: AnimatedSwitcher(
+                                                      duration: Motion.normal,
+                                                      switchInCurve: Motion.curve,
+                                                      child: KeyedSubtree(
+                                                        key: ValueKey(nav.lyrics ? 'lyrics' : nav.top.id),
+                                                        child: nav.lyrics ? const LyricsView() : _page(nav.top),
+                                                      ),
                                                     ),
                                                   ),
-                                                ),
-                                                const Positioned(
-                                                  left: 0,
-                                                  right: 0,
-                                                  bottom: S.x4,
-                                                  child: Center(child: SelectionBar()),
-                                                ),
-                                              ],
+                                                  const Positioned(
+                                                    left: 0,
+                                                    right: 0,
+                                                    bottom: S.x4,
+                                                    child: Center(child: SelectionBar()),
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                           ),
-                                        ),
-                                        if (nav.queue) ...[
-                                          const SizedBox(width: S.x4),
-                                          SizedBox(
-                                            width: c.maxWidth < 900 ? 300 : 340,
-                                            child: FocusTraversalGroup(child: const QueuePanel()),
-                                          ),
+                                          if (nav.queue) ...[
+                                            const SizedBox(width: S.x4),
+                                            SizedBox(
+                                              width: c.maxWidth < 900 ? 300 : 340,
+                                              child: FocusTraversalGroup(child: const QueuePanel()),
+                                            ),
+                                          ],
                                         ],
-                                      ],
+                                      ),
                                     ),
                                   ),
-                                ),
-                                const SizedBox(height: S.x4),
-                                FocusTraversalGroup(child: const PlayerBar()),
-                              ],
+                                  const SizedBox(height: S.x4),
+                                  FocusTraversalGroup(child: const PlayerBar()),
+                                ],
+                              ),
                             ),
-                          ),
-                        ],
+                          ],
+                        ),
                       ),
                     ),
-                  ),
-                ],
+                  ],
+                ),
               ),
               Positioned.fill(
                 top: TitleBar.height,
@@ -334,6 +366,7 @@ class _ShellState extends State<Shell> {
                 ),
               ),
               if (nav.search) const SearchConsole(),
+              if (nav.disc) const Positioned.fill(child: DiscMode()),
               if (_dragging) const _DropHint(),
             ],
           ),

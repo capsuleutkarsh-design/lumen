@@ -169,7 +169,7 @@ class PlaylistCover extends StatelessWidget {
     }
     final firsts = albums.values.toList();
     if (firsts.length < 4) {
-      return firsts.isEmpty ? CoverArt(null, radius: radius, seed: pl.name, label: pl.name) : CoverArt.track(firsts.first, radius: radius);
+      return firsts.isEmpty ? CoverArt(null, radius: radius, seed: pl.name) : CoverArt.track(firsts.first, radius: radius);
     }
     return ClipRRect(
       borderRadius: BorderRadius.circular(radius),
@@ -210,7 +210,7 @@ class PlaylistPage extends StatelessWidget {
           SliverToBoxAdapter(
             child: PageHero(
               cover: PlaylistCover(pl, radius: R.card),
-              glow: (first?.cover, first == null ? pl.name : '${first.album}\u0000${first.albumArtist}'),
+              glow: first == null ? resolveArt(null, seed: pl.name) : lib.artFor(first.albumKey, first.cover),
               title: pl.name,
               label: 'Playlist',
               meta: [

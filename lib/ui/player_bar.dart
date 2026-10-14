@@ -7,7 +7,10 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../audio/engine.dart';
 import '../audio/queue.dart';
 import 'app.dart';
+import 'cover_picker.dart';
+import 'mini_player.dart';
 import 'theme.dart';
+import 'tracks.dart';
 import 'widgets.dart';
 
 class PlayerBar extends StatefulWidget {
@@ -68,6 +71,26 @@ class _PlayerBarState extends State<PlayerBar> {
     });
   }
 
+  /// •••: Disc mode, the mini player, and Change cover for the song playing.
+  Future<void> _moreMenu(BuildContext b) async {
+    final album = lib.albumByKey[engine.current?.albumKey];
+    final box = b.findRenderObject()! as RenderBox;
+    final v = await popMenu(context, box.localToGlobal(Offset.zero) - const Offset(0, 8), [
+      menuItem('disc', LucideIcons.disc3, 'Disc mode', hint: 'D'),
+      menuItem('mini', LucideIcons.pictureInPicture2, 'Mini player'),
+      if (album != null) ...[const PopupMenuDivider(height: S.x2), menuItem('cover', LucideIcons.image, 'Change cover…')],
+    ]);
+    if (!mounted) return;
+    switch (v) {
+      case 'disc':
+        nav.setDisc(true);
+      case 'mini':
+        await setMini(true);
+      case 'cover':
+        await showCoverPicker(context, album!);
+    }
+  }
+
   @override
   Widget build(BuildContext context) => Panel(
     padding: const EdgeInsets.symmetric(horizontal: S.x4, vertical: S.x3),
@@ -77,8 +100,8 @@ class _PlayerBarState extends State<PlayerBar> {
         listenable: Listenable.merge([engine, lib, nav]),
         builder: (context, _) => LayoutBuilder(
           builder: (context, c) {
-            // The sides share what the transport leaves, up to 300 px each.
-            final side = ((c.maxWidth - 380) / 2).clamp(150.0, 300.0);
+            // The sides share what the transport leaves, up to 300 px each (at least four buttons + mute).
+            final side = ((c.maxWidth - 380) / 2).clamp(184.0, 300.0);
             return Row(
               children: [
                 SizedBox(width: side, child: const _NowPlayingInfo()),
@@ -113,6 +136,7 @@ class _PlayerBarState extends State<PlayerBar> {
                           onTap: () => _sleepMenu(b),
                         ),
                       ),
+                      Builder(builder: (b) => IconBtn(LucideIcons.ellipsis, size: 18, tooltip: 'More', onTap: () => _moreMenu(b))),
                       const SizedBox(width: S.x1),
                       const Flexible(child: VolumeControl()),
                     ],
@@ -144,7 +168,7 @@ class _NowPlayingInfoState extends State<_NowPlayingInfo> {
     if (t == null) {
       return Row(
         children: [
-          const CoverArt(null, size: 56),
+          CoverArt(null, size: 56),
           const SizedBox(width: S.x3),
           Flexible(
             child: Text('Nothing playing', style: T.small.copyWith(color: C.faint), maxLines: 1),

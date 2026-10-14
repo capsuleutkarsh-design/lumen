@@ -91,7 +91,6 @@ class _LyricsViewState extends State<LyricsView> {
   Widget build(BuildContext context) {
     final t = engine.current;
     final l = _lyrics;
-    final seed = t == null ? null : '${t.album}\u0000${t.albumArtist}';
     final style = widget.embedded ? T.lyric.copyWith(fontSize: 24) : T.lyric;
     Widget body;
     if (t == null) {
@@ -167,7 +166,7 @@ class _LyricsViewState extends State<LyricsView> {
         child: Stack(
           children: [
             // A dark, quiet wash of the cover's colours (like Wora), not a loud glow.
-            CoverGlow(t?.cover, seed: seed, opacity: 0.3, blur: 90),
+            CoverGlow(t == null ? null : lib.artFor(t.albumKey, t.cover), opacity: 0.3, blur: 90),
             const Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(

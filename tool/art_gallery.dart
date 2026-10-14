@@ -1,7 +1,7 @@
 // Renders generative cover contact sheets, headless.
 //   flutter test tool/art_gallery.dart
 // Writes to ../_scratch_art (next to the worktree), or to $ART_OUT:
-//   gallery_1..3.png  120 covers: 12 styles x 10 seeds, labelled
+//   gallery_1..3.png  110 covers: 11 styles x 10 seeds, labelled
 //   sizes.png         one cover per style at 48, 128 and 512 px
 //   grid.png          24 albums in a mock Lumen album grid on black
 //   timing.txt        render time per style (debug test mode: slower than release)
@@ -53,14 +53,14 @@ void main() {
     await loadInter();
     const styles = CoverStyle.values;
 
-    // 1. 120 samples, four styles per sheet.
+    // 1. Ten samples per style, four styles per sheet.
     const cell = 240.0, gap = 16.0, label = 26.0, cols = 10;
     for (var sheet = 0; sheet < 3; sheet++) {
       final rec = ui.PictureRecorder();
       final c = Canvas(rec);
       final w = cols * (cell + gap) + gap, h = 4 * (cell + label + gap) + gap;
       c.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..color = Colors.black);
-      for (var row = 0; row < 4; row++) {
+      for (var row = 0; row < 4 && sheet * 4 + row < styles.length; row++) {
         final style = styles[sheet * 4 + row];
         for (var col = 0; col < cols; col++) {
           final seed = albumSeed(style.index * 100 + col);
@@ -80,8 +80,8 @@ void main() {
       const big = 512.0, g = 16.0;
       final w = 6 * (big + g) + g, h = 40 + 48 + g + 128 + g * 2 + 2 * (big + g) + g + 30;
       c.drawRect(Rect.fromLTWH(0, 0, w, h), Paint()..color = Colors.black);
-      text(c, 'Same 12 covers at 48, 128 and 512 px', const Offset(g, 12), size: 16, color: Colors.white);
-      for (var i = 0; i < 12; i++) {
+      text(c, 'Same ${styles.length} covers at 48, 128 and 512 px', const Offset(g, 12), size: 16, color: Colors.white);
+      for (var i = 0; i < styles.length; i++) {
         final seed = albumSeed(styles[i].index * 100);
         c.drawImage(await cover(seed, 48, style: styles[i]), Offset(g + i * (48 + g), 40), Paint());
         c.drawImage(await cover(seed, 128, style: styles[i]), Offset(g + i * (128 + g), 40 + 48 + g), Paint());

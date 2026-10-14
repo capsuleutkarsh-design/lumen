@@ -86,6 +86,14 @@ const migrations = [
     CREATE INDEX plays_stats ON plays(track_id, skipped, at);
     UPDATE tracks SET mtime = 0;
   ''',
+  // 3: 0.2.0 covers. The quality of each cover thumbnail (null problem = fine), checked once
+  // by the scanner; the cover the user picked per album. Embedded covers are read again
+  // once so their quality gets checked (folder covers are checked on every scan anyway).
+  '''
+    CREATE TABLE cover_quality(cover TEXT PRIMARY KEY, problem TEXT);
+    CREATE TABLE album_covers(album_key TEXT PRIMARY KEY, choice TEXT NOT NULL);
+    UPDATE tracks SET mtime = 0 WHERE embedded_cover = 1;
+  ''',
 ];
 
 /// Opens (and creates or upgrades) the library database. Both the UI isolate and

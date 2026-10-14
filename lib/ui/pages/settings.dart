@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../platform/update.dart';
 import '../app.dart';
+import '../disc.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'credits.dart';
@@ -52,7 +53,7 @@ class SettingsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([lib, engine]),
+    listenable: Listenable.merge([lib, engine, discStyle]),
     builder: (context, _) {
       final folders = lib.folders;
       return ListView(
@@ -200,6 +201,34 @@ class SettingsPage extends StatelessWidget {
                       Text('Playing at ${friendlyFormat(engine.outputFormat)}', style: T.caption),
                     ],
                   ]),
+                  _card('Disc & covers', 'Appearance', [
+                    Row(
+                      children: [
+                        const SizedBox(width: 140, child: Text('Spinning disc', style: T.label)),
+                        Expanded(
+                          child: Wrap(
+                            spacing: S.x2,
+                            runSpacing: S.x2,
+                            children: [
+                              for (final (s, label) in const [(DiscStyle.cd, 'CD'), (DiscStyle.vinyl, 'Vinyl'), (DiscStyle.off, 'Off')])
+                                PillButton(label, dense: true, primary: discStyle.value == s, onTap: () => discStyle.value = s),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                    const SizedBox(height: S.x2),
+                    const Text(
+                      'Shown beside the cover in Now Playing, Disc mode (D) and the mini player. It turns only while music plays.',
+                      style: T.caption,
+                    ),
+                    const SizedBox(height: S.x4),
+                    const Text(
+                      'Albums without a cover, or with a small or blurry one, get artwork drawn by Lumen. '
+                      'Right-click an album and choose Change cover to pick another or keep the original. Your music files are never changed.',
+                      style: T.small,
+                    ),
+                  ]),
                   _card('Keyboard', null, [
                     for (final (k, v) in const [
                       ('Space', 'Play / pause'),
@@ -211,6 +240,7 @@ class SettingsPage extends StatelessWidget {
                       ('Ctrl + A', 'Select all songs'),
                       ('Menu key', 'Right-click menu (or Shift + F10)'),
                       ('Esc', 'Back, close Now Playing, clear selection'),
+                      ('D', 'Disc mode (F11: full screen)'),
                     ])
                       Padding(
                         padding: const EdgeInsets.only(bottom: S.x2),

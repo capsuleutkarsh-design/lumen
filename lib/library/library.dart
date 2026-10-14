@@ -6,6 +6,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
+import '../art/art_cache.dart';
+import '../art/generative_cover.dart';
 import 'db.dart';
 import 'lyrics.dart';
 import 'm3u.dart';
@@ -128,6 +130,10 @@ class Library extends ChangeNotifier {
     _artistByName = byName;
     artists = byName.values.toList()..sort((a, b) => (a.sortName ?? a.name).toLowerCase().compareTo((b.sortName ?? b.name).toLowerCase()));
     favourites = {for (final r in db.select('SELECT track_id FROM favourites')) r['track_id'] as int};
+    lowCovers = {for (final r in db.select('SELECT cover FROM cover_quality WHERE problem IS NOT NULL')) r['cover'] as String};
+    coverChoices = {
+      for (final r in db.select('SELECT album_key, choice FROM album_covers')) r['album_key'] as String: r['choice'] as String,
+    };
     _loadPlaylists();
     _home = null;
     _genres = null;
@@ -162,6 +168,37 @@ class Library extends ChangeNotifier {
   /// The artist page for [name]: exact, else the first artist of a credit like "Ana feat. Bo" or "Ana, Bo".
   Artist? artistNamed(String name) =>
       _artistByName[name.toLowerCase()] ?? _artistByName[splitArtist(name, solo: (_) => true).firstOrNull?.toLowerCase() ?? ''];
+
+  // ------------------------------------------------------------ cover art
+
+  /// Cover thumbnails the scanner found small, blocky or blurry.
+  Set<String> lowCovers = {};
+
+  /// Album key -> the user's pick: 'original', or the seed of a generated artwork.
+  Map<String, String> coverChoices = {};
+
+  /// What an album shows: its own cover, unless it has none or a low-quality one, or the user
+  /// picked generated art (Change cover). Generated art is seeded by the album key.
+  Art artFor(String albumKey, String? cover) {
+    final choice = coverChoices[albumKey];
+    final picked = int.tryParse(choice ?? '');
+    if (picked != null) return Art(null, picked);
+    if (cover != null && (choice == 'original' || !lowCovers.contains(cover))) return Art(cover, 0);
+    return Art(null, GenerativeCover.seedFor(albumKey));
+  }
+
+  /// Stores the cover picked for an album: 'original', a generated seed, or null for automatic.
+  /// Only the database changes, never the music files.
+  void setCoverChoice(String albumKey, String? choice) {
+    if (choice == null) {
+      db.execute('DELETE FROM album_covers WHERE album_key = ?', [albumKey]);
+      coverChoices.remove(albumKey);
+    } else {
+      db.execute('INSERT OR REPLACE INTO album_covers(album_key, choice) VALUES(?, ?)', [albumKey, choice]);
+      coverChoices[albumKey] = choice;
+    }
+    notifyListeners();
+  }
 
   // ------------------------------------------------------------ browsing data (cached until the next load)
 

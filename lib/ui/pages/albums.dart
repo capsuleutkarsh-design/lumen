@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../art/art_cache.dart';
 import '../../library/models.dart';
 import '../app.dart';
+import '../cover_picker.dart';
 import '../theme.dart';
 import '../tracks.dart';
 import '../widgets.dart';
@@ -110,7 +112,10 @@ Future<void> albumMenu(BuildContext context, Offset at, Album a) => showCollecti
   context,
   at,
   a.tracks,
-  extra: [('artist', LucideIcons.micVocal, 'Go to artist', () => nav.push('artist', a.artist))],
+  extra: [
+    ('artist', LucideIcons.micVocal, 'Go to artist', () => nav.push('artist', a.artist)),
+    ('cover', LucideIcons.image, 'Change cover…', () => showCoverPicker(context, a)),
+  ],
 );
 
 /// A horizontal row of albums with arrow buttons (Wora's carousel). The arrows
@@ -328,13 +333,16 @@ class AlbumPage extends StatelessWidget {
           SliverToBoxAdapter(
             child: PageHero(
               cover: CoverArt.album(a, radius: R.card),
-              glow: (a.cover, '${a.title}\u0000${a.artist}'),
+              glow: lib.artFor(a.key, a.cover),
               title: a.title,
               meta: [a.artist, if (a.year != null) '${a.year}', plural(a.tracks.length, 'song'), fmtLong(a.duration)],
               badge: a.badge,
               onArtist: () => nav.push('artist', a.artist),
               tracks: a.tracks,
-              menu: [('artist', LucideIcons.micVocal, 'Go to artist', () => nav.push('artist', a.artist))],
+              menu: [
+                ('artist', LucideIcons.micVocal, 'Go to artist', () => nav.push('artist', a.artist)),
+                ('cover', LucideIcons.image, 'Change cover…', () => showCoverPicker(context, a)),
+              ],
             ),
           ),
           const SliverToBoxAdapter(child: SizedBox(height: S.x4)),
@@ -387,8 +395,8 @@ class PageHero extends StatelessWidget {
   /// The square (or round) cover widget.
   final Widget cover;
 
-  /// (cover path, no-art seed) for the blurred backdrop.
-  final (String?, String?) glow;
+  /// The art blurred behind the header.
+  final Art? glow;
   final String title, label;
   final List<String> meta;
   final List<Track> tracks;
@@ -414,7 +422,7 @@ class PageHero extends StatelessWidget {
         ),
         child: Stack(
           children: [
-            CoverGlow(glow.$1, seed: glow.$2, opacity: 0.8, blur: 80),
+            CoverGlow(glow, opacity: 0.8, blur: 80),
             const Positioned.fill(
               child: DecoratedBox(
                 decoration: BoxDecoration(

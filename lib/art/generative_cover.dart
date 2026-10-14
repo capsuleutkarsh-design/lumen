@@ -15,7 +15,7 @@ import 'package:flutter/rendering.dart';
 
 import 'palettes.dart';
 
-enum CoverStyle { mesh, halftone, contours, bauhaus, riso, bokeh, flow, rings, stripes, paper, glitch, aurora }
+enum CoverStyle { mesh, halftone, contours, bauhaus, riso, bokeh, flow, stripes, paper, glitch, aurora }
 
 class GenerativeCover extends CustomPainter {
   GenerativeCover(this.seed, {CoverStyle? style, this.initials, this.mark = false})
@@ -39,7 +39,14 @@ class GenerativeCover extends CustomPainter {
     return h;
   }
 
-  static CoverStyle styleOf(int seed) => CoverStyle.values[_Rng(seed ^ 0x5bd1e995).i(CoverStyle.values.length)];
+  /// The style a seed gets. There were 12 slots; slot 7 was "rings" (retired at the owner's
+  /// request), so it draws again. Every other album keeps the art the owner approved.
+  static CoverStyle styleOf(int seed) {
+    final r = _Rng(seed ^ 0x5bd1e995);
+    final slot = r.i(12);
+    const styles = CoverStyle.values;
+    return slot == 7 ? styles[r.i(styles.length)] : styles[slot > 7 ? slot - 1 : slot];
+  }
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -96,8 +103,6 @@ class GenerativeCover extends CustomPainter {
         _bokeh(k);
       case CoverStyle.flow:
         _flow(k);
-      case CoverStyle.rings:
-        _rings(k);
       case CoverStyle.stripes:
         _stripes(k);
       case CoverStyle.paper:
@@ -119,7 +124,6 @@ class GenerativeCover extends CustomPainter {
     CoverStyle.paper: .3,
     CoverStyle.halftone: .25,
     CoverStyle.stripes: .3,
-    CoverStyle.rings: .2,
     CoverStyle.mesh: .2,
     CoverStyle.flow: .15,
     CoverStyle.contours: .1,
@@ -791,44 +795,6 @@ void _flow(_K k) {
         ..strokeCap = StrokeCap.round
         ..strokeJoin = StrokeJoin.round,
     );
-  }
-  k.grain(.3);
-}
-
-/// Concentric rings, some broken into arcs, like a record or a radial chart.
-void _rings(_K k) {
-  final r = k.r, s = k.s;
-  k.fill(k.bg);
-  final where = r.i(10);
-  final c = where < 5
-      ? k.o(.5, .5)
-      : where < 8
-      ? k.o(r.pick([0.0, 1.0]), r.pick([0.0, 1.0]))
-      : k.o(r.r(-.3, 1.3), r.pick([-0.25, 1.25]));
-  final maxR = s * 1.6;
-  var rad = where < 5 && r.p(.5) ? s * r.r(.04, .12) : 0.0;
-  final unit = r.r(.01, .03);
-  final palette = [...k.cols, k.ink];
-  var ci = r.i(4);
-  if (rad > 0) k.c.drawCircle(c, rad, Paint()..color = k.cols[2]);
-  while (rad < maxR) {
-    final w = s * unit * r.pick([1.0, 1.0, 2.0, 3.0, .4]);
-    final col = palette[ci = (ci + 1 + r.i(2)) % 4];
-    final p = Paint()
-      ..color = col.withValues(alpha: r.r(.7, 1))
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = w * r.r(.4, .9);
-    final rect = Rect.fromCircle(center: c, radius: rad + w / 2);
-    if (r.p(.35)) {
-      final segs = 1 + r.i(5), rot = r.r(0, math.pi * 2);
-      for (var i = 0; i < segs; i++) {
-        final a = rot + i * math.pi * 2 / segs;
-        k.c.drawArc(rect, a, math.pi * 2 / segs * r.r(.3, .85), false, p);
-      }
-    } else if (r.p(.85)) {
-      k.c.drawCircle(c, rad + w / 2, p);
-    }
-    rad += w;
   }
   k.grain(.3);
 }
