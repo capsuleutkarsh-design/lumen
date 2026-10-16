@@ -348,6 +348,9 @@ class TrackRow extends StatefulWidget {
 
   static const height = 56.0;
 
+  /// Rows stop growing here, so a maximised window doesn't spread one song across the screen.
+  static const maxWidth = 1200.0;
+
   /// Row height at the user's text size.
   static double extentOf(BuildContext context) => max(height, textHeight(context, [T.label, T.small]) + S.x4);
 
@@ -569,7 +572,14 @@ class _TrackRowState extends State<TrackRow> {
           ),
         ),
       );
-      return widget.why == null ? row : Tooltip(message: 'Why: ${widget.why}', waitDuration: const Duration(seconds: 1), child: row);
+      final capped = Align(
+        alignment: Alignment.centerLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: TrackRow.maxWidth),
+          child: row,
+        ),
+      );
+      return widget.why == null ? capped : Tooltip(message: 'Why: ${widget.why}', waitDuration: const Duration(seconds: 1), child: capped);
     },
   );
 }

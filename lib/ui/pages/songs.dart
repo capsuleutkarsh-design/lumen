@@ -110,7 +110,9 @@ class _SongsPageState extends State<SongsPage> {
           SliverToBoxAdapter(
             child: PageHeader(
               'Songs',
-              subtitle: q.isEmpty ? '${plural(tracks.length, 'song')} · $length' : '${fmtInt(tracks.length)} of ${plural(lib.tracks.length, 'song')} · $length',
+              subtitle: q.isEmpty
+                  ? '${plural(tracks.length, 'song')} · $length'
+                  : '${fmtInt(tracks.length)} of ${plural(lib.tracks.length, 'song')} · $length',
               trailing: lib.tracks.isEmpty
                   ? null
                   : Wrap(
@@ -141,7 +143,10 @@ class _SongsPageState extends State<SongsPage> {
                                         _setFilter('');
                                       },
                                     ),
-                              border: OutlineInputBorder(borderRadius: BorderRadius.circular(R.pill), borderSide: BorderSide(color: C.border)),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(R.pill),
+                                borderSide: BorderSide(color: C.border),
+                              ),
                               enabledBorder: OutlineInputBorder(
                                 borderRadius: BorderRadius.circular(R.pill),
                                 borderSide: BorderSide(color: C.border),
@@ -188,24 +193,35 @@ class _SongsPageState extends State<SongsPage> {
                 Container(
                   color: C.bg,
                   padding: const EdgeInsets.symmetric(horizontal: S.x2),
+                  alignment: Alignment.centerLeft,
+                  constraints: const BoxConstraints.tightFor(width: double.infinity),
                   // The same columns the rows show at this width (they drop out in a small window).
-                  child: LayoutBuilder(
-                    builder: (context, c) {
-                      final cols = TrackCols(c.maxWidth, table: true, album: true, badge: true, k: MediaQuery.textScalerOf(context).scale(1));
-                      return Row(
-                        children: [
-                          const SizedBox(width: 40 + S.x3),
-                          _head('Title', 'title', flex: 5),
-                          if (cols.artist) ...[const SizedBox(width: S.x4), _head('Artist', 'artist', flex: 3)],
-                          if (cols.album) ...[const SizedBox(width: S.x4), _head('Album', 'album', flex: 3)],
-                          if (cols.year) ...[const SizedBox(width: S.x4), _head('Year', 'year', width: cols.yearW)],
-                          if (cols.badge) ...[const SizedBox(width: S.x4), _head('Format', 'format', width: cols.badgeW)],
-                          const SizedBox(width: 32),
-                          _head('Time', 'time', width: cols.timeW, align: TextAlign.right),
-                          const SizedBox(width: 32),
-                        ],
-                      );
-                    },
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: TrackRow.maxWidth - S.x2 * 2),
+                    child: LayoutBuilder(
+                      builder: (context, c) {
+                        final cols = TrackCols(
+                          c.maxWidth,
+                          table: true,
+                          album: true,
+                          badge: true,
+                          k: MediaQuery.textScalerOf(context).scale(1),
+                        );
+                        return Row(
+                          children: [
+                            const SizedBox(width: 40 + S.x3),
+                            _head('Title', 'title', flex: 5),
+                            if (cols.artist) ...[const SizedBox(width: S.x4), _head('Artist', 'artist', flex: 3)],
+                            if (cols.album) ...[const SizedBox(width: S.x4), _head('Album', 'album', flex: 3)],
+                            if (cols.year) ...[const SizedBox(width: S.x4), _head('Year', 'year', width: cols.yearW)],
+                            if (cols.badge) ...[const SizedBox(width: S.x4), _head('Format', 'format', width: cols.badgeW)],
+                            const SizedBox(width: 32),
+                            _head('Time', 'time', width: cols.timeW, align: TextAlign.right),
+                            const SizedBox(width: 32),
+                          ],
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),

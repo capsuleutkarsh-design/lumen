@@ -23,6 +23,7 @@ import 'package:gleo/ui/pages/albums.dart';
 import 'package:gleo/ui/pages/credits.dart';
 import 'package:gleo/ui/pages/songs.dart';
 import 'package:gleo/ui/player_bar.dart';
+import 'package:gleo/ui/search.dart';
 import 'package:gleo/ui/theme.dart';
 import 'package:gleo/ui/tracks.dart';
 import 'package:gleo/ui/widgets.dart';
@@ -385,14 +386,19 @@ void main() {
     selection.clear();
     nav.setSearch(true);
     await settle(300);
-    await tester.enterText(find.byType(TextField).last, 'an');
-    await tester.ensureVisible(find.textContaining('Show all'));
+    await tester.enterText(find.descendant(of: find.byType(SearchConsole), matching: find.byType(TextField)), 'an');
+    await shot('w08a_search_typed');
+    await tester.scrollUntilVisible(
+      find.textContaining('Show all'),
+      200,
+      scrollable: find.descendant(of: find.descendant(of: find.byType(SearchConsole), matching: find.byType(ListView)), matching: find.byType(Scrollable)).first,
+    );
     await shot('w08_search_show_all');
     await tester.tap(find.textContaining('Show all'));
     await shot('w09_songs_filtered');
     songsFilter.value = '';
     await engine.playTracks([lib.byId[500003]!, lib.byId[500004]!, lib.byId[500005]!]); // missing files, one after another
-    await shot('w10_failures_merged', 2500);
+    await shot('w10_failures_merged', 4000);
     await engine.playTracks(hiRes.tracks);
     await engine.player.pause();
     await size(960, 640);
