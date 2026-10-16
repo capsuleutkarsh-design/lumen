@@ -5,6 +5,7 @@ import '../audio/queue.dart';
 import '../platform/window.dart' show isTouch;
 import 'app.dart';
 import 'theme.dart';
+import 'tracks.dart' show showTrackMenu;
 import 'widgets.dart';
 
 /// The play queue: now playing, then what comes next (drag to reorder).
@@ -45,6 +46,7 @@ class QueuePanel extends StatelessWidget {
                 ),
               )
             else ...[
+              if (q.history.isNotEmpty) _History(q.history.reversed.take(20).toList(), (e) => _entry(context, e, removable: false)),
               _label('Now playing'),
               _entry(context, cur, current: true),
               _label(upcoming.isEmpty ? 'Nothing after this' : 'Next up · ${plural(upcoming.length, 'song')}'),
@@ -115,12 +117,13 @@ class QueuePanel extends StatelessWidget {
     toast(context, 'Removed “${t?.title ?? 'the song'}”', action: 'Undo', onAction: engine.undoRemove);
   }
 
-  Widget _entry(BuildContext context, Entry e, {bool current = false, int? dragIndex}) {
+  Widget _entry(BuildContext context, Entry e, {bool current = false, int? dragIndex, bool removable = true}) {
     final t = lib.byId[e.trackId] ?? (current ? engine.current : null);
     if (t == null) return const SizedBox.shrink();
     final row = Clickable(
       onDoubleTap: current ? null : () => engine.jump(engine.queue.items.indexOf(e)),
       onTap: () {},
+      onSecondaryTapDown: (d) => showTrackMenu(context, d.globalPosition, [t]),
       selected: current,
       radius: R.small + 2,
       padding: const EdgeInsets.symmetric(horizontal: S.x2),
@@ -161,7 +164,7 @@ class QueuePanel extends StatelessWidget {
                 padding: const EdgeInsets.only(right: S.x2),
                 child: PlayingBars(playing: engine.playing),
               )
-            else
+            else if (removable)
               IconBtn(LucideIcons.x, size: 14, box: 28, color: C.faint, tooltip: 'Remove from queue', onTap: () => _remove(context, e)),
           ],
         ),
@@ -174,4 +177,48 @@ class QueuePanel extends StatelessWidget {
           )
         : Tooltip(message: '$tapWord to play now', waitDuration: const Duration(seconds: 1), child: row);
   }
+}
+
+/// "History · N", collapsed: what played before, most recent first.
+class _History extends StatefulWidget {
+  const _History(this.entries, this.row);
+  final List<Entry> entries;
+  final Widget Function(Entry) row;
+  @override
+  State<_History> createState() => _HistoryState();
+}
+
+class _HistoryState extends State<_History> {
+  bool _open = false;
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      Padding(
+        padding: const EdgeInsets.fromLTRB(S.x3, S.x2, S.x3, 0),
+        child: Clickable(
+          onTap: () => setState(() => _open = !_open),
+          semanticLabel: _open ? 'Hide history' : 'Show history',
+          radius: R.small,
+          padding: const EdgeInsets.symmetric(horizontal: S.x2, vertical: S.x1),
+          child: Row(
+            children: [
+              Text('History · ${widget.entries.length}', style: T.caption),
+              const SizedBox(width: S.x1),
+              Icon(_open ? LucideIcons.chevronUp : LucideIcons.chevronDown, size: 12, color: C.faint),
+            ],
+          ),
+        ),
+      ),
+      if (_open)
+        ConstrainedBox(
+          constraints: const BoxConstraints(maxHeight: 220),
+          child: ListView(
+            shrinkWrap: true,
+            padding: const EdgeInsets.symmetric(horizontal: S.x2),
+            children: [for (final e in widget.entries) widget.row(e)],
+          ),
+        ),
+    ],
+  );
 }

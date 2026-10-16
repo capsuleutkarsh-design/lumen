@@ -12,6 +12,7 @@ import '../library/models.dart';
 import '../platform/window.dart' show isTouch;
 import 'app.dart';
 import 'theme.dart';
+import 'tracks.dart' show selection;
 
 String fmtTime(Duration d) {
   final s = d.inSeconds;
@@ -576,6 +577,10 @@ class EmptyState extends StatelessWidget {
   );
 }
 
+/// A page subtitle, or null when it would say nothing: a count of nothing ("0 songs · 0 min")
+/// is left to the empty state below.
+String? shownSubtitle(String? s) => s == null || s.isEmpty || s.startsWith('0 ') ? null : s;
+
 /// Page title + subtitle, Wora style. The trailing buttons drop below the title when narrow.
 class PageHeader extends StatelessWidget {
   const PageHeader(this.title, {super.key, this.subtitle, this.trailing});
@@ -587,13 +592,14 @@ class PageHeader extends StatelessWidget {
     padding: const EdgeInsets.fromLTRB(S.x2, S.x2, S.x2, S.x5),
     child: LayoutBuilder(
       builder: (context, c) {
+        final subtitle = shownSubtitle(this.subtitle);
         final head = Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(title, style: T.title, maxLines: 1, overflow: TextOverflow.ellipsis),
             if (subtitle != null) ...[
               const SizedBox(height: S.x1),
-              Text(subtitle!, style: T.small, maxLines: 1, overflow: TextOverflow.ellipsis),
+              Text(subtitle, style: T.small, maxLines: 1, overflow: TextOverflow.ellipsis),
             ],
           ],
         );
@@ -766,7 +772,8 @@ void toast(
     ..showSnackBar(
       SnackBar(
         duration: Duration(seconds: seconds ?? (actions.isEmpty ? 2 : 5)),
-        margin: EdgeInsets.fromLTRB(side, 0, side, 136 + (scale - 1) * 48),
+        // Above the player bar, and above the selection bar while that shows.
+        margin: EdgeInsets.fromLTRB(side, 0, side, 136 + (scale - 1) * 48 + (selection.length > 1 ? 64 : 0)),
         padding: const EdgeInsets.fromLTRB(S.x4, S.x2, S.x2, S.x2),
         content: Row(
           children: [

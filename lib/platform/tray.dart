@@ -6,9 +6,9 @@ import '../audio/engine.dart';
 import '../library/library.dart';
 import 'window.dart';
 
-/// Extra tray menu entries from other features (e.g. a "Mini player" item), shown
-/// above Show / Quit. Add them before [setupTray] runs, or call [trayMenu] again after.
-final trayItems = <(String label, VoidCallback onClick)>[];
+/// Extra tray menu entries from other features (e.g. "Mini player" / "Full window"), shown
+/// above Show / Quit. Add them before [setupTray] runs; call [trayMenu] again when a label changes.
+final trayItems = <(String Function() label, VoidCallback onClick)>[];
 
 /// Settings → Window: closing the window hides it to the tray instead of quitting. Off by default.
 bool closeToTray(Library lib) => lib.setting('closeToTray') == '1';
@@ -16,7 +16,7 @@ bool closeToTray(Library lib) => lib.setting('closeToTray') == '1';
 bool _quitting = false;
 late Engine _engine;
 
-/// The tray icon: click shows Gleo; right-click has Play/Pause, Next, Previous, Show and Quit.
+/// The tray icon: click shows Gleo; right-click has Previous, Play/Pause, Next, Show and Quit.
 /// Its tooltip is the song playing.
 Future<void> setupTray(Library lib, Engine engine) async {
   if (!isDesktop) return;
@@ -45,11 +45,11 @@ Future<void> setupTray(Library lib, Engine engine) async {
 Future<void> trayMenu() => trayManager.setContextMenu(
   Menu(
     items: [
+      MenuItem(key: 'previous', label: 'Previous'),
       MenuItem(key: 'play', label: _engine.playing ? 'Pause' : 'Play'),
       MenuItem(key: 'next', label: 'Next'),
-      MenuItem(key: 'previous', label: 'Previous'),
       MenuItem.separator(),
-      for (final (i, (label, _)) in trayItems.indexed) MenuItem(key: 'extra$i', label: label),
+      for (final (i, (label, _)) in trayItems.indexed) MenuItem(key: 'extra$i', label: label()),
       MenuItem(key: 'show', label: 'Show Gleo'),
       MenuItem(key: 'quit', label: 'Quit'),
     ],

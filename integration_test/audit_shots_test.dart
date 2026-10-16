@@ -21,6 +21,7 @@ import 'package:gleo/ui/cover_picker.dart';
 import 'package:gleo/ui/mini_player.dart';
 import 'package:gleo/ui/pages/albums.dart';
 import 'package:gleo/ui/pages/credits.dart';
+import 'package:gleo/ui/pages/songs.dart';
 import 'package:gleo/ui/player_bar.dart';
 import 'package:gleo/ui/theme.dart';
 import 'package:gleo/ui/tracks.dart';
@@ -225,14 +226,8 @@ void main() {
       ('artists', () => nav.go('artists')),
       ('artist', () => nav.push('artist', 'Aurora Fields')),
       ('folders', () => nav.go('folders')),
-      ('folders_sub', () {
-        nav.memo['folders.dir'] = p.join(testlib, 'The Tidal Set', 'Deep Water');
-        nav.go('folders');
-      }),
-      ('playlists', () {
-        nav.memo['folders.dir'] = null;
-        nav.go('playlists');
-      }),
+      ('folders_sub', () => nav.push('folder', p.join(testlib, 'The Tidal Set', 'Deep Water'))),
+      ('playlists', () => nav.go('playlists')),
       ('playlist', () => nav.push('playlist', pl)),
       ('playlist_empty', () => nav.push('playlist', empty)),
       ('smart', () => nav.push('smart', smartId)),
@@ -351,6 +346,61 @@ void main() {
     await setMiniExpanded(false);
     await setMini(false);
     await settle(800);
+
+    // ------------------------------------------------------------ 8b. States the 0.4 desktop fixes added
+    nav.toggleLyrics();
+    await shot('w01_lyrics_synced', 1200);
+    nav.toggleLyrics();
+    await engine.addToQueue([...summer.tracks, ...deep.tracks]);
+    await engine.next();
+    await engine.next();
+    await engine.player.pause();
+    nav.toggleQueue();
+    await settle();
+    await tester.tap(find.textContaining('History ·'));
+    await shot('w02_queue_history');
+    await tester.tap(find.text('Clear'));
+    await shot('w03_queue_cleared_undo', 400);
+    nav.toggleQueue();
+    setSleep(30);
+    await settle(200);
+    await tester.tap(find.byTooltip(sleepTip(ctx())));
+    await shot('w04_sleep_menu_on');
+    await esc();
+    nav.push('folder', p.join(testlib, 'The Tidal Set'));
+    await settle();
+    nav.push('folder', p.join(testlib, 'The Tidal Set', 'Deep Water'));
+    await settle();
+    nav.back();
+    await shot('w05_folders_after_back');
+    if (lib.composers.isNotEmpty) {
+      nav.push('composer', lib.composers.keys.first);
+      await shot('w06_composer');
+    }
+    nav.go('songs');
+    await settle();
+    selection.selectAll();
+    toast(ctx(), 'A toast while songs are selected');
+    await shot('w07_toast_over_selection', 400);
+    selection.clear();
+    nav.setSearch(true);
+    await settle(300);
+    await tester.enterText(find.byType(TextField).last, 'an');
+    await tester.ensureVisible(find.textContaining('Show all'));
+    await shot('w08_search_show_all');
+    await tester.tap(find.textContaining('Show all'));
+    await shot('w09_songs_filtered');
+    songsFilter.value = '';
+    await engine.playTracks([lib.byId[500003]!, lib.byId[500004]!, lib.byId[500005]!]); // missing files, one after another
+    await shot('w10_failures_merged', 2500);
+    await engine.playTracks(hiRes.tracks);
+    await engine.player.pause();
+    await size(960, 640);
+    await tester.tap(find.descendant(of: find.byType(PlayerBar), matching: find.byTooltip('More · ${sleepTip(ctx())}')));
+    await shot('w11_min_more_menu_with_sleep');
+    await esc();
+    setSleep(0);
+    await size(1360, 860);
 
     // ------------------------------------------------------------ 9. Large window (maximised on 1920 x 1080) and 1920 x 1080 offscreen
     await windowManager.maximize();

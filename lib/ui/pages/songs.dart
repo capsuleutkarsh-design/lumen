@@ -191,17 +191,17 @@ class _SongsPageState extends State<SongsPage> {
                   // The same columns the rows show at this width (they drop out in a small window).
                   child: LayoutBuilder(
                     builder: (context, c) {
-                      final cols = TrackCols(c.maxWidth, table: true, album: true, badge: true);
+                      final cols = TrackCols(c.maxWidth, table: true, album: true, badge: true, k: MediaQuery.textScalerOf(context).scale(1));
                       return Row(
                         children: [
                           const SizedBox(width: 40 + S.x3),
                           _head('Title', 'title', flex: 5),
                           if (cols.artist) ...[const SizedBox(width: S.x4), _head('Artist', 'artist', flex: 3)],
                           if (cols.album) ...[const SizedBox(width: S.x4), _head('Album', 'album', flex: 3)],
-                          if (cols.year) _head('Year', 'year', width: 56),
-                          if (cols.badge) ...[const SizedBox(width: S.x4), _head('Format', 'format', width: 104)],
+                          if (cols.year) ...[const SizedBox(width: S.x4), _head('Year', 'year', width: cols.yearW)],
+                          if (cols.badge) ...[const SizedBox(width: S.x4), _head('Format', 'format', width: cols.badgeW)],
                           const SizedBox(width: 32),
-                          _head('Time', 'time', width: 48, align: TextAlign.right),
+                          _head('Time', 'time', width: cols.timeW, align: TextAlign.right),
                           const SizedBox(width: 32),
                         ],
                       );

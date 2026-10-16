@@ -132,7 +132,7 @@ class Sound extends ChangeNotifier {
       final eq = s.deviceEq[_device];
       if (s.perDevice && eq != null) {
         s.eq = eq.copy();
-        engine.say("Using '${eq.name}' EQ for ${device.name}");
+        engine.say('Using “${eq.name}” EQ for ${device.name}');
         save();
         notifyListeners();
       }

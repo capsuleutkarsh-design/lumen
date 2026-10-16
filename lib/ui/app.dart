@@ -456,6 +456,7 @@ Widget pageFor(Place p) => switch (p.page) {
   'artist' => ArtistPage(p.arg as String),
   'songs' => const SongsPage(),
   'folders' => const FoldersPage(),
+  'folder' => FoldersPage(dir: p.arg as String),
   'playlists' => const PlaylistsPage(),
   'playlist' => PlaylistPage(p.arg as int),
   'smart' => SmartPlaylistPage(p.arg as int),

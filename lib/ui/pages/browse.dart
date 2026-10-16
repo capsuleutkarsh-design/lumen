@@ -57,31 +57,46 @@ class Segmented<V> extends StatelessWidget {
   );
 }
 
-/// The tab strip and the page title of a Browse page.
+/// The tab strip of a Browse page (it names the page), with the subtitle under it.
 class BrowseHeader extends StatelessWidget {
   const BrowseHeader(this.tab, {super.key, this.subtitle, this.trailing});
   final String tab;
   final String? subtitle;
   final Widget? trailing;
   @override
-  Widget build(BuildContext context) => Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(S.x2, S.x2, S.x2, S.x4),
-        child: Segmented(
-          value: tab,
-          options: browseTabs,
-          onChanged: (t) {
-            nav.memo['browse.tab'] = t;
-            nav.go(t);
-          },
+  Widget build(BuildContext context) {
+    final sub = shownSubtitle(subtitle);
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(S.x2, S.x2, S.x2, S.x3),
+          child: Segmented(
+            value: tab,
+            options: browseTabs,
+            onChanged: (t) {
+              nav.memo['browse.tab'] = t;
+              nav.go(t);
+            },
+          ),
         ),
-      ),
-      PageHeader(browseTabs.firstWhere((x) => x.$1 == tab).$2, subtitle: subtitle, trailing: trailing),
-    ],
-  );
+        Padding(
+          padding: const EdgeInsets.fromLTRB(S.x2, 0, S.x2, S.x5),
+          child: SizedBox(
+            width: double.infinity,
+            child: Wrap(
+              alignment: WrapAlignment.spaceBetween,
+              crossAxisAlignment: WrapCrossAlignment.center,
+              spacing: S.x4,
+              runSpacing: S.x3,
+              children: [if (sub != null) Text(sub, style: T.small), ?trailing],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
 
 /// Up to four album covers in a square, else the first cover, else a gradient.
@@ -419,6 +434,7 @@ class ComposerPage extends StatelessWidget {
                   list: movements, // a movement plays on through the rest of its work
                   index: i,
                   number: movements[i].movementNo ?? i + 1,
+                  title: movementOf(movements[i], work),
                   showCover: false,
                   showAlbum: false,
                   albumArtist: movements[i].artist,
@@ -432,6 +448,15 @@ class ComposerPage extends StatelessWidget {
       );
     },
   );
+}
+
+/// Under a work's header only the movement: its MOVEMENT tag, else the title without the work's name
+/// ("Symphony No. 5: I. Allegro" -> "I. Allegro").
+String movementOf(Track t, String work) {
+  if (t.movement case final m? when m.isNotEmpty) return m;
+  if (!t.title.toLowerCase().startsWith(work.toLowerCase())) return t.title;
+  final rest = t.title.substring(work.length).replaceFirst(RegExp('^[ :,.;/–—-]+'), '');
+  return rest.isEmpty ? t.title : rest;
 }
 
 /// A work's title, its length and performers, and Play work (all movements, in order).
@@ -543,6 +568,8 @@ class DuplicatesPage extends StatelessWidget {
 
   Widget _copy(BuildContext context, List<Track> g, int i) {
     final t = g[i];
+    int quality(Track x) => x.bitDepth * x.sampleRate * 10000 + x.bitrate;
+    final best = g.reduce((a, b) => quality(b) > quality(a) ? b : a);
     return TrackRow(
       track: t,
       list: g,
@@ -551,15 +578,17 @@ class DuplicatesPage extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          if (t.bitrate > 0) ...[const SizedBox(width: S.x2), FormatBadge('${fmtInt(t.bitrate)} kbps')],
-          const SizedBox(width: S.x1),
+          SizedBox(
+            width: 72,
+            child: t == best ? Text('Best copy', textAlign: TextAlign.center, style: T.caption.copyWith(color: C.text)) : null,
+          ),
           IconBtn(LucideIcons.play, size: 14, box: 32, tooltip: 'Play this copy', onTap: () => engine.playTracks([t])),
-          IconBtn(
-            LucideIcons.eyeOff,
-            size: 14,
-            box: 32,
-            tooltip: 'Hide from library (the file stays)',
-            onTap: () {
+          Tooltip(
+            message: 'Hide from library (the file stays)',
+            child: PillButton(
+              'Hide',
+              dense: true,
+              onTap: () {
               lib.setHidden([t.id], true);
               toast(
                 context,
@@ -569,6 +598,7 @@ class DuplicatesPage extends StatelessWidget {
                 ],
               );
             },
+            ),
           ),
           IconBtn(LucideIcons.folderOpen, size: 14, box: 32, tooltip: 'Show in Explorer\n${t.path}', onTap: () => showInExplorer(t.path)),
         ],

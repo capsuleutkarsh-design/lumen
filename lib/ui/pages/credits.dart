@@ -1,6 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path/path.dart' as p;
 
@@ -20,6 +21,14 @@ List<Widget> markdown(String md) {
         in s.replaceAllMapped(RegExp(r'\[([^\]]*)\]\([^)]*\)'), (m) => m[1]!).replaceAll(RegExp('<[^>]+>'), '').split('`').indexed)
       i.isOdd ? part : part.replaceAll('*', ''),
   ].join().trim();
+  // A table row on two lines: the component, then what it is · its licence.
+  Widget row(List<String> cells) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      if (cells.isNotEmpty) Text(cells.first, style: T.label),
+      if (cells.length > 1) Text(cells.skip(1).join(' · '), style: T.small),
+    ],
+  );
   return [
     for (final raw in md.replaceAll('\r\n', '\n').split('\n'))
       if (raw.trim() case final l when l.isNotEmpty && !RegExp(r'^(\|[-: |]+|-{3,})$').hasMatch(l))
@@ -28,7 +37,7 @@ List<Widget> markdown(String md) {
           child: l.startsWith('#')
               ? Text(plain(l.replaceFirst(RegExp(r'^#+'), '')), style: l.startsWith('###') ? T.label : T.heading)
               : l.startsWith('|')
-              ? Text(l.split('|').map(plain).where((c) => c.isNotEmpty).join('   ·   '), style: T.small.copyWith(color: C.text))
+              ? row(l.split('|').map(plain).where((c) => c.isNotEmpty).toList())
               : Text(plain(l.replaceFirst(RegExp(r'^(> ?|- )'), l.startsWith('- ') ? '•  ' : '')), style: T.small),
         ),
   ];
@@ -77,7 +86,33 @@ class DataAndUpdates extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SelectableText('Your library, playlists, play counts and the log are kept in ${lib.dataDir}', style: T.small),
+        Text('Your library, playlists, play counts and the log are kept in', style: T.small),
+        // The folder on one line, its middle cut when long, with Copy.
+        Row(
+          children: [
+            Flexible(
+              child: Tooltip(
+                message: lib.dataDir,
+                child: Text(
+                  lib.dataDir.length > 64 ? '${lib.dataDir.substring(0, 28)}…${lib.dataDir.substring(lib.dataDir.length - 32)}' : lib.dataDir,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: T.small.copyWith(color: C.text, fontFeatures: T.tabular),
+                ),
+              ),
+            ),
+            IconBtn(
+              LucideIcons.copy,
+              size: 14,
+              box: 32,
+              tooltip: 'Copy the folder path',
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: lib.dataDir));
+                toast(context, 'Copied the folder path');
+              },
+            ),
+          ],
+        ),
         const SizedBox(height: S.x3),
         if (!Platform.isAndroid) // the app's own folder: no file manager can open it there
           Row(

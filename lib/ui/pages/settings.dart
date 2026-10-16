@@ -18,6 +18,7 @@ import '../widgets.dart';
 import 'browse.dart' show Segmented;
 import 'credits.dart';
 import 'settings_extras.dart';
+import 'sound.dart' show Narrow;
 
 /// Asks for a folder and adds it to the library (Settings, the empty Home, drag and drop).
 /// On Android the folder may be on the phone or on an SD card / USB stick.
@@ -59,14 +60,11 @@ class SettingsPage extends StatelessWidget {
         key: const PageStorageKey('settings'),
         padding: EdgeInsets.zero,
         children: [
-          const PageHeader('Settings'),
-          Align(
-            alignment: Alignment.topLeft,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 880),
-              child: Column(
+          Narrow(
+            child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const PageHeader('Settings'),
                   _card(
                     'Library folders',
                     Platform.isAndroid
@@ -269,24 +267,37 @@ class SettingsPage extends StatelessWidget {
                       children: [
                         const Wordmark(height: 40),
                         const SizedBox(width: S.x4),
-                        Expanded(
-                          child: Text(
-                            'Gleo · © 2026 Utkarsh Tripathi · UT Community Licence 2.0\n\n'
-                            'Version $shortVersion · Gleo audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/lumen-audio-engine). '
-                            'Design inspired by Wora (MIT). '
-                            'Font: Inter (SIL Open Font License). Icons: Lucide (ISC). No AI. Suggestions come only from what you play here, '
-                            'and nothing goes to the internet unless you turn on the update check.',
-                            style: T.small,
-                          ),
-                        ),
+                        Expanded(child: Text('Gleo · © 2026 Utkarsh Tripathi · UT Community Licence 2.0', style: T.label)),
                       ],
+                    ),
+                    const SizedBox(height: S.x4),
+                    for (final (k, v) in [
+                      ('Version', shortVersion),
+                      ('Audio engine', 'Gleo audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/lumen-audio-engine)'),
+                      ('Design', 'Inspired by Wora (MIT)'),
+                      ('Font', 'Inter (SIL Open Font License)'),
+                      ('Icons', 'Lucide (ISC)'),
+                    ])
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: S.x2),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(width: 140, child: Text(k, style: T.small.copyWith(color: C.faint))),
+                            Expanded(child: SelectableText(v, style: T.small.copyWith(color: C.text))),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: S.x2),
+                    Text(
+                      'No AI. Suggestions come only from what you play here, and nothing goes to the internet unless you turn on the update check.',
+                      style: T.small,
                     ),
                     const SizedBox(height: S.x4),
                     PillButton('Credits', icon: LucideIcons.award, onTap: () => showCredits(context)),
                   ]),
                 ],
               ),
-            ),
           ),
         ],
       );

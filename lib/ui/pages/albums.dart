@@ -33,7 +33,7 @@ class _AlbumCardState extends State<AlbumCard> {
   @override
   Widget build(BuildContext context) {
     final a = widget.album;
-    final caption = widget.why ?? [if (a.year != null) '${a.year}', a.badge].join(' · ');
+    final caption = widget.why ?? [if (a.year != null) '${a.year}', a.bestBadge].join(' · ');
     final card = DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(R.card),
@@ -162,12 +162,21 @@ class _AlbumShelfState extends State<AlbumShelf> {
           onNotification: (n) => _update(n.metrics),
           child: NotificationListener<ScrollNotification>(
             onNotification: (n) => _update(n.metrics),
-            child: ListView.separated(
-              controller: _c,
-              scrollDirection: Axis.horizontal,
-              itemCount: widget.albums.length,
-              separatorBuilder: (_, _) => const SizedBox(width: S.x4),
-              itemBuilder: (_, i) => AlbumCard(widget.albums[i], width: _card - S.x2 * 2, why: widget.whys?[i]),
+            // Lined up with the section title; the right edge fades while there is more.
+            child: ShaderMask(
+              blendMode: BlendMode.dstIn,
+              shaderCallback: (r) => LinearGradient(
+                colors: [Colors.black, _right ? Colors.transparent : Colors.black],
+                stops: [1 - 24 / r.width, 1],
+              ).createShader(r),
+              child: ListView.separated(
+                controller: _c,
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: S.x2),
+                itemCount: widget.albums.length,
+                separatorBuilder: (_, _) => const SizedBox(width: S.x4),
+                itemBuilder: (_, i) => AlbumCard(widget.albums[i], width: _card - S.x2 * 2, why: widget.whys?[i]),
+              ),
             ),
           ),
         ),
@@ -530,7 +539,7 @@ class PageHero extends StatelessWidget {
                         text,
                       ] else
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                          crossAxisAlignment: compact ? CrossAxisAlignment.center : CrossAxisAlignment.end,
                           children: [
                             art,
                             const SizedBox(width: S.x6),

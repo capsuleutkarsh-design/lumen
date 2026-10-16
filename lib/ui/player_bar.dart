@@ -391,7 +391,7 @@ class Transport extends StatelessWidget {
             onTap: has ? engine.previous : null,
           ),
           gap,
-          _PlayButton(playing: engine.playing, size: big ? 64 : 40, onTap: has ? engine.togglePlay : null),
+          PlayButton(playing: engine.playing, size: big ? 64 : 40, onTap: has ? engine.togglePlay : null),
           gap,
           IconBtn(
             LucideIcons.skipForward,
@@ -469,8 +469,9 @@ class VolumeControl extends StatelessWidget {
   );
 }
 
-class _PlayButton extends StatelessWidget {
-  const _PlayButton({required this.playing, this.onTap, this.size = 40});
+/// The filled round play / pause button (the player bar, Now Playing, the mini player).
+class PlayButton extends StatelessWidget {
+  const PlayButton({super.key, required this.playing, this.onTap, this.size = 40});
   final bool playing;
   final double size;
   final VoidCallback? onTap;
