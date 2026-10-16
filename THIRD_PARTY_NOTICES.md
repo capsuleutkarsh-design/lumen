@@ -10,14 +10,14 @@ Gleo uses and credits the following work.
 |---|---|---|
 | [Inter](https://github.com/rsms/inter) 4.1 by Rasmus Andersson and the Inter Project Authors | The app's font (`assets/fonts/Inter-*.ttf`) | SIL Open Font License 1.1, full text in [`assets/fonts/Inter-OFL.txt`](assets/fonts/Inter-OFL.txt) |
 | [Outfit](https://github.com/Outfitio/Outfit-Fonts) by the Outfit Project Authors | The letters of the Gleo logo and wordmark, drawn as shapes (the font file itself is not in the app; `tool/brand/make_logo.py` reads it from `tool/brand/fonts/`) | SIL Open Font License 1.1, full text in [`tool/brand/fonts/OFL.txt`](tool/brand/fonts/OFL.txt) |
-| [FFmpeg](https://ffmpeg.org) 8.1.3, inside Gleo's audio engine `libmpv-2.dll` | Audio decoding, filters (EQ, crossfeed, limiter, ...) | LGPL-3.0-or-later (built with `--enable-version3`, without `--enable-gpl`), text in `LGPL-3.0.txt` and `GPL-3.0.txt` |
-| [mpv](https://mpv.io) 0.41.0 (libmpv), in `libmpv-2.dll` | Playback and audio output | LGPL-2.1-or-later |
-| [libplacebo](https://code.videolan.org/videolan/libplacebo) 7.360.1 (with [fast_float](https://github.com/fastfloat/fast_float)), in `libmpv-2.dll` | Needed to build mpv | LGPL-2.1-or-later (fast_float: MIT / Apache-2.0 / BSL-1.0) |
-| [libsoxr](https://sourceforge.net/projects/soxr/) 0.1.3, in `libmpv-2.dll` | High-quality resampler | LGPL-2.1-or-later |
-| [libbs2b](http://bs2b.sourceforge.net) 3.1.0, in `libmpv-2.dll` | Headphone crossfeed | MIT, Copyright (c) 2005 Boris Mikhaylov |
-| [libass](https://github.com/libass/libass) 0.17.5, [HarfBuzz](https://harfbuzz.github.io) 14.6.0, [FreeType](https://freetype.org) 2.14.3, [FriBidi](https://github.com/fribidi/fribidi) 1.0.17, in `libmpv-2.dll` | Needed to build mpv (subtitle text, not used by Gleo) | ISC; MIT; FreeType License (FTL); LGPL-2.1-or-later |
-| [zlib](https://zlib.net) 1.3.2, in `libmpv-2.dll` | Compressed tags and containers | zlib |
-| [llvm-mingw](https://github.com/mstorsjo/llvm-mingw) runtime (libc++, libunwind, compiler-rt, mingw-w64 CRT), in `libmpv-2.dll` | Compiler runtime | Apache-2.0 WITH LLVM-exception; mingw-w64 runtime licence |
+| [FFmpeg](https://ffmpeg.org) 8.1.3, inside Gleo's audio engine (libmpv) | Audio decoding, filters (EQ, crossfeed, limiter, ...) | LGPL-3.0-or-later (built with `--enable-version3`, without `--enable-gpl`), text in `LGPL-3.0.txt` and `GPL-3.0.txt` |
+| [mpv](https://mpv.io) 0.41.0 (libmpv) | Playback and audio output | LGPL-2.1-or-later |
+| [libplacebo](https://code.videolan.org/videolan/libplacebo) 7.360.1 (with [fast_float](https://github.com/fastfloat/fast_float)), in libmpv | Needed to build mpv | LGPL-2.1-or-later (fast_float: MIT / Apache-2.0 / BSL-1.0) |
+| [libsoxr](https://sourceforge.net/projects/soxr/) 0.1.3, in libmpv | High-quality resampler | LGPL-2.1-or-later |
+| [libbs2b](http://bs2b.sourceforge.net) 3.1.0, in libmpv | Headphone crossfeed | MIT, Copyright (c) 2005 Boris Mikhaylov |
+| [libass](https://github.com/libass/libass) 0.17.5, [HarfBuzz](https://harfbuzz.github.io) 14.6.0, [FreeType](https://freetype.org) 2.14.3, [FriBidi](https://github.com/fribidi/fribidi) 1.0.17, in libmpv | Needed to build mpv (subtitle text, not used by Gleo) | ISC; MIT; FreeType License (FTL); LGPL-2.1-or-later |
+| [zlib](https://zlib.net) 1.3.2, in libmpv | Compressed tags and containers | zlib |
+| [llvm-mingw](https://github.com/mstorsjo/llvm-mingw) runtime (libc++, libunwind, compiler-rt, mingw-w64 CRT), in libmpv | Compiler runtime | Apache-2.0 WITH LLVM-exception; mingw-w64 runtime licence |
 | Gleo's audio engine for Android, `libmpv.so` (arm64-v8a, armeabi-v7a, x86_64) | The same FFmpeg, mpv, libplacebo, libsoxr, libbs2b, libass, HarfBuzz, FreeType, FriBidi and zlib as above, built for Android | As above |
 | [Android NDK](https://developer.android.com/ndk) r28c runtime (libc++, libc++abi, libunwind, compiler-rt), in `libmpv.so` | Compiler runtime (Android) | Apache-2.0 WITH LLVM-exception |
 | Microsoft Visual C++ runtime (`msvcp140*.dll`, `vcruntime140*.dll`, `concrt140.dll`) | C++ runtime for `gleo.exe` and the plugins | Microsoft Visual C++ Redistributable, distributed under the Visual Studio licence terms |

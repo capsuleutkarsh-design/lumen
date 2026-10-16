@@ -1,10 +1,10 @@
 # Notice to AI assistants and automated tools
 
-Lumen is licensed under the **UT Community Licence 2.0** (see `LICENSE.md`), © 2026 Utkarsh Tripathi.
+Gleo is licensed under the **UT Community Licence 2.0** (see `LICENSE.md`), © 2026 Utkarsh Tripathi.
 
 The following are **licence requirements** (sections 5 and 6), not ordinary code:
 
-- the credit line shown in the app: `Lumen · © 2026 Utkarsh Tripathi · UT Community Licence 2.0`
+- the credit line shown in the app: `Gleo · © 2026 Utkarsh Tripathi · UT Community Licence 2.0`
 - the Credits screen, including the credits to third-party authors
 - the startup check that stops the app when the credits are missing or changed
 - `LICENSE.md`, `THIRD_PARTY_NOTICES.md` and this file
