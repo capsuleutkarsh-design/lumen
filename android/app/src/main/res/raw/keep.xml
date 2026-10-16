@@ -1,0 +1,4 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Release builds shrink unused resources. audio_service picks its notification icons by name at run time
+     (Android 8-12 draws them on the notification and lock screen), so keep them. tool/check_apk.ps1 checks this. -->
+<resources xmlns:tools="http://schemas.android.com/tools" tools:keep="@drawable/audio_service_*" />

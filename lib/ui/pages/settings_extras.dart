@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 
+import '../../platform/android.dart' show lockViewOn, sendLockAllowed;
 import '../../platform/tray.dart';
 import '../app.dart';
 import '../art_accent.dart';
@@ -54,6 +55,21 @@ class WindowSettings extends StatelessWidget {
     'Closing the window keeps Gleo playing in the notification area. Click its icon to come back; right-click it to quit.',
     closeToTray(lib),
     (v) => lib.setSetting('closeToTray', v ? '1' : '0'),
+  );
+}
+
+/// Settings → Lock screen (Android).
+class LockScreenSettings extends StatelessWidget {
+  const LockScreenSettings({super.key});
+  @override
+  Widget build(BuildContext context) => _Toggle(
+    'Show on lock screen',
+    'When the phone locks while Gleo is open and playing, waking it shows the spinning disc and the controls. Open Gleo unlocks as usual.',
+    lockViewOn(lib),
+    (v) {
+      lib.setSetting('lockView', v ? '1' : '0');
+      sendLockAllowed(engine);
+    },
   );
 }
 

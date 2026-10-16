@@ -77,7 +77,15 @@ FlutterWindow::MessageHandler(HWND hwnd, UINT const message,
     }
   }
 
+  static const UINT taskbar_created = RegisterWindowMessage(L"TaskbarButtonCreated");
+  if (message == taskbar_created && media_controls_) {
+    media_controls_->OnTaskbarCreated();
+    return 0;
+  }
   switch (message) {
+    case WM_COMMAND:  // the taskbar thumbnail buttons
+      if (HIWORD(wparam) == THBN_CLICKED && media_controls_ && media_controls_->OnThumbButton(LOWORD(wparam))) return 0;
+      break;
     case MediaControls::kButtonMessage:
       if (media_controls_) media_controls_->OnButton(static_cast<int>(wparam));
       return 0;

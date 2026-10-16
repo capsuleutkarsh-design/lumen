@@ -12,6 +12,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
@@ -114,6 +115,14 @@ void main() {
     await engine.addToQueue([etude]);
     expect(engine.queue.items.length, 9);
     say('Next, previous and Add to queue: ok');
+
+    // The 0.4 platform calls reach MainActivity / GleoWidget (none may be missing on the device).
+    const android = MethodChannel('gleo/android');
+    for (final (m, arg) in [('keepOn', true), ('keepOn', false), ('lockAllowed', false), ('askNotifications', null)]) {
+      await android.invokeMethod(m, arg);
+    }
+    await const MethodChannel('gleo/widget').invokeMethod('update', {'title': 'T', 'artist': 'A', 'art': '', 'playing': true});
+    say('Keep screen on, lock-screen gate, notification ask and widget update: ok');
 
     // The Sound page on Gleo's own Android libmpv: every filter and soxr run, the song keeps playing,
     // and mpv logs no error ("osc" is media_kit asking for the Lua OSC, which the engine leaves out).

@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The home-screen widget (GleoWidget.kt): midnight and gold, like the app. -->
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="@drawable/widget_bg"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:padding="8dp">
+    <ImageView
+        android:id="@+id/cover"
+        android:layout_width="56dp"
+        android:layout_height="56dp"
+        android:contentDescription="Open Gleo"
+        android:scaleType="centerCrop"
+        android:src="@mipmap/ic_launcher" />
+    <LinearLayout
+        android:id="@+id/text"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="12dp"
+        android:layout_weight="1"
+        android:orientation="vertical">
+        <TextView
+            android:id="@+id/title"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Gleo"
+            android:textColor="#FFF4F4F5"
+            android:textSize="15sp" />
+        <TextView
+            android:id="@+id/artist"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:ellipsize="end"
+            android:maxLines="1"
+            android:text="Tap to open"
+            android:textColor="#FFA3A9B6"
+            android:textSize="13sp" />
+    </LinearLayout>
+    <ImageButton
+        android:id="@+id/prev"
+        android:layout_width="44dp"
+        android:layout_height="48dp"
+        android:background="@android:color/transparent"
+        android:contentDescription="Previous"
+        android:padding="11dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/widget_prev" />
+    <ImageButton
+        android:id="@+id/play"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        android:background="@android:color/transparent"
+        android:contentDescription="Play"
+        android:padding="4dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/widget_play" />
+    <ImageButton
+        android:id="@+id/next"
+        android:layout_width="44dp"
+        android:layout_height="48dp"
+        android:background="@android:color/transparent"
+        android:contentDescription="Next"
+        android:padding="11dp"
+        android:scaleType="fitCenter"
+        android:src="@drawable/widget_next" />
+</LinearLayout>

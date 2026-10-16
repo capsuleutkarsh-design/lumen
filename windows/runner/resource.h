@@ -3,6 +3,10 @@
 // Used by Runner.rc
 //
 #define IDI_APP_ICON                    101
+#define IDI_THUMB_PREV                  102
+#define IDI_THUMB_PLAY                  103
+#define IDI_THUMB_PAUSE                 104
+#define IDI_THUMB_NEXT                  105
 
 // Next default values for new objects
 //

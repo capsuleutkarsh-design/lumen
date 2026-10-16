@@ -1,8 +1,11 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../art/art_cache.dart';
 import '../../library/models.dart';
+import '../../platform/android.dart' show androidMusic;
 import '../../platform/window.dart' show isTouch;
 import '../app.dart';
 import '../cover_picker.dart';
@@ -301,7 +304,16 @@ class NoMusic extends StatelessWidget {
             ? 'Choose the folder where your music lives${isTouch ? '' : ', or drop it on this window'}. Nothing is copied or changed; Gleo only reads it.'
             : 'Gleo found no audio files in your folders. Check them in Settings.',
         action: none
-            ? const PillButton('Choose folder', primary: true, icon: LucideIcons.folderPlus, onTap: addMusicFolder)
+            ? Wrap(
+                spacing: S.x3,
+                runSpacing: S.x2,
+                alignment: WrapAlignment.center,
+                children: [
+                  if (Platform.isAndroid)
+                    PillButton('Use the Music folder', primary: true, icon: LucideIcons.music, onTap: () => lib.folders = [androidMusic]),
+                  PillButton('Choose folder', primary: !Platform.isAndroid, icon: LucideIcons.folderPlus, onTap: addMusicFolder),
+                ],
+              )
             : PillButton('Open Settings', icon: LucideIcons.settings, onTap: () => nav.go('settings')),
       );
     },

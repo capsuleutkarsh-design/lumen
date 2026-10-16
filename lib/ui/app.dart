@@ -16,9 +16,10 @@ import '../audio/sound_control.dart';
 import '../library/library.dart';
 import '../library/models.dart';
 import '../library/tags.dart' show audioExtensions;
-import '../platform/android.dart' show musicAccess;
+import '../platform/android.dart' show lockView, musicAccess, photosStep;
 import '../platform/window.dart';
 import 'art_accent.dart';
+import 'lock_view.dart';
 import 'lyrics_view.dart';
 import 'mini_player.dart';
 import 'now_playing.dart';
@@ -317,14 +318,27 @@ class _ShellState extends State<Shell> {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: Listenable.merge([nav, musicAccess]),
-    builder: (context, _) => !musicAccess.value
-        ? const MusicAccess()
-        : nav.mini
-        ? const MiniPlayer()
-        : phoneLayout(context)
-        ? const PhoneShell()
-        : _shell(context),
+    listenable: Listenable.merge([nav, musicAccess, photosStep, lockView]),
+    builder: (context, _) => Stack(
+      fit: StackFit.expand,
+      children: [
+        // Over the phone's lock screen only the lock-screen view shows; the app keeps its place behind it.
+        Offstage(
+          offstage: lockView.value,
+          child: TickerMode(
+            enabled: !lockView.value,
+            child: !musicAccess.value || photosStep.value
+                ? const MusicAccess()
+                : nav.mini
+                ? const MiniPlayer()
+                : phoneLayout(context)
+                ? const PhoneShell()
+                : _shell(context),
+          ),
+        ),
+        if (lockView.value) const LockView(),
+      ],
+    ),
   );
 
   /// Files dropped from Explorer (desktop only).

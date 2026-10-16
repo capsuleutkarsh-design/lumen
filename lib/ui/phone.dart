@@ -421,24 +421,44 @@ class PhoneBar extends StatelessWidget {
   );
 }
 
-/// Before Gleo may read the music: what it needs and why, and the button that asks Android.
+/// Before Gleo may read the music: what it needs and why, and the button that asks Android. After
+/// "Don't allow" twice Android won't ask again, so the button opens Gleo's page in Android's settings
+/// (coming back re-checks: see main.dart). Android 13+ then offers the photos permission, skippable.
 class MusicAccess extends StatelessWidget {
   const MusicAccess({super.key});
+
+  /// What Android calls the permission in Settings → Permissions.
+  static String permissionName(int sdk) => sdk >= 33 ? 'Music and audio' : (sdk >= 30 ? 'Files and media' : 'Storage');
+
   @override
   Widget build(BuildContext context) => Scaffold(
     backgroundColor: C.bg,
     body: SafeArea(
-      child: EmptyState(
-        icon: LucideIcons.music,
-        title: 'Your music, on this phone',
-        body: 'Gleo plays the songs saved on this phone. Allow it to read your music files: it only reads them, and never changes them.',
-        action: PillButton(
-          'Allow access',
-          key: const ValueKey('allowMusic'),
-          icon: LucideIcons.check,
-          primary: true,
-          onTap: () => askMusicAccess(lib),
-        ),
+      child: ListenableBuilder(
+        listenable: Listenable.merge([musicBlocked, photosStep]),
+        builder: (context, _) => photosStep.value
+            ? EmptyState(
+                icon: LucideIcons.image,
+                title: 'Album covers',
+                body: 'Covers saved as folder.jpg need access to photos. You can skip this: Gleo still shows the covers inside your songs.',
+                action: Wrap(
+                  spacing: S.x3,
+                  children: [
+                    PillButton('Allow photos', key: const ValueKey('allowPhotos'), icon: LucideIcons.check, primary: true, onTap: askPhotos),
+                    PillButton('Skip', key: const ValueKey('skipPhotos'), onTap: () => photosStep.value = false),
+                  ],
+                ),
+              )
+            : EmptyState(
+                icon: LucideIcons.music,
+                title: 'Your music, on this phone',
+                body: musicBlocked.value
+                    ? 'Gleo needs ${permissionName(audioRoute.value?.sdk ?? 33)} access. Turn it on in Settings → Permissions.'
+                    : 'Gleo plays the songs saved on this phone. Allow it to read your music files: it only reads them, and never changes them.',
+                action: musicBlocked.value
+                    ? PillButton('Open settings', key: const ValueKey('openSettings'), icon: LucideIcons.settings, primary: true, onTap: openAppSettings)
+                    : PillButton('Allow access', key: const ValueKey('allowMusic'), icon: LucideIcons.check, primary: true, onTap: () => askMusicAccess(lib)),
+              ),
       ),
     ),
   );

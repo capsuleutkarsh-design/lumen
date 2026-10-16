@@ -7,6 +7,8 @@
 
 #include <string>
 
+#include "resource.h"
+
 using namespace winrt::Windows::Media;
 using winrt::Windows::Foundation::AsyncStatus;
 using winrt::Windows::Foundation::IAsyncOperation;
@@ -80,13 +82,18 @@ MediaControls::~MediaControls() {
 }
 
 void MediaControls::Update(const flutter::EncodableMap& args) {
+  const bool has_track = Get<bool>(args, "hasTrack", false);
+  const bool playing = Get<bool>(args, "playing", false);
+  if (has_track != has_track_ || playing != playing_) {
+    has_track_ = has_track;
+    playing_ = playing;
+    UpdateThumbBar(false);
+  }
   if (!smtc_) return;
   try {
-    const bool has_track = Get<bool>(args, "hasTrack", false);
     smtc_.IsEnabled(has_track);
     if (!has_track) return;
-    smtc_.PlaybackStatus(Get<bool>(args, "playing", false) ? MediaPlaybackStatus::Playing
-                                                           : MediaPlaybackStatus::Paused);
+    smtc_.PlaybackStatus(playing ? MediaPlaybackStatus::Playing : MediaPlaybackStatus::Paused);
     SystemMediaTransportControlsTimelineProperties timeline;
     const auto duration = Ms(GetInt(args, "durationMs"));
     timeline.StartTime(Ms(0));
@@ -149,6 +156,60 @@ void MediaControls::OnThumbnail() {
   }
 }
 
+namespace {
+constexpr WORD kThumbPrevious = 1, kThumbPlay = 2, kThumbNext = 3;
+}
+
+void MediaControls::OnTaskbarCreated() {
+  if (!taskbar_) {
+    if (FAILED(CoCreateInstance(CLSID_TaskbarList, nullptr, CLSCTX_INPROC_SERVER, IID_PPV_ARGS(taskbar_.put()))) ||
+        FAILED(taskbar_->HrInit())) {
+      taskbar_ = nullptr;
+    }
+  }
+  UpdateThumbBar(true);
+}
+
+// Previous / play-pause / next under the taskbar thumbnail; play-pause follows the state, and with no song all three are greyed.
+void MediaControls::UpdateThumbBar(bool add) {
+  if (!taskbar_) return;
+  const int size = GetSystemMetricsForDpi(SM_CXSMICON, GetDpiForWindow(hwnd_));
+  auto icon = [size](int id) {
+    return static_cast<HICON>(LoadImage(GetModuleHandle(nullptr), MAKEINTRESOURCE(id), IMAGE_ICON, size, size, 0));
+  };
+  // ponytail: loaded once, at the first screen's scale; reload them on WM_DPICHANGED if they ever look soft.
+  static HICON prev = icon(IDI_THUMB_PREV), play = icon(IDI_THUMB_PLAY), pause = icon(IDI_THUMB_PAUSE), next = icon(IDI_THUMB_NEXT);
+  const THUMBBUTTONFLAGS flags = has_track_ ? THBF_ENABLED : THBF_DISABLED;
+  THUMBBUTTON buttons[3] = {};
+  const struct { WORD id; HICON icon; const wchar_t* tip; } spec[3] = {
+      {kThumbPrevious, prev, L"Previous"},
+      {kThumbPlay, playing_ ? pause : play, playing_ ? L"Pause" : L"Play"},
+      {kThumbNext, next, L"Next"},
+  };
+  for (int i = 0; i < 3; i++) {
+    buttons[i].dwMask = THB_ICON | THB_TOOLTIP | THB_FLAGS;
+    buttons[i].iId = spec[i].id;
+    buttons[i].hIcon = spec[i].icon;
+    buttons[i].dwFlags = flags;
+    wcscpy_s(buttons[i].szTip, spec[i].tip);
+  }
+  if (add) taskbar_->ThumbBarAddButtons(hwnd_, 3, buttons);
+  else taskbar_->ThumbBarUpdateButtons(hwnd_, 3, buttons);
+}
+
+bool MediaControls::OnThumbButton(WORD id) {
+  switch (id) {
+    case kThumbPrevious: Send("previous"); return true;
+    case kThumbPlay: Send(playing_ ? "pause" : "play"); return true;
+    case kThumbNext: Send("next"); return true;
+  }
+  return false;
+}
+
+void MediaControls::Send(const char* button) {
+  channel_->InvokeMethod("button", std::make_unique<flutter::EncodableValue>(button));
+}
+
 void MediaControls::OnButton(int button) {
   const char* name = nullptr;
   switch (static_cast<SystemMediaTransportControlsButton>(button)) {
@@ -159,7 +220,7 @@ void MediaControls::OnButton(int button) {
     case SystemMediaTransportControlsButton::Stop: name = "stop"; break;
     default: return;
   }
-  channel_->InvokeMethod("button", std::make_unique<flutter::EncodableValue>(name));
+  Send(name);
 }
 
 void MediaControls::OnSeek(int64_t ms) {
