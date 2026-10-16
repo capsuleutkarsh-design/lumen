@@ -15,16 +15,16 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:music_player/main.dart';
-import 'package:music_player/ui/app.dart';
-import 'package:music_player/ui/cover_picker.dart';
-import 'package:music_player/ui/mini_player.dart';
-import 'package:music_player/ui/pages/albums.dart';
-import 'package:music_player/ui/pages/credits.dart';
-import 'package:music_player/ui/player_bar.dart';
-import 'package:music_player/ui/theme.dart';
-import 'package:music_player/ui/tracks.dart';
-import 'package:music_player/ui/widgets.dart';
+import 'package:gleo/main.dart';
+import 'package:gleo/ui/app.dart';
+import 'package:gleo/ui/cover_picker.dart';
+import 'package:gleo/ui/mini_player.dart';
+import 'package:gleo/ui/pages/albums.dart';
+import 'package:gleo/ui/pages/credits.dart';
+import 'package:gleo/ui/player_bar.dart';
+import 'package:gleo/ui/theme.dart';
+import 'package:gleo/ui/tracks.dart';
+import 'package:gleo/ui/widgets.dart';
 import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 
@@ -82,7 +82,7 @@ void main() {
     }
 
     final offKey = GlobalKey();
-    Future<void> offscreen(String name, Size s) async {
+    Future<void> offscreen(String name, Size s, {double text = 1}) async {
       await tester.pumpWidget(
         MaterialApp(
           debugShowCheckedModeBanner: false,
@@ -95,7 +95,7 @@ void main() {
               minHeight: s.height,
               maxHeight: s.height,
               child: MediaQuery(
-                data: MediaQuery.of(c).copyWith(size: s),
+                data: MediaQuery.of(c).copyWith(size: s, textScaler: TextScaler.linear(text)),
                 child: RepaintBoundary(key: offKey, child: const Shell()),
               ),
             ),
@@ -442,6 +442,22 @@ void main() {
     await offscreen('j03_1920x1080_home', const Size(1920, 1080));
     nav.go('albums');
     await offscreen('j04_1920x1080_albums', const Size(1920, 1080));
+    for (final (name, go) in <(String, void Function())>[
+      ('songs', () => nav.go('songs')),
+      ('album', () => nav.push('album', deep.key)),
+      ('home', () => nav.go('home')),
+    ]) {
+      go();
+      await offscreen('j1_text150_$name', const Size(1360, 860), text: 1.5);
+    }
+    for (final (name, go) in <(String, void Function())>[
+      ('songs', () => nav.go('songs')),
+      ('album', () => nav.push('album', deep.key)),
+      ('home', () => nav.go('home')),
+    ]) {
+      go();
+      await offscreen('j1_text150_$name', const Size(1360, 860), text: 1.5);
+    }
     await tester.pumpWidget(const App());
     await settle();
 
