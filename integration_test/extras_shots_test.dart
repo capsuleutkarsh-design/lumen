@@ -319,6 +319,8 @@ void main() {
         go();
         await shot('${theme}_${(i + 1).toString().padLeft(2, '0')}_$name');
       }
+      await tester.ensureVisible(find.text('Credits'));
+      await shot('${theme}_19b_settings_about');
       nav.go('home');
       nav.toggleLyrics();
       await shot('${theme}_20_lyrics');

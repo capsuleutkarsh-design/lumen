@@ -488,7 +488,7 @@ Future<void> onDrop(BuildContext context, List<String> paths, Offset at) async {
     } else if (await confirm(
       context,
       add.length == 1 ? 'Add “${p.basename(add.first)}” to your library?' : 'Add ${add.length} folders to your library?',
-      '${add.join('\n')}\n\nLumen reads these folders and watches them for new music. Nothing is copied or changed.',
+      '${add.join('\n')}\n\nGleo reads these folders and watches them for new music. Nothing is copied or changed.',
       action: 'Add',
     )) {
       lib.folders = [...lib.folders, ...add];
