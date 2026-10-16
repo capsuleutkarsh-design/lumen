@@ -1,9 +1,9 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/library/lyrics.dart';
-import 'package:music_player/library/m3u.dart';
-import 'package:music_player/library/models.dart';
+import 'package:gleo/library/lyrics.dart';
+import 'package:gleo/library/m3u.dart';
+import 'package:gleo/library/models.dart';
 
 void main() {
   test('LRC: stamps, repeated lines, offset; plain text stays unsynced', () {

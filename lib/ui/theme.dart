@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../platform/window.dart' show isTouch;
 
-/// One set of colours. [Palette.dark] is Lumen's look; [Palette.light] is the
+/// One set of colours. [Palette.dark] is Gleo's look; [Palette.light] is the
 /// same design on paper. Text, dim, faint and the accent are at least 4.5:1 on
 /// every surface in both (test/extras_test.dart checks it).
 class Palette {

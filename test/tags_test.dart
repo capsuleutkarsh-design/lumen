@@ -2,8 +2,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart' hide Tags;
-import 'package:music_player/library/models.dart';
-import 'package:music_player/library/tags.dart';
+import 'package:gleo/library/models.dart';
+import 'package:gleo/library/tags.dart';
 
 Tags read(String name) => readTags('test/fixtures/$name');
 

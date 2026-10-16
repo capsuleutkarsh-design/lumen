@@ -25,7 +25,7 @@ Future<void> addMusicFolder() async {
   try {
     dir = Platform.isAndroid ? await pickAndroidFolder() : await getDirectoryPath(confirmButtonText: 'Use this folder');
   } on PlatformException {
-    return notify('Lumen can only read folders on the phone or an SD card. Please choose one there.');
+    return notify('Gleo can only read folders on the phone or an SD card. Please choose one there.');
   }
   if (dir != null && !lib.folders.contains(dir)) lib.folders = [...lib.folders, dir];
 }
@@ -69,7 +69,7 @@ class SettingsPage extends StatelessWidget {
                   _card(
                     'Library folders',
                     Platform.isAndroid
-                        ? 'Lumen reads these folders, and looks again each time you come back to it (or pull down on a list). Your files are never changed.'
+                        ? 'Gleo reads these folders, and looks again each time you come back to it (or pull down on a list). Your files are never changed.'
                         : 'The player reads these folders and watches them for changes. Your files are never changed.',
                     [
                       if (folders.isEmpty) Text('No folders yet.', style: T.small.copyWith(color: C.faint)),
@@ -202,7 +202,7 @@ class SettingsPage extends StatelessWidget {
                     const SizedBox(height: S.x3),
                     Text(
                       'Albums without a cover, or with a small or blurry one, get artwork from the collections that are on: '
-                      'public-domain paintings (Masterpieces), styles Lumen paints itself (Painted), illustrations made for Lumen (Illustrated) and code-drawn shapes (Abstract). '
+                      'public-domain paintings (Masterpieces), styles Gleo paints itself (Painted), illustrations made for Gleo (Illustrated) and code-drawn shapes (Abstract). '
                       '${isTouch ? 'Long-press' : 'Right-click'} an album and choose Change cover to pick another or keep the original. Your music files are never changed.',
                       style: T.small,
                     ),
@@ -254,12 +254,12 @@ class SettingsPage extends StatelessWidget {
                   _card('About', null, [
                     Row(
                       children: [
-                        const AppMark(size: 40),
+                        const Wordmark(height: 40),
                         const SizedBox(width: S.x4),
                         Expanded(
                           child: Text(
-                            'Lumen · © 2026 Utkarsh Tripathi · UT Community Licence 2.0\n\n'
-                            'Version $shortVersion · Lumen audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/lumen-audio-engine). '
+                            'Gleo · © 2026 Utkarsh Tripathi · UT Community Licence 2.0\n\n'
+                            'Version $shortVersion · Gleo audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/lumen-audio-engine). '
                             'Design inspired by Wora (MIT). '
                             'Font: Inter (SIL Open Font License). Icons: Lucide (ISC). No AI. Suggestions come only from what you play here, '
                             'and nothing goes to the internet unless you turn on the update check.',

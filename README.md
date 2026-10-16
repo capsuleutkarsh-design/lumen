@@ -1,10 +1,12 @@
 <div align="center">
 
-![Lumen](docs/images/banner.png)
+![Gleo](docs/images/banner.png)
 
-# Lumen
+# Gleo
 
 **A beautiful, fast music player for your lossless library.**
+
+*Gleo* (say GLAY-oh) is Old English for music and joy. Until 0.4 the app was called Lumen.
 
 Windows now · Android coming · No account, no internet, no AI. Just your music.
 
@@ -12,11 +14,11 @@ Windows now · Android coming · No account, no internet, no AI. Just your music
 
 ---
 
-![Lumen home](docs/images/screens/01_home.png)
+![Gleo home](docs/images/screens/01_home.png)
 
 ## Download
 
-Get **[Lumen for Windows](https://github.com/capsuleutkarsh-design/lumen/releases/latest)** (beta): run `Lumen-Setup-….exe`, or unzip the portable `.zip` and run `lumen.exe`. Then open **Settings → Add folder** and pick your music folder. Lumen only reads your files; it never changes them.
+Get **[Gleo for Windows](https://github.com/capsuleutkarsh-design/lumen/releases/latest)** (beta): run `Gleo-Setup-….exe`, or unzip the portable `.zip` and run `gleo.exe`. Then open **Settings → Add folder** and pick your music folder. Gleo only reads your files; it never changes them.
 
 > **Beta:** please report anything odd in [Issues](https://github.com/capsuleutkarsh-design/lumen/issues). What's new in 0.2.0: [release notes](docs/releases/v0.2.0.md).
 
@@ -32,11 +34,11 @@ Get **[Lumen for Windows](https://github.com/capsuleutkarsh-design/lumen/release
 | ![Light theme](docs/images/screens/50_light_home.png) **Light theme** | ![Light album](docs/images/screens/51_light_now_playing.png) **Light theme:** Now Playing |
 | ![Synced lyrics](docs/images/screens/13_lyrics_synced.png) **Synced lyrics** | ![Search](docs/images/screens/15_search.png) **Ctrl+K search** |
 
-## Why Lumen
+## Why Gleo
 
-Lumen is inspired by [Wora](https://github.com/playwora/wora), a lovely-looking open-source player. It keeps that look and fixes what kept getting in the way:
+Gleo is inspired by [Wora](https://github.com/playwora/wora), a lovely-looking open-source player. It keeps that look and fixes what kept getting in the way:
 
-| In Wora | In Lumen |
+| In Wora | In Gleo |
 |---|---|
 | Seeking in FLAC files doesn't work | Exact, instant seeking in every format, including high-res FLAC with no seek table |
 | Next / Previous feel random | A real play queue: *Play next*, *Add to queue*, drag to reorder; Previous goes back to what you actually heard; shuffle never repeats until everything has played |
@@ -49,7 +51,7 @@ Lumen is inspired by [Wora](https://github.com/playwora/wora), a lovely-looking 
 - **Every common format:** FLAC (any resolution), ALAC, WAV, AIFF, WavPack, APE, DSD, MP3, AAC, OGG and Opus.
 - **The Sound page:** a signal path that shows what happens to your music, with a verified **Bit-perfect** badge; a 10-band graphic and an advanced parametric **EQ** with presets; headphone correction from AutoEQ or Equalizer APO files; EQ per output device; crossfeed; upsampling with soxr; ReplayGain; and *Best quality on this device* (high-quality resampling, dither, headroom and a limiter, so even cheap speakers play cleanly).
 - **Bit-perfect output:** WASAPI exclusive mode and an output device picker, plus a quality badge such as *FLAC 24/96*.
-- **Cover art collections:** albums without a good cover get a public-domain painting (*Masterpieces*), a storybook illustration made for Lumen (*Illustrated*) or a style Lumen paints itself (*Painted*). Right-click → **Change cover** to pick any artwork, with credits. Your files are never changed.
+- **Cover art collections:** albums without a good cover get a public-domain painting (*Masterpieces*), a storybook illustration made for Gleo (*Illustrated*) or a style Gleo paints itself (*Painted*). Right-click → **Change cover** to pick any artwork, with credits. Your files are never changed.
 - **The spinning disc:** a CD (or vinyl) slides out from behind the cover in Now Playing and turns while the music plays. **Disc mode** shows only the cover and the disc; the **mini player** keeps them in a small always-on-top window.
 - **Library:** albums, artists, songs, folders, playlists and favourites; M3U8 import and export. **Browse** by genre, year and composer (works and their movements in order), and find duplicates.
 - **Smart playlists** that update themselves (recently added, most played, never played, Hi-Res, or your own rules), and **Statistics** of your listening.
@@ -61,12 +63,13 @@ Lumen is inspired by [Wora](https://github.com/playwora/wora), a lovely-looking 
 
 ## Your data
 
-Lumen keeps its library list, playlists, favourites, play counts, sound settings and a log (`lumen.log`) in **`%APPDATA%\Utkarsh Tripathi\Lumen\`**. *Settings → Data and updates* has buttons that open the folder and the log. Your music files are only read, never changed.
+Gleo keeps its library list, playlists, favourites, play counts, sound settings and a log (`gleo.log`) in **`%APPDATA%\Utkarsh Tripathi\Gleo\`**. *Settings → Data and updates* has buttons that open the folder and the log. Your music files are only read, never changed.
 
-- **Caches:** cover thumbnails and the cover art Lumen draws are kept in `%LOCALAPPDATA%` (the art is capped at about 300 MB; the least recently used goes first). Deleting them is safe.
-- **Portable copy:** the portable `.zip` has a `portable.txt` next to `lumen.exe`, so it keeps everything in a `userdata` folder beside the program instead. Delete `portable.txt` to use `%APPDATA%` again.
+- **Coming from Lumen** (the app's old name): the first start copies `%APPDATA%\Utkarsh Tripathi\Lumen\` here, so your library, playlists, play counts and settings carry over. The old folder is kept; delete it once you are happy. Gleo installs as a new app, so uninstall Lumen yourself.
+- **Caches:** cover thumbnails and the cover art Gleo draws are kept in `%LOCALAPPDATA%` (the art is capped at about 300 MB; the least recently used goes first). Deleting them is safe.
+- **Portable copy:** the portable `.zip` has a `portable.txt` next to `gleo.exe`, so it keeps everything in a `userdata` folder beside the program instead. Delete `portable.txt` to use `%APPDATA%` again.
 - **Uninstalling** asks whether to delete this data too; the answer is *keep* unless you choose otherwise.
-- **If Lumen cannot start,** it shows why, with *Open data folder* and *Start fresh*. Start fresh renames the old library to `library.db.broken-<date>` and starts empty; nothing is deleted.
+- **If Gleo cannot start,** it shows why, with *Open data folder* and *Start fresh*. Start fresh renames the old library to `library.db.broken-<date>` and starts empty; nothing is deleted.
 
 ## Build from source
 
@@ -85,7 +88,7 @@ How v1 was built and tested: [docs/DONE_v1.md](docs/DONE_v1.md) · The plan: [do
 
 ## Licence
 
-Lumen is free to use and share, made by **Utkarsh Tripathi**. It is not for sale. If you change it, keep the name with *"(modified by …)"*, keep the credits, and send your changes back as a pull request. Read the full [UT Community Licence 2.0](LICENSE.md).
+Gleo is free to use and share, made by **Utkarsh Tripathi**. It is not for sale. If you change it, keep the name with *"(modified by …)"*, keep the credits, and send your changes back as a pull request. Read the full [UT Community Licence 2.0](LICENSE.md).
 
 Third-party parts and their licences are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 

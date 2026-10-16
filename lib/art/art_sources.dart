@@ -1,4 +1,4 @@
-// Where Lumen's cover art comes from: styles drawn by code (lib/art/) or bundled image
+// Where Gleo's cover art comes from: styles drawn by code (lib/art/) or bundled image
 // packs (assets/covers/<pack>/*.jpg + credits.json). The automatic art of an album is
 // picked by a hash of its key: first one of the sources that are on (each equally often),
 // then one of that source's items.
@@ -75,7 +75,7 @@ Set<String> sourcesOn(String? saved) {
   return {for (final s in artSources.where((s) => s.painterly)) s.id};
 }
 
-/// The sources Lumen picks from: those that are on and have something in them; with none
+/// The sources Gleo picks from: those that are on and have something in them; with none
 /// (e.g. no painterly pack installed yet), the abstract styles.
 List<ArtSource> sourcesInUse(Set<String> on) {
   final pool = [
@@ -96,7 +96,7 @@ String artKeyOf(String albumKey) {
   return albumKey.startsWith('mb\u0000') || albumKey.indexOf('\u0000') == cut ? albumKey : albumKey.substring(0, cut);
 }
 
-/// The art Lumen picks for an album: a hash of its art key picks one of [sourcesInUse]
+/// The art Gleo picks for an album: a hash of its art key picks one of [sourcesInUse]
 /// (each source equally often, however many items it has), then one of its items.
 Art autoArt(String albumKey, Set<String> on) {
   final key = artKeyOf(albumKey), pool = sourcesInUse(on);
@@ -117,7 +117,7 @@ Art freeArt(Art art, Set<String> taken) {
   return art; // every image of the pack is in use: now it repeats
 }
 
-/// Whether [key] still names something Lumen can draw (a pack may have been removed).
+/// Whether [key] still names something Gleo can draw (a pack may have been removed).
 bool knownArt(String key) {
   if (key.startsWith('pack:')) {
     final slash = key.indexOf('/');

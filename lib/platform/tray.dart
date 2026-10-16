@@ -16,19 +16,19 @@ bool closeToTray(Library lib) => lib.setting('closeToTray') == '1';
 bool _quitting = false;
 late Engine _engine;
 
-/// The tray icon: click shows Lumen; right-click has Play/Pause, Next, Previous, Show and Quit.
+/// The tray icon: click shows Gleo; right-click has Play/Pause, Next, Previous, Show and Quit.
 /// Its tooltip is the song playing.
 Future<void> setupTray(Library lib, Engine engine) async {
   if (!isDesktop) return;
   _engine = engine;
   hideOnClose = () => !_quitting && closeToTray(lib);
-  await trayManager.setIcon('assets/brand/lumen.ico');
+  await trayManager.setIcon('assets/brand/gleo.ico');
   trayManager.addListener(_Tray());
   String? tip;
   bool? playing;
   Future<void> update() async {
     final t = engine.current;
-    final next = t == null ? 'Lumen' : '${t.title} · ${t.artist}';
+    final next = t == null ? 'Gleo' : '${t.title} · ${t.artist}';
     // Windows cuts tray tooltips at 127 characters.
     if (next != tip) await trayManager.setToolTip((tip = next).length > 127 ? '${next.substring(0, 126)}…' : next);
     if (engine.playing != playing) {
@@ -50,7 +50,7 @@ Future<void> trayMenu() => trayManager.setContextMenu(
       MenuItem(key: 'previous', label: 'Previous'),
       MenuItem.separator(),
       for (final (i, (label, _)) in trayItems.indexed) MenuItem(key: 'extra$i', label: label),
-      MenuItem(key: 'show', label: 'Show Lumen'),
+      MenuItem(key: 'show', label: 'Show Gleo'),
       MenuItem(key: 'quit', label: 'Quit'),
     ],
   ),

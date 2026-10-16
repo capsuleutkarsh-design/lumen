@@ -86,7 +86,7 @@ class Engine extends ChangeNotifier {
   Stream<String> get messages => _messages.stream;
   final _messages = StreamController<String>.broadcast();
   void _say(String m) {
-    debugPrint('engine: $m'); // in lumen.log too, for bug reports
+    debugPrint('engine: $m'); // in gleo.log too, for bug reports
     if (!_messages.isClosed) _messages.add(m);
   }
 
@@ -129,7 +129,7 @@ class Engine extends ChangeNotifier {
 
   Future<void> init() async {
     player = Player(
-      configuration: PlayerConfiguration(title: 'Lumen', logLevel: logLevel),
+      configuration: PlayerConfiguration(title: 'Gleo', logLevel: logLevel),
     );
     await _mpv.setProperty('gapless-audio', 'weak'); // gapless whenever formats match; never resample to force it
     await _mpv.setProperty('prefetch-playlist', 'yes');
@@ -413,10 +413,10 @@ class Engine extends ChangeNotifier {
   /// An mpv `af` chain in lavfi syntax, e.g. "equalizer=f=100:t=q:w=1:g=3".
   /// Empty = no filters: the clean bit-perfect path. The caller persists it.
   /// A chain mpv can't build is dropped (filters off) with a message.
-  /// Labelled `@lumen`, so `af-command lumen ...` can change a running filter without rebuilding the chain.
+  /// Labelled `@gleo`, so `af-command gleo ...` can change a running filter without rebuilding the chain.
   Future<void> setAudioFilters(String lavfiChain) {
     final chain = lavfiChain.trim();
-    return setOption('af', chain.isEmpty ? '' : '@lumen:lavfi=[$chain]');
+    return setOption('af', chain.isEmpty ? '' : '@gleo:lavfi=[$chain]');
   }
 
   /// Any mpv option or property (e.g. "replaygain"). The caller persists it.

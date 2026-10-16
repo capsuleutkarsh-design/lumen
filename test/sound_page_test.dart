@@ -4,13 +4,13 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/audio/engine.dart';
-import 'package:music_player/audio/sound.dart';
-import 'package:music_player/library/library.dart';
-import 'package:music_player/ui/app.dart';
-import 'package:music_player/ui/pages/sound.dart';
-import 'package:music_player/ui/theme.dart';
-import 'package:music_player/ui/widgets.dart';
+import 'package:gleo/audio/engine.dart';
+import 'package:gleo/audio/sound.dart';
+import 'package:gleo/library/library.dart';
+import 'package:gleo/ui/app.dart';
+import 'package:gleo/ui/pages/sound.dart';
+import 'package:gleo/ui/theme.dart';
+import 'package:gleo/ui/widgets.dart';
 
 /// Records the mpv calls instead of making them.
 class RecordingEngine extends Engine {
@@ -49,7 +49,7 @@ Future<void> flush(WidgetTester tester) => tester.pump(const Duration(millisecon
 
 void main() {
   setUp(() {
-    tmp = Directory.systemTemp.createTempSync('lumen_sound_ui');
+    tmp = Directory.systemTemp.createTempSync('gleo_sound_ui');
     lib = Library(tmp.path)..load();
   });
   tearDown(() {
@@ -76,7 +76,7 @@ void main() {
     await flush(tester);
     expect(sound.s.eq.name, 'Rock');
     expect(sound.s.eq.on, isTrue);
-    expect(e.af, startsWith('@lumen:lavfi=[aformat=sample_fmts=fltp,volume@pre='));
+    expect(e.af, startsWith('@gleo:lavfi=[aformat=sample_fmts=fltp,volume@pre='));
     expect(e.af, contains('equalizer@b0=f=31:t=q:w=1.41:g=4'));
     expect(find.text('Preset: Rock'), findsOneWidget);
     expect(lib.setting('sound'), contains('"name":"Rock"'), reason: 'saved');
@@ -92,8 +92,8 @@ void main() {
     expect(sound.s.eq.graphic[5], greaterThan(0));
     expect(sound.s.eq.name, 'Custom');
     expect(e.sent.where((x) => x.startsWith('af=')).length, chains, reason: 'no rebuild');
-    expect(e.sent.where((x) => x.startsWith('af-command lumen g ')).last, endsWith('equalizer@b5'));
-    expect(e.sent.where((x) => x.startsWith('af-command lumen volume ')), isNotEmpty, reason: 'headroom follows');
+    expect(e.sent.where((x) => x.startsWith('af-command gleo g ')).last, endsWith('equalizer@b5'));
+    expect(e.sent.where((x) => x.startsWith('af-command gleo volume ')), isNotEmpty, reason: 'headroom follows');
   });
 
   testWidgets('AutoEQ import: paste, preview, use; saved as a preset', (tester) async {

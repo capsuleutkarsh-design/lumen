@@ -289,7 +289,7 @@ class _AppState extends State<App> with WidgetsBindingObserver {
 
   @override
   Widget build(BuildContext context) => MaterialApp(
-    title: 'Lumen',
+    title: 'Gleo',
     debugShowCheckedModeBanner: false,
     theme: buildTheme(),
     scaffoldMessengerKey: messengerKey,
@@ -547,7 +547,7 @@ class TitleBar extends StatefulWidget {
 class _TitleBarState extends State<TitleBar> with WindowListener {
   /// The native side reports hover over the maximise button, which it owns
   /// so Windows 11 can show Snap Layouts there.
-  static const _channel = MethodChannel('lumen/titlebar');
+  static const _channel = MethodChannel('gleo/titlebar');
   bool _max = false, _maxHover = false;
 
   @override
@@ -589,13 +589,7 @@ class _TitleBarState extends State<TitleBar> with WindowListener {
               padding: const EdgeInsets.only(left: S.x5),
               child: Row(
                 children: [
-                  const AppMark(size: 18),
-                  const SizedBox(width: S.x2),
-                  Text(
-                    'Lumen',
-                    textScaler: TextScaler.noScaling,
-                    style: T.caption.copyWith(color: C.dim, fontWeight: FontWeight.w500),
-                  ),
+                  const Wordmark(height: 20),
                   const Spacer(),
                   const ScanPill(),
                   const SizedBox(width: S.x3),
@@ -657,13 +651,26 @@ class _WinButtonState extends State<_WinButton> {
   }
 }
 
-/// The Lumen logo (assets/brand/lumen.svg, rendered by tool/brand/build_brand.py).
+/// The Gleo app icon, a gold g on midnight (assets/brand/gleo.svg, rendered by tool/brand/build_brand.py).
 class AppMark extends StatelessWidget {
   const AppMark({super.key, this.size = 32});
   final double size;
   @override
   Widget build(BuildContext context) =>
-      Image.asset('assets/brand/lumen_256.png', width: size, height: size, filterQuality: FilterQuality.medium, semanticLabel: 'Lumen');
+      Image.asset('assets/brand/gleo_256.png', width: size, height: size, filterQuality: FilterQuality.medium, semanticLabel: 'Gleo');
+}
+
+/// The gleo wordmark, for where there is room: gold, or a deeper gold on the light theme.
+class Wordmark extends StatelessWidget {
+  const Wordmark({super.key, this.height = 24});
+  final double height;
+  @override
+  Widget build(BuildContext context) => Image.asset(
+    C.isLight ? 'assets/brand/gleo_wordmark_light.png' : 'assets/brand/gleo_wordmark.png',
+    height: height,
+    filterQuality: FilterQuality.medium,
+    semanticLabel: 'Gleo',
+  );
 }
 
 /// "Scanning 12 / 30" while the library scan runs.

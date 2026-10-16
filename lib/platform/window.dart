@@ -53,7 +53,7 @@ Future<void> setupWindow(Library lib, Future<void> Function() onClose, {Color ba
       center: bounds == null,
       backgroundColor: background,
       titleBarStyle: TitleBarStyle.hidden,
-      title: 'Lumen',
+      title: 'Gleo',
     ),
     () async {
       final (b, max) = (bounds, saved != null && saved.length > 4 && saved[4] == 1);

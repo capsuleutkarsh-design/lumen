@@ -1,5 +1,5 @@
 # Every push: flutter analyze + flutter test on Windows.
-# A tag like v0.2.0-beta: also builds lumen.exe, the installer and the portable zip
+# A tag like v0.2.0-beta: also builds gleo.exe, the installer and the portable zip
 # (installer\build_installer.ps1) and drafts a pre-release with them and SHA256SUMS.txt.
 # The draft is not published until the owner checks it and presses Publish on GitHub.
 name: CI
@@ -62,6 +62,6 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
-          $notes = "Lumen $env:GITHUB_REF_NAME (draft made by CI).`n`nSHA-256:`n``````n$(Get-Content build\installer\SHA256SUMS.txt -Raw)``````"
-          gh release create $env:GITHUB_REF_NAME --draft --prerelease --title "Lumen $env:GITHUB_REF_NAME" --notes $notes `
-            (Get-ChildItem build\installer\Lumen-Setup-*.exe).FullName (Get-ChildItem build\installer\Lumen-*-portable.zip).FullName build\installer\SHA256SUMS.txt
+          $notes = "Gleo $env:GITHUB_REF_NAME (draft made by CI).`n`nSHA-256:`n``````n$(Get-Content build\installer\SHA256SUMS.txt -Raw)``````"
+          gh release create $env:GITHUB_REF_NAME --draft --prerelease --title "Gleo $env:GITHUB_REF_NAME" --notes $notes `
+            (Get-ChildItem build\installer\Gleo-Setup-*.exe).FullName (Get-ChildItem build\installer\Gleo-*-portable.zip).FullName build\installer\SHA256SUMS.txt

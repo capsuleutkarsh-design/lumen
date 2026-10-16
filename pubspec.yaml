@@ -1,4 +1,4 @@
-name: music_player
+name: gleo
 description: "A beautiful lossless music player"
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
@@ -52,8 +52,10 @@ dev_dependencies:
 flutter:
   uses-material-design: true
   assets:
-    - assets/brand/lumen_256.png
-    - assets/brand/lumen.ico
+    - assets/brand/gleo_256.png
+    - assets/brand/gleo_wordmark.png
+    - assets/brand/gleo_wordmark_light.png
+    - assets/brand/gleo.ico
     - LICENSE.md
     - THIRD_PARTY_NOTICES.md
     - assets/fonts/Inter-OFL.txt

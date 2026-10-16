@@ -1,11 +1,11 @@
-// Lumen on Android, end to end on an emulator: scan a real folder, play, next / previous, the queue, the sleep timer,
+// Gleo on Android, end to end on an emulator: scan a real folder, play, next / previous, the queue, the sleep timer,
 // the output Android reports, and screenshots of every phone screen in dark and light.
 // Run (the music permission is granted first, as the app's own button would after "Allow"):
-//   adb push <testlib> /sdcard/Music/LumenTest/testlib
-//   adb shell pm grant com.capsuleutkarsh.lumen android.permission.READ_EXTERNAL_STORAGE   (READ_MEDIA_AUDIO on 13+)
-//   flutter test integration_test/android_test.dart -d emulator-5554 --dart-define=MP_DATA=/data/user/0/com.capsuleutkarsh.lumen/files/itest
+//   adb push <testlib> /sdcard/Music/GleoTest/testlib
+//   adb shell pm grant com.capsuleutkarsh.gleo android.permission.READ_EXTERNAL_STORAGE   (READ_MEDIA_AUDIO on 13+)
+//   flutter test integration_test/android_test.dart -d emulator-5554 --dart-define=MP_DATA=/data/user/0/com.capsuleutkarsh.gleo/files/itest
 // Screenshots and the report go to the app's external files folder:
-//   adb pull /sdcard/Android/data/com.capsuleutkarsh.lumen/files/shots
+//   adb pull /sdcard/Android/data/com.capsuleutkarsh.gleo/files/shots
 import 'dart:async';
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -16,15 +16,15 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:media_kit/media_kit.dart' hide Track;
-import 'package:music_player/audio/engine.dart' show StopAfter;
-import 'package:music_player/audio/sound.dart';
-import 'package:music_player/main.dart';
-import 'package:music_player/platform/android.dart';
-import 'package:music_player/ui/app.dart';
-import 'package:music_player/ui/lyrics_view.dart';
+import 'package:gleo/audio/engine.dart' show StopAfter;
+import 'package:gleo/audio/sound.dart';
+import 'package:gleo/main.dart';
+import 'package:gleo/platform/android.dart';
+import 'package:gleo/ui/app.dart';
+import 'package:gleo/ui/lyrics_view.dart';
 import 'package:path_provider/path_provider.dart';
 
-const music = '$androidMusic/LumenTest';
+const music = '$androidMusic/GleoTest';
 
 Future<void> waitFor(bool Function() ok, {Duration timeout = const Duration(seconds: 30), String what = ''}) async {
   final sw = Stopwatch()..start();
@@ -115,7 +115,7 @@ void main() {
     expect(engine.queue.items.length, 9);
     say('Next, previous and Add to queue: ok');
 
-    // The Sound page on Lumen's own Android libmpv: every filter and soxr run, the song keeps playing,
+    // The Sound page on Gleo's own Android libmpv: every filter and soxr run, the song keeps playing,
     // and mpv logs no error ("osc" is media_kit asking for the Lua OSC, which the engine leaves out).
     final mpvErrors = <String>[];
     engine.player.stream.log.listen((l) {

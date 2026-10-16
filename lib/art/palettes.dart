@@ -4,7 +4,7 @@ import 'dart:ui';
 /// background (light on dark palettes, dark on bright ones). Edit freely: the
 /// covers only read these lists.
 const darkPalettes = <List<int>>[
-  [0xFF14100F, 0xFF3A1A14, 0xFFB23A1E, 0xFFFF6B4A, 0xFFFFC9A8], // ember (Lumen coral)
+  [0xFF14100F, 0xFF3A1A14, 0xFFB23A1E, 0xFFFF6B4A, 0xFFFFC9A8], // ember
   [0xFF0B1416, 0xFF10333A, 0xFF1F6F78, 0xFF6FC2B0, 0xFFE8D8B0], // midnight teal
   [0xFF140D17, 0xFF3B1C3F, 0xFF7A2E5C, 0xFFD45D79, 0xFFF7C59F], // plum dusk
   [0xFF060B1A, 0xFF0D2346, 0xFF1D4E89, 0xFF3FA7D6, 0xFFC7EFFF], // deep sea

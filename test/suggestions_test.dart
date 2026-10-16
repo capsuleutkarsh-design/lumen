@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/library/models.dart';
-import 'package:music_player/library/suggestions.dart';
+import 'package:gleo/library/models.dart';
+import 'package:gleo/library/suggestions.dart';
 
 void main() {
   final now = DateTime(2026, 10, 13, 12);

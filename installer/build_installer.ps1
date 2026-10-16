@@ -1,5 +1,5 @@
-# Builds Lumen with the version from pubspec.yaml, then in build\installer:
-#   Lumen-Setup-<version>.exe, Lumen-<version>-portable.zip and SHA256SUMS.txt
+# Builds Gleo with the version from pubspec.yaml, then in build\installer:
+#   Gleo-Setup-<version>.exe, Gleo-<version>-portable.zip and SHA256SUMS.txt
 # Needs Flutter on PATH and Inno Setup 6.
 $ErrorActionPreference = "Stop"
 Set-Location (Join-Path $PSScriptRoot "..")
@@ -9,7 +9,7 @@ $full = (Select-String -Path pubspec.yaml -Pattern '^version:\s*(\S+)').Matches[
 $version = $full.Split('+')[0]
 $build = if ($full.Contains('+')) { $full.Split('+')[1] } else { '0' }
 $fileVersion = "$($version.Split('-')[0]).$build"
-Write-Host "Lumen $version (file version $fileVersion)"
+Write-Host "Gleo $version (file version $fileVersion)"
 
 flutter build windows --release
 if ($LASTEXITCODE) { throw "flutter build failed" }
@@ -26,27 +26,27 @@ $txt = $md -replace '<[^>]+>', '' -replace '\[([^\]]*)\]\(mailto:[^)]*\)', '$1' 
 $iscc = @("${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe", "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
           "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe") | Where-Object { Test-Path $_ } | Select-Object -First 1
 if (-not $iscc) { throw "Inno Setup 6 not found" }
-& $iscc /Q "/DAppVersion=$version" "/DFileVersion=$fileVersion" installer\lumen.iss
+& $iscc /Q "/DAppVersion=$version" "/DFileVersion=$fileVersion" installer\gleo.iss
 if ($LASTEXITCODE) { throw "ISCC failed" }
 
 # The portable zip: only what the app needs (never a stale exe from an older build), plus portable.txt.
-$stage = "build\portable\Lumen"
+$stage = "build\portable\Gleo"
 if (Test-Path build\portable) { Remove-Item -Recurse -Force build\portable }   # a plain folder made here, no junctions
 New-Item -ItemType Directory -Force $stage | Out-Null
-Copy-Item "$release\lumen.exe", "$release\*.dll", "$release\*.txt", LICENSE.md, THIRD_PARTY_NOTICES.md, assets\fonts\Inter-OFL.txt $stage
+Copy-Item "$release\gleo.exe", "$release\*.dll", "$release\*.txt", LICENSE.md, THIRD_PARTY_NOTICES.md, assets\fonts\Inter-OFL.txt $stage
 Copy-Item -Recurse "$release\data" $stage
 Set-Content -Encoding ascii "$stage\portable.txt" @(
-  'Portable mode: Lumen keeps its library, playlists, play counts and log in the "userdata"',
-  'folder next to lumen.exe, not in %APPDATA%\Utkarsh Tripathi\Lumen.',
+  'Portable mode: Gleo keeps its library, playlists, play counts and log in the "userdata"',
+  'folder next to gleo.exe, not in %APPDATA%\Utkarsh Tripathi\Gleo.',
   'Delete this file to use %APPDATA% instead.')
-$zip = "$out\Lumen-$version-portable.zip"
+$zip = "$out\Gleo-$version-portable.zip"
 if (Test-Path $zip) { Remove-Item $zip }
 # Windows' own bsdtar writes zip entries with forward slashes (Compress-Archive in PowerShell 5.1
 # writes backslashes, which unzip on Linux and some tools turn into odd file names).
-& "$env:SystemRoot\System32\tar.exe" -a -cf $zip -C build\portable Lumen
+& "$env:SystemRoot\System32\tar.exe" -a -cf $zip -C build\portable Gleo
 if ($LASTEXITCODE) { throw "zip failed" }
 
-$files = @("$out\Lumen-Setup-$version.exe", $zip)
+$files = @("$out\Gleo-Setup-$version.exe", $zip)
 $sums = foreach ($f in $files) { "$((Get-FileHash -Algorithm SHA256 $f).Hash.ToLower())  $(Split-Path $f -Leaf)" }
 Set-Content -Encoding ascii "$out\SHA256SUMS.txt" $sums
 $sums

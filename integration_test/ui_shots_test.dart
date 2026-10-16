@@ -15,11 +15,11 @@ import 'package:flutter/services.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:music_player/library/models.dart';
-import 'package:music_player/main.dart';
-import 'package:music_player/ui/app.dart';
-import 'package:music_player/ui/theme.dart';
-import 'package:music_player/ui/tracks.dart';
+import 'package:gleo/library/models.dart';
+import 'package:gleo/main.dart';
+import 'package:gleo/ui/app.dart';
+import 'package:gleo/ui/theme.dart';
+import 'package:gleo/ui/tracks.dart';
 import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 

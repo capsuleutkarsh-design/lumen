@@ -2,7 +2,7 @@
 // Usage: dart run tool/dump_tags.dart <folder> [...]
 import 'dart:io';
 
-import 'package:music_player/library/tags.dart';
+import 'package:gleo/library/tags.dart';
 import 'package:path/path.dart' as p;
 
 void main(List<String> dirs) {

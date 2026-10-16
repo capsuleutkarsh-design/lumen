@@ -1,7 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/audio/queue.dart';
+import 'package:gleo/audio/queue.dart';
 
 List<int> ids(Iterable<Entry> es) => [for (final e in es) e.trackId];
 

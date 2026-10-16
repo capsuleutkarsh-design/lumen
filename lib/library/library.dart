@@ -176,11 +176,11 @@ class Library extends ChangeNotifier {
   /// Cover thumbnails the scanner found small, blocky or blurry.
   Set<String> lowCovers = {};
 
-  /// Art key ([artKeyOf] the album key) -> the user's pick: 'original', or the key of an artwork Lumen draws ([Art.key]).
+  /// Art key ([artKeyOf] the album key) -> the user's pick: 'original', or the key of an artwork Gleo draws ([Art.key]).
   Map<String, String> coverChoices = {};
 
   /// What an album shows: its own cover, unless it has none or a low-quality one, or the user
-  /// picked other art (Change cover). Otherwise Lumen's art, picked by the album key from the
+  /// picked other art (Change cover). Otherwise Gleo's art, picked by the album key from the
   /// art sources that are on (art_sources.dart).
   Art artFor(String albumKey, String? cover) {
     final choice = coverChoices[artKeyOf(albumKey)];
@@ -189,7 +189,7 @@ class Library extends ChangeNotifier {
     return autoArtFor(albumKey);
   }
 
-  /// Lumen's own pick for an album (see [artFor]).
+  /// Gleo's own pick for an album (see [artFor]).
   Art autoArtFor(String albumKey) => _autoArt[artKeyOf(albumKey)] ?? autoArt(albumKey, artSourcesOn);
 
   /// The automatic art of every album that shows it, picked once per load or change: albums in
@@ -209,7 +209,7 @@ class Library extends ChangeNotifier {
   }();
   Map<String, Art>? _auto;
 
-  /// Settings → Disc & covers: the art sources Lumen picks from (painterly ones by default).
+  /// Settings → Disc & covers: the art sources Gleo picks from (painterly ones by default).
   Set<String> get artSourcesOn => _sourcesOn ??= sourcesOn(setting('artSources'));
   Set<String>? _sourcesOn;
   set artSourcesOn(Set<String> ids) {
@@ -328,6 +328,14 @@ class Library extends ChangeNotifier {
     notifyListeners();
   }
 
+  /// Points the cover paths stored under [old] at the same files in [coverDir].
+  void repointCovers(String old) => db.execute('UPDATE tracks SET cover = ? || substr(cover, ?) WHERE substr(cover, 1, ?) = ?', [
+    coverDir,
+    old.length + 1,
+    old.length,
+    old,
+  ]);
+
   /// Moves a cover cache from the old place (next to the database, 0.1.x) to [coverDir].
   void _moveCovers(String old) {
     if (p.equals(old, coverDir) || !Directory(old).existsSync()) return;
@@ -349,12 +357,7 @@ class Library extends ChangeNotifier {
         // left behind: the next scan makes the thumbnail again
       }
     }
-    db.execute('UPDATE tracks SET cover = ? || substr(cover, ?) WHERE substr(cover, 1, ?) = ?', [
-      coverDir,
-      old.length + 1,
-      old.length,
-      old,
-    ]);
+    repointCovers(old);
     try {
       Directory(old).deleteSync(recursive: true);
     } on FileSystemException {

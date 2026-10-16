@@ -12,15 +12,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:music_player/art/art_sources.dart';
-import 'package:music_player/art/generative_cover.dart';
-import 'package:music_player/main.dart';
-import 'package:music_player/ui/app.dart';
-import 'package:music_player/ui/cover_picker.dart';
-import 'package:music_player/ui/disc.dart';
-import 'package:music_player/ui/widgets.dart';
-import 'package:music_player/ui/mini_player.dart';
-import 'package:music_player/ui/now_playing.dart';
+import 'package:gleo/art/art_sources.dart';
+import 'package:gleo/art/generative_cover.dart';
+import 'package:gleo/main.dart';
+import 'package:gleo/ui/app.dart';
+import 'package:gleo/ui/cover_picker.dart';
+import 'package:gleo/ui/disc.dart';
+import 'package:gleo/ui/widgets.dart';
+import 'package:gleo/ui/mini_player.dart';
+import 'package:gleo/ui/now_playing.dart';
 import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 
@@ -158,7 +158,7 @@ void main() {
       }
     }
 
-    // A real album (files that play) with generated art: drawn by Lumen, or picked with Change cover.
+    // A real album (files that play) with generated art: drawn by Gleo, or picked with Change cover.
     final real = lib.albums.where((a) => a != withArt && File(a.first.path).existsSync()).toList();
     final gen = real.firstWhere((a) => lib.artFor(a.key, a.cover).generated, orElse: () => real.first);
     if (!lib.artFor(gen.key, gen.cover).generated) lib.setCoverChoice(gen.key, '${GenerativeCover.seedFor('${gen.key}#3')}');

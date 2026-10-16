@@ -312,7 +312,7 @@ class DeviceInfo {
   final double volume;
   final int outRate, outChannels;
 
-  /// Android: its mixer always sits between Lumen and the device; Bluetooth adds a lossy codec.
+  /// Android: its mixer always sits between Gleo and the device; Bluetooth adds a lossy codec.
   final bool android, bluetooth;
 
   /// Android: the rate the output runs at (0 = unknown).
@@ -339,7 +339,7 @@ String _n(double v) => (v.toStringAsFixed(3).replaceFirst(RegExp(r'\.?0+$'), '')
 /// One filter in FFmpeg's syntax; each has a fixed instance name so live changes can be sent as commands.
 String _filter(Band b, int i, double fs) {
   final f = 'f=${_n(b.freq)}:t=q:w=${_n(b.q)}';
-  // Lumen's engine has no bandreject: the notch is FFmpeg's generic biquad with the same RBJ coefficients.
+  // Gleo's engine has no bandreject: the notch is FFmpeg's generic biquad with the same RBJ coefficients.
   // ponytail: coefficients are for the song's rate; a gapless change of rate runs the old ones until apply() (milliseconds).
   final k = biquad(b, fs);
   return switch (b.type) {
@@ -364,7 +364,7 @@ int upsampleRate(Upsample u, int src) {
   return to > src ? to : 0;
 }
 
-/// The rate Lumen sends on Android (0 = the song's own): Best quality converts to the output's own rate
+/// The rate Gleo sends on Android (0 = the song's own): Best quality converts to the output's own rate
 /// with soxr; otherwise the song's rate up to 96 kHz (higher rates go to 88.2 / 96 kHz, the same family).
 int androidRate(SoundSettings s, DeviceInfo d, int src) {
   if (s.bestQuality && d.nativeRate > 0) return d.nativeRate == src ? 0 : d.nativeRate;
@@ -392,7 +392,7 @@ double? rgGainDb(SoundSettings s, SourceInfo src) {
   return g;
 }
 
-/// Everything Lumen asks of mpv for these settings: a lavfi chain for `af` (empty = no
+/// Everything Gleo asks of mpv for these settings: a lavfi chain for `af` (empty = no
 /// filters, the clean path) and mpv options. The one place the chain is built.
 ({String chain, Map<String, String> options}) buildAudioChain(SoundSettings s, DeviceInfo d, SourceInfo src) {
   final fs = (src.rate > 0 ? src.rate : 48000).toDouble();
@@ -610,9 +610,9 @@ final _preampLine = RegExp(r'^\s*Preamp\s*:\s*([-+]?[\d.]+)\s*dB', caseSensitive
   return (eq, skipped);
 }
 
-/// Presets as a JSON file: {"lumen": "eq-presets", "presets": [...]}.
+/// Presets as a JSON file: {"gleo": "eq-presets", "presets": [...]}.
 String exportPresets(List<Eq> presets) =>
-    const JsonEncoder.withIndent('  ').convert({'lumen': 'eq-presets', 'version': 1, 'presets': [for (final p in presets) p.toJson()]});
+    const JsonEncoder.withIndent('  ').convert({'gleo': 'eq-presets', 'version': 1, 'presets': [for (final p in presets) p.toJson()]});
 
 /// Reads [exportPresets]' file, or a single preset object.
 List<Eq> importPresets(String json) {

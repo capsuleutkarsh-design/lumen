@@ -298,8 +298,8 @@ class NoMusic extends StatelessWidget {
         icon: LucideIcons.folderOpen,
         title: none ? 'Add your music folder' : 'No songs found',
         body: none
-            ? 'Choose the folder where your music lives${isTouch ? '' : ', or drop it on this window'}. Nothing is copied or changed; Lumen only reads it.'
-            : 'Lumen found no audio files in your folders. Check them in Settings.',
+            ? 'Choose the folder where your music lives${isTouch ? '' : ', or drop it on this window'}. Nothing is copied or changed; Gleo only reads it.'
+            : 'Gleo found no audio files in your folders. Check them in Settings.',
         action: none
             ? const PillButton('Choose folder', primary: true, icon: LucideIcons.folderPlus, onTap: addMusicFolder)
             : PillButton('Open Settings', icon: LucideIcons.settings, onTap: () => nav.go('settings')),

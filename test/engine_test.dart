@@ -6,7 +6,7 @@ library;
 import 'dart:async';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/audio/engine.dart';
+import 'package:gleo/audio/engine.dart';
 import 'package:path/path.dart' as p;
 
 import 'mpv_harness.dart';

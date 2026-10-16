@@ -31,7 +31,7 @@ class MediaControls {
   }
 
   final Engine engine;
-  static const channel = MethodChannel('music_player/media_controls');
+  static const channel = MethodChannel('gleo/media_controls');
   (int?, bool, int, int, Art?)? _last;
   int _sent = -1;
 

@@ -4,14 +4,14 @@ import 'dart:ui';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/audio/engine.dart';
-import 'package:music_player/library/lyrics.dart';
-import 'package:music_player/library/m3u.dart';
-import 'package:music_player/main.dart';
-import 'package:music_player/platform/log.dart';
-import 'package:music_player/platform/update.dart';
-import 'package:music_player/platform/window.dart';
-import 'package:music_player/ui/pages/credits.dart';
+import 'package:gleo/audio/engine.dart';
+import 'package:gleo/library/lyrics.dart';
+import 'package:gleo/library/m3u.dart';
+import 'package:gleo/main.dart';
+import 'package:gleo/platform/log.dart';
+import 'package:gleo/platform/update.dart';
+import 'package:gleo/platform/window.dart';
+import 'package:gleo/ui/pages/credits.dart';
 import 'package:path/path.dart' as p;
 
 void main() {
@@ -47,7 +47,7 @@ void main() {
   });
 
   test('log rotates past 1 MB', () {
-    final dir = Directory.systemTemp.createTempSync('lumen_log');
+    final dir = Directory.systemTemp.createTempSync('gleo_log');
     final (print, onError) = (debugPrint, FlutterError.onError);
     addTearDown(() {
       dir.deleteSync(recursive: true);
@@ -55,18 +55,18 @@ void main() {
       FlutterError.onError = onError;
       PlatformDispatcher.instance.onError = null;
     });
-    File(p.join(dir.path, 'lumen.log')).writeAsStringSync('x' * ((1 << 20) + 1));
+    File(p.join(dir.path, 'gleo.log')).writeAsStringSync('x' * ((1 << 20) + 1));
     startLog(dir.path);
     log('after rotation');
-    expect(File(p.join(dir.path, 'lumen.log.1')).lengthSync(), greaterThan(1 << 20));
-    expect(File(p.join(dir.path, 'lumen.log')).readAsStringSync(), contains('after rotation'));
+    expect(File(p.join(dir.path, 'gleo.log.1')).lengthSync(), greaterThan(1 << 20));
+    expect(File(p.join(dir.path, 'gleo.log')).readAsStringSync(), contains('after rotation'));
   });
 
   test('untrusted LRC and M3U do not throw', () {
     expect(parseLyrics('[99999999999999999999:00.00]boom\n[00:01.00]ok').lines.single.$2, 'ok');
     expect(parseLyrics('[offset:+99999999999999999999]\n[00:01.00]x').lines.single.$1, const Duration(seconds: 1));
     expect(parseM3u('file:///C:/Music/Beyonc%C3%A9/a%20b.flac', r'C:\pl'), [r'C:\Music\Beyoncé\a b.flac']);
-    final dir = Directory.systemTemp.createTempSync('lumen_m3u');
+    final dir = Directory.systemTemp.createTempSync('gleo_m3u');
     addTearDown(() => dir.deleteSync(recursive: true));
     final f = File(p.join(dir.path, 'latin1.m3u'))..writeAsBytesSync(latin1.encode('C:\\Music\\Beyonc\u00e9\\a.flac\r\n'));
     expect(parseM3u(readText(f.path), dir.path), [r'C:\Music\Beyoncé\a.flac']);
@@ -75,12 +75,12 @@ void main() {
   testWidgets('start-up failure: a visible screen, and Start fresh keeps the old library renamed', (tester) async {
     var pressed = false;
     await tester.pumpWidget(StartupScreen.failed('file is not a database\nCausing statement: ...', r'C:\data', () async => pressed = true));
-    expect(find.text('Lumen could not start'), findsOneWidget);
+    expect(find.text('Gleo could not start'), findsOneWidget);
     expect(find.textContaining('Causing statement'), findsNothing, reason: 'only the first line; the rest is in the log');
     await tester.tap(find.text('Start fresh'));
     expect(pressed, isTrue);
 
-    final dir = Directory.systemTemp.createTempSync('lumen_fresh');
+    final dir = Directory.systemTemp.createTempSync('gleo_fresh');
     addTearDown(() => dir.deleteSync(recursive: true));
     for (final n in ['library.db', 'library.db-wal', 'library.db-shm']) {
       File(p.join(dir.path, n)).writeAsStringSync('broken $n');
@@ -88,5 +88,31 @@ void main() {
     final stamp = setAsideLibrary(dir.path);
     final names = [for (final f in dir.listSync()) p.basename(f.path)]..sort();
     expect(names, ['library.db-shm.broken-$stamp', 'library.db-wal.broken-$stamp', 'library.db.broken-$stamp']);
+  });
+
+  test("Lumen's data folder is copied to Gleo's once; the old one is kept", () {
+    final base = Directory.systemTemp.createTempSync('gleo_rename').path;
+    addTearDown(() => Directory(base).deleteSync(recursive: true));
+    final old = p.join(base, 'Lumen'), now = p.join(base, 'Gleo');
+    expect(copyOldFolder(old, now), isFalse, reason: 'neither exists');
+    expect(Directory(now).existsSync(), isFalse);
+
+    File(p.join(old, 'library.db')).createSync(recursive: true);
+    File(p.join(old, 'library.db')).writeAsStringSync('db');
+    File(p.join(old, 'covers', 'a.jpg')).createSync(recursive: true);
+    Directory(now).createSync(); // path_provider makes the new folder, empty
+    expect(copyOldFolder(old, now), isTrue);
+    expect(File(p.join(now, 'library.db')).readAsStringSync(), 'db');
+    expect(File(p.join(now, 'covers', 'a.jpg')).existsSync(), isTrue);
+    expect(File(p.join(old, 'library.db')).existsSync(), isTrue, reason: 'the old folder is kept');
+    expect(Directory('$now.copying').existsSync(), isFalse);
+
+    File(p.join(now, 'library.db')).writeAsStringSync('new');
+    expect(copyOldFolder(old, now), isFalse, reason: 'the new folder has data');
+    expect(File(p.join(now, 'library.db')).readAsStringSync(), 'new');
+  });
+
+  test('the update check asks the repository named in licence.dart', () {
+    expect(releasesApi, 'https://api.github.com/repos/capsuleutkarsh-design/lumen/releases/latest');
   });
 }

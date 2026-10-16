@@ -9,7 +9,7 @@ import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/art/generative_cover.dart';
+import 'package:gleo/art/generative_cover.dart';
 import 'package:path/path.dart' as p;
 
 import 'art_gallery.dart' show loadInter, text;
@@ -79,7 +79,7 @@ void main() {
         ('Low Tide', 'Marlo Vance'), ('Glass Animals', 'Paper Kites'), ('Night Drive', 'Ostra'),
         ('Unknown Album', 'Various Artists'), ('Hymns for Nobody', 'Elsa Brandt'), ('Field Recordings', 'K. Moreau'),
         ('Saturn Return', 'Juno Park'), ('Soft Machines', 'Holloway'), ('Ashes, Rising', 'The Quiet Hours'),
-        ('Lumen Sessions', 'Arun Mehta'), ('Coastlines', 'Fennel'), ('Midnight Static', 'Velvet Ions'),
+        ('Gleo Sessions', 'Arun Mehta'), ('Coastlines', 'Fennel'), ('Midnight Static', 'Velvet Ions'),
         ('Ghost Notes', 'Iris & the Owls'), ('Polaroid Summer', 'Teddy Lowe'), ('Monsoon Tapes', 'Ravi Shankar Jr.'),
         ('After Hours', 'Neon Coast'), ('Analog Heart', 'Mira'), ('Slow Fade', 'Dune Theory'),
         ('Blue Hour', 'Okafor'), ('Wild Grass', 'Pine & Ash'), ('Satellites', 'Lark'),

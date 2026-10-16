@@ -303,7 +303,7 @@ Art? resolveArt(String? path, {String? seed}) {
 /// The one place to get a cover as a file (the Windows media overlay, accent colours...).
 Future<String?> coverFile(Track t, {double px = 384}) => ArtCache.ensure(lib.artFor(t.albumKey, t.cover), px);
 
-/// An album's cover, or the art Lumen draws for it when it has none or only a low-quality one
+/// An album's cover, or the art Gleo draws for it when it has none or only a low-quality one
 /// (and whatever the user picked with Change cover).
 class CoverArt extends StatelessWidget {
   CoverArt(String? path, {super.key, this.size, this.radius = R.cover, this.round = false, String? seed})
@@ -316,7 +316,7 @@ class CoverArt extends StatelessWidget {
   final double radius;
   final bool round;
 
-  /// What [CoverArt.track] shows for [t] at [px] pixels: the cover file, or the art Lumen draws
+  /// What [CoverArt.track] shows for [t] at [px] pixels: the cover file, or the art Gleo draws
   /// (drawn when first read), plus a colour for when the image can't be read.
   /// The accent-from-art reads covers only through here.
   static (ImageProvider?, Color) source(Track t, int px) {

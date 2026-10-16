@@ -1,9 +1,9 @@
 @echo off
 rem ------------------------------------------------------------------
-rem  Builds Lumen for release, with the version from pubspec.yaml:
-rem    build\windows\x64\runner\Release\lumen.exe        the program
-rem    build\installer\Lumen-Setup-<version>.exe         the installer
-rem    build\installer\Lumen-<version>-portable.zip      the portable zip
+rem  Builds Gleo for release, with the version from pubspec.yaml:
+rem    build\windows\x64\runner\Release\gleo.exe        the program
+rem    build\installer\Gleo-Setup-<version>.exe         the installer
+rem    build\installer\Gleo-<version>-portable.zip      the portable zip
 rem    build\installer\SHA256SUMS.txt                    their checksums
 rem  Needs Flutter (C:\dev\flutter), Visual Studio 2022 with C++ and Inno Setup 6.
 rem ------------------------------------------------------------------
@@ -30,14 +30,14 @@ powershell -NoProfile -ExecutionPolicy Bypass -File installer\build_installer.ps
 
 echo.
 echo DONE. Opening the installer folder ...
-if not defined LUMEN_NO_PAUSE start "" "%~dp0build\installer"
+if not defined GLEO_NO_PAUSE start "" "%~dp0build\installer"
 popd
-if not defined LUMEN_NO_PAUSE pause
+if not defined GLEO_NO_PAUSE pause
 exit /b 0
 
 :failed
 popd
 echo.
 echo BUILD FAILED - see the messages above.
-if not defined LUMEN_NO_PAUSE pause
+if not defined GLEO_NO_PAUSE pause
 exit /b 1

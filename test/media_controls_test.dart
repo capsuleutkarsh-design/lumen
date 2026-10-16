@@ -4,7 +4,7 @@ library;
 
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/platform/media_controls.dart';
+import 'package:gleo/platform/media_controls.dart';
 
 import 'mpv_harness.dart';
 

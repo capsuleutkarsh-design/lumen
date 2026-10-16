@@ -5,7 +5,7 @@
 import 'dart:io';
 
 import 'package:flutter/widgets.dart';
-import 'package:music_player/art/generative_cover.dart';
+import 'package:gleo/art/generative_cover.dart';
 
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();

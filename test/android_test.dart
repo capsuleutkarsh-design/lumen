@@ -1,15 +1,15 @@
-// Android's parts that run anywhere: the output rate Lumen sends, the honest signal path
+// Android's parts that run anywhere: the output rate Gleo sends, the honest signal path
 // (Android's mixer, Bluetooth's lossy codec) and reading the route the app reports.
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/audio/sound.dart';
-import 'package:music_player/platform/android.dart';
+import 'package:gleo/audio/sound.dart';
+import 'package:gleo/platform/android.dart';
 
 const flac = SourceInfo(badge: 'FLAC 24/96', format: 's32', rate: 96000, bits: 24, channels: 2);
 const phone = DeviceInfo(name: 'Phone speaker', android: true, nativeRate: 48000, outFormat: 'floatp', outRate: 96000, outChannels: 2);
 const bt = DeviceInfo(name: 'Bluetooth headphones', android: true, bluetooth: true, nativeRate: 48000, outFormat: 'floatp', outRate: 96000, outChannels: 2);
 
 void main() {
-  test('Lumen sends the song rate up to 96 kHz; higher rates stay in their family', () {
+  test('Gleo sends the song rate up to 96 kHz; higher rates stay in their family', () {
     final s = SoundSettings()..bestQuality = false;
     expect(androidRate(s, phone, 44100), 0);
     expect(androidRate(s, phone, 96000), 0);

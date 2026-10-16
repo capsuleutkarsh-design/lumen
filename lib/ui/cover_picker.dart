@@ -8,7 +8,7 @@ import 'app.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-/// Right-click → Change cover: the album's own cover (if any) and Lumen's pick on top, then
+/// Right-click → Change cover: the album's own cover (if any) and Gleo's pick on top, then
 /// a tab per art source (Masterpieces, Painted, Illustrated, Abstract...). The pick is stored
 /// in the library only; music files are never written.
 Future<void> showCoverPicker(BuildContext context, Album a) => showDialog<void>(context: context, builder: (_) => _CoverPicker(a));
@@ -58,7 +58,7 @@ class _CoverPickerState extends State<_CoverPicker> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text('Pick any artwork. Lumen keeps your choice; the music files are never changed.', style: T.small),
+            Text('Pick any artwork. Gleo keeps your choice; the music files are never changed.', style: T.small),
             const SizedBox(height: S.x4),
             Row(
               children: [
@@ -74,7 +74,7 @@ class _CoverPickerState extends State<_CoverPicker> {
                   ),
                   const SizedBox(width: S.x3),
                 ],
-                SizedBox(width: 92, child: _tile(auto, 'Lumen’s pick', current, auto.key!)),
+                SizedBox(width: 92, child: _tile(auto, 'Gleo’s pick', current, auto.key!)),
                 const SizedBox(width: S.x4),
                 if (credit != null)
                   Expanded(
@@ -149,7 +149,7 @@ class _CoverPickerState extends State<_CoverPicker> {
     final credit = creditFor(art);
     Widget w = Clickable(
       onTap: () => _pick(choice),
-      semanticLabel: label.isNotEmpty ? label : credit ?? 'Cover by Lumen',
+      semanticLabel: label.isNotEmpty ? label : credit ?? 'Cover by Gleo',
       radius: R.small,
       child: Column(
         children: [

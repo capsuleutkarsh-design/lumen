@@ -17,7 +17,7 @@ std::wstring ExePath(HANDLE process) {
   return ::QueryFullProcessImageNameW(process, 0, path, &size) ? std::wstring(path, size) : std::wstring();
 }
 
-// Brings the window of the Lumen already running from this same lumen.exe to the front.
+// Brings the window of the Gleo already running from this same gleo.exe to the front.
 BOOL CALLBACK FocusRunning(HWND hwnd, LPARAM exe) {
   wchar_t cls[64];
   if (!::GetClassNameW(hwnd, cls, ARRAYSIZE(cls)) || wcscmp(cls, L"FLUTTER_RUNNER_WIN32_WINDOW") != 0) return TRUE;
@@ -38,19 +38,19 @@ BOOL CALLBACK FocusRunning(HWND hwnd, LPARAM exe) {
 
 int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
                       _In_ wchar_t *command_line, _In_ int show_command) {
-  // One Lumen per lumen.exe: a second launch brings the first window forward and quits, so two copies
+  // One Gleo per gleo.exe: a second launch brings the first window forward and quits, so two copies
   // never share one library. Copies in other folders (portable, test builds) run on their own.
-  // ponytail: a file path given to the second launch is not handed over yet ("Open with Lumen" later).
+  // ponytail: a file path given to the second launch is not handed over yet ("Open with Gleo" later).
   const std::wstring exe = ExePath(::GetCurrentProcess());
   std::wstring key = exe;
   for (auto &c : key) c = static_cast<wchar_t>(std::towlower(c));
-  ::CreateMutexW(nullptr, FALSE, (L"Lumen.SingleInstance." + std::to_wstring(std::hash<std::wstring>{}(key))).c_str());
+  ::CreateMutexW(nullptr, FALSE, (L"Gleo.SingleInstance." + std::to_wstring(std::hash<std::wstring>{}(key))).c_str());
   if (::GetLastError() == ERROR_ALREADY_EXISTS) {
     ::EnumWindows(FocusRunning, reinterpret_cast<LPARAM>(&exe));
     return EXIT_SUCCESS;
   }
-  // The installer and uninstaller wait while any Lumen runs (AppMutex in installer\lumen.iss).
-  ::CreateMutexW(nullptr, FALSE, L"Lumen.SingleInstance");
+  // The installer and uninstaller wait while any Gleo runs (AppMutex in installer\gleo.iss).
+  ::CreateMutexW(nullptr, FALSE, L"Gleo.SingleInstance");
 
   // Attach to console when present (e.g., 'flutter run') or create a
   // new console when running with a debugger.
@@ -76,7 +76,7 @@ int APIENTRY wWinMain(_In_ HINSTANCE instance, _In_opt_ HINSTANCE prev,
   FlutterWindow window(project);
   Win32Window::Point origin(10, 10);
   Win32Window::Size size(1280, 720);
-  if (!window.Create(L"Lumen", origin, size)) {
+  if (!window.Create(L"Gleo", origin, size)) {
     return EXIT_FAILURE;
   }
   window.SetQuitOnClose(true);

@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🎧 Lumen
+# 🎧 Gleo
 
 ### UT Community Licence · version 2.0
 
@@ -18,19 +18,19 @@ Official repository: **[capsuleutkarsh-design/lumen](https://github.com/capsuleu
 
 | ✅ You may | ❌ You may not |
 |---|---|
-| Use Lumen for free, on any number of devices | Sell, rent or charge for Lumen, or a changed copy of it |
+| Use Gleo for free, on any number of devices | Sell, rent or charge for Gleo, or a changed copy of it |
 | Use it anywhere, including at work | Remove, hide or change the credits, or get around the credit check |
-| Share unchanged copies for free, with the credits | Call a changed copy the official Lumen |
+| Share unchanged copies for free, with the credits | Call a changed copy the official Gleo |
 | Change it, if you **send your changes back** as a pull request | Use AI or other tools to do any of the above |
 
-> **Credit line shown in the app:** `Lumen · © 2026 Utkarsh Tripathi · UT Community Licence 2.0`
+> **Credit line shown in the app:** `Gleo · © 2026 Utkarsh Tripathi · UT Community Licence 2.0`
 
 ---
 
 ## 0 · Words used in this licence
 
 - **Author**: Utkarsh Tripathi.
-- **Software**: Lumen: its source code, installers, scripts, documentation, logos, icons and other artwork made by the Author, as published at the Official Repository.
+- **Software**: Gleo: its source code, installers, scripts, documentation, logos, icons and other artwork made by the Author, as published at the Official Repository.
 - **Official Repository**: https://github.com/capsuleutkarsh-design/lumen
 - **Third-Party Parts**: code, programs, libraries, fonts, icons and other material made by others and listed in the Software's `THIRD_PARTY_NOTICES` file.
 - **Modified Version**: the Software with anything changed, added or removed, or any work that includes part of the Software's own code.
@@ -66,7 +66,7 @@ Private experiments that are never used regularly and never given to anyone do n
 
 ## 4 · The name
 
-A Modified Version must keep the Software's name and add **"(modified by *your name or company*)"**, for example *"Lumen (modified by XYZ)"*. It must not be presented as the official Software, or as made or approved by the Author.
+A Modified Version must keep the Software's name and add **"(modified by *your name or company*)"**, for example *"Gleo (modified by XYZ)"*. It must not be presented as the official Software, or as made or approved by the Author.
 
 ## 5 · Keep the credits
 
@@ -104,5 +104,5 @@ This licence is governed by the laws of India.
 ---
 
 <div align="center">
-<sub>Lumen · © 2026 Utkarsh Tripathi · UT Community Licence 2.0</sub>
+<sub>Gleo · © 2026 Utkarsh Tripathi · UT Community Licence 2.0</sub>
 </div>

@@ -4,7 +4,7 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/audio/sound.dart';
+import 'package:gleo/audio/sound.dart';
 
 const fs = 48000.0;
 

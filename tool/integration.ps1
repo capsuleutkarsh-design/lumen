@@ -12,10 +12,10 @@ Set-Location $root
 $defines = @("--dart-define=MP_DATA=$Data", "--dart-define=MP_ROOT=$root")
 if ($Music) { $defines += "--dart-define=MP_MUSIC=$Music" }
 if ($Shots) { $defines += "--dart-define=MP_SHOTS=$Shots" }
-$exe = Join-Path $root 'build\windows\x64\runner\Debug\lumen.exe'
+$exe = Join-Path $root 'build\windows\x64\runner\Debug\gleo.exe'
 function Wait-TestAppGone {
   for ($i = 0; $i -lt 40; $i++) {
-    $left = Get-CimInstance Win32_Process -Filter "Name='lumen.exe'" | Where-Object { $_.ExecutablePath -eq $exe }
+    $left = Get-CimInstance Win32_Process -Filter "Name='gleo.exe'" | Where-Object { $_.ExecutablePath -eq $exe }
     if (-not $left) { return }
     Start-Sleep -Milliseconds 500
   }

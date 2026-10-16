@@ -5,14 +5,14 @@ import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/library/library.dart';
-import 'package:music_player/library/models.dart';
-import 'package:music_player/library/scanner.dart';
-import 'package:music_player/library/smart.dart';
-import 'package:music_player/library/stats.dart';
-import 'package:music_player/library/suggestions.dart' show PlayStat;
-import 'package:music_player/ui/art_accent.dart';
-import 'package:music_player/ui/theme.dart';
+import 'package:gleo/library/library.dart';
+import 'package:gleo/library/models.dart';
+import 'package:gleo/library/scanner.dart';
+import 'package:gleo/library/smart.dart';
+import 'package:gleo/library/stats.dart';
+import 'package:gleo/library/suggestions.dart' show PlayStat;
+import 'package:gleo/ui/art_accent.dart';
+import 'package:gleo/ui/theme.dart';
 import 'package:path/path.dart' as p;
 
 import 'scanner_test.dart' show writeFlac;

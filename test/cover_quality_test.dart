@@ -2,7 +2,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:music_player/art/cover_quality.dart';
+import 'package:gleo/art/cover_quality.dart';
 
 /// A crisp 600 px "cover": a gradient, shapes, thin lines and text.
 img.Image clean() {
@@ -17,7 +17,7 @@ img.Image clean() {
   for (var i = 0; i < 12; i++) {
     img.drawLine(im, x1: 40, y1: 400 + i * 14, x2: 560, y2: 380 + i * 16, color: img.ColorRgb8(20, 20, 30), thickness: 2);
   }
-  img.drawString(im, 'LUMEN', font: img.arial48, x: 320, y: 500, color: img.ColorRgb8(255, 255, 255));
+  img.drawString(im, 'GLEO', font: img.arial48, x: 320, y: 500, color: img.ColorRgb8(255, 255, 255));
   return im;
 }
 

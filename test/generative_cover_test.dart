@@ -1,6 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/art/cover_quality.dart';
-import 'package:music_player/art/generative_cover.dart';
+import 'package:gleo/art/cover_quality.dart';
+import 'package:gleo/art/generative_cover.dart';
 
 void main() {
   TestWidgetsFlutterBinding.ensureInitialized();

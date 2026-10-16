@@ -3,7 +3,7 @@
 // Writes to ../_scratch_art (next to the worktree), or to $ART_OUT:
 //   gallery_1..3.png  110 covers: 11 styles x 10 seeds, labelled
 //   sizes.png         one cover per style at 48, 128 and 512 px
-//   grid.png          24 albums in a mock Lumen album grid on black
+//   grid.png          24 albums in a mock Gleo album grid on black
 //   timing.txt        render time per style (debug test mode: slower than release)
 import 'dart:io';
 import 'dart:ui' as ui;
@@ -11,7 +11,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/art/generative_cover.dart';
+import 'package:gleo/art/generative_cover.dart';
 import 'package:path/path.dart' as p;
 
 final out = Platform.environment['ART_OUT'] ?? p.join(Directory.current.parent.path, '_scratch_art');
@@ -97,7 +97,7 @@ void main() {
         ('Low Tide', 'Marlo Vance'), ('Glass Animals', 'Paper Kites'), ('Night Drive', 'Ostra'),
         ('Unknown Album', 'Various Artists'), ('Hymns for Nobody', 'Elsa Brandt'), ('Field Recordings', 'K. Moreau'),
         ('Saturn Return', 'Juno Park'), ('Soft Machines', 'Holloway'), ('Ashes, Rising', 'The Quiet Hours'),
-        ('Lumen Sessions', 'Arun Mehta'), ('Coastlines', 'Fennel'), ('Midnight Static', 'Velvet Ions'),
+        ('Gleo Sessions', 'Arun Mehta'), ('Coastlines', 'Fennel'), ('Midnight Static', 'Velvet Ions'),
         ('Ghost Notes', 'Iris & the Owls'), ('Polaroid Summer', 'Teddy Lowe'), ('Monsoon Tapes', 'Ravi Shankar Jr.'),
         ('After Hours', 'Neon Coast'), ('Analog Heart', 'Mira'), ('Slow Fade', 'Dune Theory'),
         ('Blue Hour', 'Okafor'), ('Wild Grass', 'Pine & Ash'), ('Satellites', 'Lark'),
@@ -124,7 +124,7 @@ void main() {
       await save(rec.endRecording(), w.toInt(), h.toInt(), 'grid.png');
     }
 
-    // 4. The optional initials and Lumen mark (both off by default).
+    // 4. The optional initials (off by default).
     {
       final rec = ui.PictureRecorder();
       final c = Canvas(rec);
@@ -134,7 +134,7 @@ void main() {
       for (var i = 0; i < 12; i++) {
         final title = words[i % 6];
         final initials = title.split(' ').map((w) => w[0]).join();
-        final cov = GenerativeCover(GenerativeCover.seedFor('x/$title/$i'), initials: i < 6 ? initials : null, mark: i >= 6);
+        final cov = GenerativeCover(GenerativeCover.seedFor('x/$title/$i'), initials: i < 6 ? initials : null);
         c.drawImage(await cov.toImage(sz.toInt()), Offset(g + (i % 6) * (sz + g), g + (i ~/ 6) * (sz + g)), Paint());
       }
       await save(rec.endRecording(), (6 * (sz + g) + g).toInt(), (2 * (sz + g) + g).toInt(), 'extras.png');

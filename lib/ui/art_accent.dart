@@ -70,7 +70,7 @@ Future<List<int>?> _pixels(ImageProvider image) {
 }
 
 /// The accent for [t], read through the cover widget's own source ([CoverArt.source]),
-/// so covers drawn by Lumen give their colour the same way as files.
+/// so covers drawn by Gleo give their colour the same way as files.
 Future<Color?> coverAccent(Track t) async {
   final (image, fallback) = CoverArt.source(t, 64);
   final px = image == null ? null : await _pixels(image);

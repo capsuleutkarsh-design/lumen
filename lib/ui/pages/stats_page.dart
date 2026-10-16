@@ -14,7 +14,7 @@ const _periods = [('7d', '7 days'), ('30d', '30 days'), ('12m', '12 months'), ('
 const _months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const _days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-/// What you listened to, from Lumen's own play counts (nothing leaves the computer).
+/// What you listened to, from Gleo's own play counts (nothing leaves the computer).
 class StatsPage extends StatefulWidget {
   const StatsPage({super.key});
   @override

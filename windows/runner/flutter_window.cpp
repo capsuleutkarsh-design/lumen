@@ -30,7 +30,7 @@ bool FlutterWindow::OnCreate() {
   RegisterPlugins(flutter_controller_->engine());
   media_controls_ = std::make_unique<MediaControls>(GetHandle(), flutter_controller_->engine()->messenger());
   title_bar_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-      flutter_controller_->engine()->messenger(), "lumen/titlebar",
+      flutter_controller_->engine()->messenger(), "gleo/titlebar",
       &flutter::StandardMethodCodec::GetInstance());
   SetChildContent(flutter_controller_->view()->GetNativeWindow());
 

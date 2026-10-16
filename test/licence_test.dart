@@ -1,7 +1,7 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/platform/licence.dart';
+import 'package:gleo/platform/licence.dart';
 
 void main() {
   final licence = File('LICENSE.md').readAsStringSync();
@@ -17,7 +17,7 @@ void main() {
   test('a tampered or missing licence, or notices without the credit line, stop the app', () {
     expect(licenceProblems(licence.replaceFirst('Sell', 'Sel'), notices), ['LICENSE.md has been changed']);
     expect(licenceProblems(null, notices), ['LICENSE.md is missing']);
-    expect(licenceProblems(licence, notices.replaceAll(creditLine, 'Lumen')), ['THIRD_PARTY_NOTICES.md has been changed']);
+    expect(licenceProblems(licence, notices.replaceAll(creditLine, 'Gleo')), ['THIRD_PARTY_NOTICES.md has been changed']);
     expect(licenceProblems(licence, null), ['THIRD_PARTY_NOTICES.md is missing']);
   });
 }

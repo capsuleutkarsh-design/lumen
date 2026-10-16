@@ -1,4 +1,4 @@
-// The credits every copy of Lumen must keep, and the check that enforces them.
+// The credits every copy of Gleo must keep, and the check that enforces them.
 //
 // UT Community Licence 2.0, section 5: LICENSE.md, THIRD_PARTY_NOTICES.md, the credit line and the
 // Credits screen must stay in place and unchanged, and this check must not be removed, disabled or
@@ -12,8 +12,8 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-const licenceSha256 = '342db22842bea6bf2a5988fa4bf1d730f7a40325fb74eb041fb613e01d3edd88';
-const creditLine = 'Lumen · © 2026 Utkarsh Tripathi · UT Community Licence 2.0';
+const licenceSha256 = '530f294f1ce83eab9c970a46e6b7d8f8ee5ebe0e077509152de9b4d90a61ff16';
+const creditLine = 'Gleo · © 2026 Utkarsh Tripathi · UT Community Licence 2.0';
 const repository = 'https://github.com/capsuleutkarsh-design/lumen';
 
 /// Line endings and trailing spaces do not count, so a checkout on any system gives the same hash.

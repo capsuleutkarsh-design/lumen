@@ -165,9 +165,7 @@ class _TopBar extends StatelessWidget {
           IconBtn(LucideIcons.chevronLeft, size: 22, color: C.text, tooltip: 'Back', onTap: nav.back)
         else ...[
           const SizedBox(width: S.x4),
-          const AppMark(size: 24),
-          const SizedBox(width: S.x2),
-          Text('Lumen', style: T.label),
+          const Wordmark(height: 28),
         ],
         const Spacer(),
         const ScanPill(),
@@ -423,7 +421,7 @@ class PhoneBar extends StatelessWidget {
   );
 }
 
-/// Before Lumen may read the music: what it needs and why, and the button that asks Android.
+/// Before Gleo may read the music: what it needs and why, and the button that asks Android.
 class MusicAccess extends StatelessWidget {
   const MusicAccess({super.key});
   @override
@@ -433,7 +431,7 @@ class MusicAccess extends StatelessWidget {
       child: EmptyState(
         icon: LucideIcons.music,
         title: 'Your music, on this phone',
-        body: 'Lumen plays the songs saved on this phone. Allow it to read your music files: it only reads them, and never changes them.',
+        body: 'Gleo plays the songs saved on this phone. Allow it to read your music files: it only reads them, and never changes them.',
         action: PillButton(
           'Allow access',
           key: const ValueKey('allowMusic'),

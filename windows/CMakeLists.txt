@@ -1,10 +1,10 @@
 ﻿# Project-level configuration.
 cmake_minimum_required(VERSION 3.14)
-project(lumen LANGUAGES CXX)
+project(gleo LANGUAGES CXX)
 
 # The name of the executable created for the application. Change this to change
 # the on-disk name of your application.
-set(BINARY_NAME "lumen")
+set(BINARY_NAME "gleo")
 
 # Explicitly opt in to modern CMake behaviors to avoid warnings with recent
 # versions of CMake.
@@ -57,22 +57,22 @@ add_subdirectory("runner")
 # them to the application.
 include(flutter/generated_plugins.cmake)
 
-# Lumen's own audio engine (libmpv-2.dll: mpv + FFmpeg with the audio filters and soxr),
+# Gleo's own audio engine (libmpv-2.dll: mpv + FFmpeg with the audio filters and soxr),
 # built in public at https://github.com/capsuleutkarsh-design/lumen-audio-engine.
 # It replaces the libmpv-2.dll that media_kit_libs_windows_audio downloads.
 # To update: set the new release tag and the SHA-256 of its -win64.zip.
-set(LUMEN_ENGINE_TAG "v2026.10.14")
-set(LUMEN_ENGINE_SHA256 "2c4df2a46e5c06e6479ca7c14a3cdbcf56b59683227b8b109a31c7139ee8cc4d")
-set(LUMEN_ENGINE_ZIP "lumen-audio-engine-${LUMEN_ENGINE_TAG}-win64.zip")
-set(LUMEN_ENGINE_DIR "${CMAKE_BINARY_DIR}/lumen-audio-engine-${LUMEN_ENGINE_TAG}")
-if(NOT EXISTS "${LUMEN_ENGINE_DIR}/libmpv-2.dll")
+set(GLEO_ENGINE_TAG "v2026.10.14")
+set(GLEO_ENGINE_SHA256 "2c4df2a46e5c06e6479ca7c14a3cdbcf56b59683227b8b109a31c7139ee8cc4d")
+set(GLEO_ENGINE_ZIP "lumen-audio-engine-${GLEO_ENGINE_TAG}-win64.zip")
+set(GLEO_ENGINE_DIR "${CMAKE_BINARY_DIR}/lumen-audio-engine-${GLEO_ENGINE_TAG}")
+if(NOT EXISTS "${GLEO_ENGINE_DIR}/libmpv-2.dll")
   file(DOWNLOAD
-    "https://github.com/capsuleutkarsh-design/lumen-audio-engine/releases/download/${LUMEN_ENGINE_TAG}/${LUMEN_ENGINE_ZIP}"
-    "${CMAKE_BINARY_DIR}/${LUMEN_ENGINE_ZIP}"
-    EXPECTED_HASH SHA256=${LUMEN_ENGINE_SHA256} TLS_VERIFY ON)
-  file(ARCHIVE_EXTRACT INPUT "${CMAKE_BINARY_DIR}/${LUMEN_ENGINE_ZIP}" DESTINATION "${LUMEN_ENGINE_DIR}")
+    "https://github.com/capsuleutkarsh-design/lumen-audio-engine/releases/download/${GLEO_ENGINE_TAG}/${GLEO_ENGINE_ZIP}"
+    "${CMAKE_BINARY_DIR}/${GLEO_ENGINE_ZIP}"
+    EXPECTED_HASH SHA256=${GLEO_ENGINE_SHA256} TLS_VERIFY ON)
+  file(ARCHIVE_EXTRACT INPUT "${CMAKE_BINARY_DIR}/${GLEO_ENGINE_ZIP}" DESTINATION "${GLEO_ENGINE_DIR}")
 endif()
-list(TRANSFORM PLUGIN_BUNDLED_LIBRARIES REPLACE ".*/libmpv-2\\.dll$" "${LUMEN_ENGINE_DIR}/libmpv-2.dll")
+list(TRANSFORM PLUGIN_BUNDLED_LIBRARIES REPLACE ".*/libmpv-2\\.dll$" "${GLEO_ENGINE_DIR}/libmpv-2.dll")
 
 
 # === Installation ===
@@ -110,7 +110,7 @@ install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/../licenses/LGPL-3.0.txt" "${CMAKE_CU
   DESTINATION "${INSTALL_BUNDLE_LIB_DIR}" COMPONENT Runtime)
 
 # The Visual C++ runtime (MSVCP140, VCRUNTIME140, VCRUNTIME140_1, ...) app-locally, so
-# Lumen runs on a PC without the VC++ Redistributable installed.
+# Gleo runs on a PC without the VC++ Redistributable installed.
 set(CMAKE_INSTALL_SYSTEM_RUNTIME_DESTINATION "${INSTALL_BUNDLE_LIB_DIR}")
 set(CMAKE_INSTALL_SYSTEM_RUNTIME_COMPONENT Runtime)
 include(InstallRequiredSystemLibraries)

@@ -51,7 +51,7 @@ class WindowSettings extends StatelessWidget {
   @override
   Widget build(BuildContext context) => _Toggle(
     'Close to tray',
-    'Closing the window keeps Lumen playing in the notification area. Click its icon to come back; right-click it to quit.',
+    'Closing the window keeps Gleo playing in the notification area. Click its icon to come back; right-click it to quit.',
     closeToTray(lib),
     (v) => lib.setSetting('closeToTray', v ? '1' : '0'),
   );

@@ -3,8 +3,8 @@ import 'dart:math';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:music_player/library/db.dart';
-import 'package:music_player/library/scanner.dart';
+import 'package:gleo/library/db.dart';
+import 'package:gleo/library/scanner.dart';
 import 'package:path/path.dart' as p;
 
 import 'scanner_test.dart' show writeFlac;

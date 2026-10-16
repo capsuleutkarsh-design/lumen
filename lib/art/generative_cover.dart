@@ -25,7 +25,7 @@ enum CoverStyle {
 }
 
 class GenerativeCover extends CustomPainter {
-  GenerativeCover(this.seed, {CoverStyle? style, this.initials, this.mark = false})
+  GenerativeCover(this.seed, {CoverStyle? style, this.initials})
     : style = style ?? styleOf(seed);
 
   final int seed;
@@ -33,9 +33,6 @@ class GenerativeCover extends CustomPainter {
 
   /// Optional initials (e.g. the album title's) set small in the corner.
   final String? initials;
-
-  /// Optional tiny Lumen mark in the corner.
-  final bool mark;
 
   /// A stable 32-bit hash (FNV-1a) of an album key: the cover's seed.
   static int seedFor(String key) {
@@ -69,7 +66,7 @@ class GenerativeCover extends CustomPainter {
 
   @override
   bool shouldRepaint(GenerativeCover old) =>
-      old.seed != seed || old.style != style || old.initials != initials || old.mark != mark;
+      old.seed != seed || old.style != style || old.initials != initials;
 
   ui.Picture record(int px) {
     final rec = ui.PictureRecorder();
@@ -129,7 +126,6 @@ class GenerativeCover extends CustomPainter {
         _garden(k);
     }
     if (initials != null && initials!.isNotEmpty) _initials(k, initials!);
-    if (mark) _mark(k);
     c.restore();
   }
 
@@ -1092,18 +1088,5 @@ void _initials(_K k, String text) {
   )..layout();
   tp.paint(k.c, Offset(s * .07, s * .93 - tp.height));
   tp.dispose();
-}
-
-/// The Lumen "L with two sound bars", small, bottom right.
-void _mark(_K k) {
-  final s = k.s, m = s * .075, x = s * .93 - m, y = s * .93 - m, u = m / 296;
-  final p = Paint()..color = (k.dark ? const Color(0xFFFFFFFF) : const Color(0xFF111111)).withValues(alpha: .85);
-  RRect bar(double bx, double by, double w, double h) =>
-      RRect.fromRectAndRadius(Rect.fromLTWH(x + (bx - 108) * u, y + (by - 108) * u, w * u, h * u), Radius.circular(math.min(w, h) * u / 2));
-  k.c
-    ..drawRRect(bar(140, 108, 64, 296), p)
-    ..drawRRect(bar(140, 340, 236, 64), p)
-    ..drawRRect(bar(240, 212, 48, 100), p)
-    ..drawRRect(bar(316, 158, 48, 154), p);
 }
 

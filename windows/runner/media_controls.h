@@ -15,7 +15,7 @@
 #include <winrt/Windows.Storage.h>
 
 // Windows System Media Transport Controls (the media overlay, lock screen and
-// hardware media keys), driven from Dart over the "music_player/media_controls"
+// hardware media keys), driven from Dart over the "gleo/media_controls"
 // channel. Button presses arrive on a background thread and are posted back to
 // the window so Dart is always called on the platform thread.
 class MediaControls {

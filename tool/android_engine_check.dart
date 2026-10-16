@@ -1,10 +1,10 @@
-// Checks Lumen's own libmpv.so on Android (an emulator or phone): a FLAC plays through each audio
+// Checks Gleo's own libmpv.so on Android (an emulator or phone): a FLAC plays through each audio
 // output with the Sound page's filters (EQ + bs2b crossfeed) and soxr resampling, with no mpv error.
-// Prints one LUMEN_CHECK line per output to logcat. Run:
+// Prints one GLEO_CHECK line per output to logcat. Run:
 //   flutter build apk --debug -t tool/android_engine_check.dart
 //   adb install -r build/app/outputs/flutter-apk/app-debug.apk
-//   adb shell "cat /sdcard/Music/LumenTest/test.flac | run-as com.capsuleutkarsh.lumen sh -c 'cat > files/test.flac'"
-//   adb shell am start -n com.capsuleutkarsh.lumen/.MainActivity; adb logcat -s flutter
+//   adb shell "cat /sdcard/Music/GleoTest/test.flac | run-as com.capsuleutkarsh.gleo sh -c 'cat > files/test.flac'"
+//   adb shell am start -n com.capsuleutkarsh.gleo/.MainActivity; adb logcat -s flutter
 import 'dart:io';
 
 import 'package:flutter/widgets.dart';
@@ -38,15 +38,15 @@ Future<void> main() async {
     final errors = logs.where((l) => (l.startsWith('error') || l.startsWith('fatal')) && !l.contains('(osc,'));
     // AudioTrack may open the track at the source rate instead of 96 kHz, so the rate is only reported.
     final ok = await pos() >= 1.5 && current == ao && errors.isEmpty;
-    debugPrint('LUMEN_CHECK ao=$ao ${ok ? 'PASS' : 'FAIL'} rate=$rate pos=${await pos()} current-ao=$current '
+    debugPrint('GLEO_CHECK ao=$ao ${ok ? 'PASS' : 'FAIL'} rate=$rate pos=${await pos()} current-ao=$current '
         'out=${await mpv.getProperty('audio-out-params')} af=${await mpv.getProperty('af')} logs=$logs');
     await player.dispose();
   }
   final p = Player();
   final mpv = p.platform as NativePlayer;
-  debugPrint('LUMEN_CHECK version ${await mpv.getProperty('mpv-version')} '
+  debugPrint('GLEO_CHECK version ${await mpv.getProperty('mpv-version')} '
       'FFmpeg ${await mpv.getProperty('ffmpeg-version')}');
   await p.dispose();
-  debugPrint('LUMEN_CHECK done');
+  debugPrint('GLEO_CHECK done');
   exit(0);
 }

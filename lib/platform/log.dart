@@ -6,13 +6,13 @@ import 'package:path/path.dart' as p;
 
 File? _file;
 var _size = 0;
-const _maxSize = 1 << 20; // past 1 MB the log becomes lumen.log.1 and a new one starts
+const _maxSize = 1 << 20; // past 1 MB the log becomes gleo.log.1 and a new one starts
 
-/// Sends debugPrint, Flutter errors and uncaught async errors to `<data>\lumen.log`.
+/// Sends debugPrint, Flutter errors and uncaught async errors to `<data>\gleo.log`.
 void startLog(String dataDir) {
   try {
     Directory(dataDir).createSync(recursive: true);
-    final f = File(p.join(dataDir, 'lumen.log'));
+    final f = File(p.join(dataDir, 'gleo.log'));
     _size = f.existsSync() ? f.lengthSync() : 0;
     _file = f;
   } catch (_) {
@@ -41,7 +41,7 @@ void log(String text) {
   if (f == null) return;
   try {
     if (_size > _maxSize) {
-      f.renameSync('${f.path}.1'); // replaces the previous lumen.log.1
+      f.renameSync('${f.path}.1'); // replaces the previous gleo.log.1
       _size = 0;
     }
     final line = '${DateTime.now().toIso8601String()}  $text\n';
@@ -52,5 +52,5 @@ void log(String text) {
 
 /// Opens a folder, a file (with its default app) or a web address. Android: web addresses only.
 void openPath(String target) => Platform.isAndroid
-    ? const MethodChannel('lumen/android').invokeMethod('open', target).catchError((Object e) => log('open: $e'))
+    ? const MethodChannel('gleo/android').invokeMethod('open', target).catchError((Object e) => log('open: $e'))
     : Process.run('explorer.exe', [target]);

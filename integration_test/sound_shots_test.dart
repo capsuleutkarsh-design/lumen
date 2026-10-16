@@ -9,10 +9,10 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:music_player/audio/sound.dart';
-import 'package:music_player/main.dart';
-import 'package:music_player/ui/app.dart';
-import 'package:music_player/ui/widgets.dart';
+import 'package:gleo/audio/sound.dart';
+import 'package:gleo/main.dart';
+import 'package:gleo/ui/app.dart';
+import 'package:gleo/ui/widgets.dart';
 import 'package:path/path.dart' as p;
 import 'package:window_manager/window_manager.dart';
 

@@ -10,21 +10,21 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
-import 'package:music_player/art/art_sources.dart';
-import 'package:music_player/audio/engine.dart';
-import 'package:music_player/library/library.dart';
-import 'package:music_player/library/models.dart';
-import 'package:music_player/ui/app.dart';
-import 'package:music_player/ui/lyrics_view.dart';
-import 'package:music_player/ui/pages/albums.dart';
-import 'package:music_player/ui/pages/artists.dart';
-import 'package:music_player/ui/pages/settings.dart';
-import 'package:music_player/ui/pages/songs.dart';
-import 'package:music_player/ui/player_bar.dart';
-import 'package:music_player/ui/search.dart';
-import 'package:music_player/ui/theme.dart';
-import 'package:music_player/ui/tracks.dart';
-import 'package:music_player/ui/widgets.dart';
+import 'package:gleo/art/art_sources.dart';
+import 'package:gleo/audio/engine.dart';
+import 'package:gleo/library/library.dart';
+import 'package:gleo/library/models.dart';
+import 'package:gleo/ui/app.dart';
+import 'package:gleo/ui/lyrics_view.dart';
+import 'package:gleo/ui/pages/albums.dart';
+import 'package:gleo/ui/pages/artists.dart';
+import 'package:gleo/ui/pages/settings.dart';
+import 'package:gleo/ui/pages/songs.dart';
+import 'package:gleo/ui/player_bar.dart';
+import 'package:gleo/ui/search.dart';
+import 'package:gleo/ui/theme.dart';
+import 'package:gleo/ui/tracks.dart';
+import 'package:gleo/ui/widgets.dart';
 
 /// Plays nothing: transport changes only flip fields.
 class FakeEngine extends Engine {
@@ -139,7 +139,7 @@ void uiTest(String name, Future<void> Function(WidgetTester) body) => testWidget
 
 void main() {
   setUp(() {
-    tmp = Directory.systemTemp.createTempSync('lumen_ui');
+    tmp = Directory.systemTemp.createTempSync('gleo_ui');
     lib = Library(tmp.path)..load();
     selection.clear();
     nav.go('home');

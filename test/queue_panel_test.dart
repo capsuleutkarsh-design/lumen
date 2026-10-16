@@ -5,12 +5,12 @@ import 'dart:io';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/audio/engine.dart';
-import 'package:music_player/library/library.dart';
-import 'package:music_player/library/models.dart';
-import 'package:music_player/ui/app.dart';
-import 'package:music_player/ui/queue_panel.dart';
-import 'package:music_player/ui/theme.dart';
+import 'package:gleo/audio/engine.dart';
+import 'package:gleo/library/library.dart';
+import 'package:gleo/library/models.dart';
+import 'package:gleo/ui/app.dart';
+import 'package:gleo/ui/queue_panel.dart';
+import 'package:gleo/ui/theme.dart';
 
 /// Records what the panel asks for (no mpv needed).
 class _Engine extends Engine {
@@ -26,7 +26,7 @@ class _Engine extends Engine {
 
 void main() {
   testWidgets('remove and double-click use the position at click time', (tester) async {
-    lib = Library(Directory.systemTemp.createTempSync('lumen_panel_').path)..load();
+    lib = Library(Directory.systemTemp.createTempSync('gleo_panel_').path)..load();
     lib.byId = {for (var i = 1; i <= 9; i++) i: Track(id: i, title: 'Song $i')};
     final e = _Engine(lib);
     engine = e;

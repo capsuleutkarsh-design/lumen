@@ -4,9 +4,9 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:image/image.dart' as img;
-import 'package:music_player/library/db.dart';
-import 'package:music_player/library/models.dart';
-import 'package:music_player/library/scanner.dart';
+import 'package:gleo/library/db.dart';
+import 'package:gleo/library/models.dart';
+import 'package:gleo/library/scanner.dart';
 import 'package:path/path.dart' as p;
 
 /// A header-only FLAC file (STREAMINFO + Vorbis comments + an optional front cover): enough for the tag reader.

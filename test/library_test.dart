@@ -1,8 +1,8 @@
 import 'dart:io';
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:music_player/library/library.dart';
-import 'package:music_player/library/suggestions.dart';
+import 'package:gleo/library/library.dart';
+import 'package:gleo/library/suggestions.dart';
 import 'package:path/path.dart' as p;
 
 import 'scanner_test.dart' show writeFlac;

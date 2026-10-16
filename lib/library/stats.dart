@@ -34,7 +34,7 @@ class ListenStats {
 }
 
 /// Adds up [rows] played in [from, to). Listening time is each counted play times the song's
-/// length (Lumen stores plays, not seconds). Top lists keep [top] entries each.
+/// length (Gleo stores plays, not seconds). Top lists keep [top] entries each.
 ListenStats listenStats(Iterable<PlayRow> rows, Map<int, Track> byId, DateTime from, DateTime to, Bucket b, {int top = 5}) {
   final time = <DateTime, int>{};
   final songs = <int, int>{}, albums = <String, int>{}, artists = <String, int>{};

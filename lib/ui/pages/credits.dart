@@ -54,14 +54,14 @@ Future<void> _showDoc(BuildContext context, String title, String file, [List<Wid
   );
 }
 
-/// The Credits screen: who made Lumen, the third-party notices, the licence and every package licence.
+/// The Credits screen: who made Gleo, the third-party notices, the licence and every package licence.
 Future<void> showCredits(BuildContext context) => _showDoc(context, 'Credits', 'THIRD_PARTY_NOTICES.md', [
   PillButton('Read the licence', onTap: () => _showDoc(context, 'UT Community Licence 2.0', 'LICENSE.md')),
   PillButton(
     'All package licences',
     onTap: () => showLicensePage(
       context: context,
-      applicationName: 'Lumen',
+      applicationName: 'Gleo',
       applicationVersion: shortVersion,
       applicationIcon: const Padding(padding: EdgeInsets.all(S.x3), child: AppMark(size: 48)),
       applicationLegalese: creditLine,
@@ -84,7 +84,7 @@ class DataAndUpdates extends StatelessWidget {
             children: [
               PillButton('Open data folder', icon: LucideIcons.folderOpen, onTap: () => openPath(lib.dataDir)),
               const SizedBox(width: S.x3),
-              PillButton('Open log', icon: LucideIcons.fileText, onTap: () => openPath(p.join(lib.dataDir, 'lumen.log'))),
+              PillButton('Open log', icon: LucideIcons.fileText, onTap: () => openPath(p.join(lib.dataDir, 'gleo.log'))),
             ],
           ),
         const SizedBox(height: S.x4),
@@ -97,7 +97,7 @@ class DataAndUpdates extends StatelessWidget {
                   Text('Check for updates at start-up', style: T.label),
                   SizedBox(height: 2),
                   Text(
-                    'Off unless you turn it on. Lumen then asks GitHub whether a newer version is out; nothing else is sent and nothing is downloaded.',
+                    'Off unless you turn it on. Gleo then asks GitHub whether a newer version is out; nothing else is sent and nothing is downloaded.',
                     style: T.small,
                   ),
                 ],
@@ -157,12 +157,12 @@ class _StartupScreenState extends State<StartupScreen> {
     final w = widget;
     final (title, body) = w.problems != null
         ? (
-            'Lumen cannot start',
+            'Gleo cannot start',
             'Its licence credits have been removed or changed:\n\n${w.problems!.map((x) => '  -  $x').join('\n')}\n\n'
-                'Reinstall Lumen or restore the original files from\n$repository\n\n$creditLine',
+                'Reinstall Gleo or restore the original files from\n$repository\n\n$creditLine',
           )
         : (
-            'Lumen could not start',
+            'Gleo could not start',
             '${w.error!.split('\n').first}\n\nData folder: ${w.data}\nDetails are in ${logPath ?? 'the log (not available)'}.\n\n'
                 'Start fresh sets the library aside (library.db is renamed to library.db.broken-…, nothing is deleted) '
                 'and starts with an empty library. Your music files are not touched.',

@@ -1,4 +1,4 @@
-// The Sound settings against Lumen's real engine (libmpv-2.dll) on mpv's null output:
+// The Sound settings against Gleo's real engine (libmpv-2.dll) on mpv's null output:
 // nothing is ever audible and no device is opened, so "exclusive mode" here is simulated.
 // Proves: every preset chain loads, EQ on/off keeps playing, the bit-perfect path stays
 // empty, live slider changes are filter commands, and measured levels (ebur128) show the
@@ -14,11 +14,11 @@ import 'dart:math';
 import 'package:flutter/foundation.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_kit/media_kit.dart' hide Track;
-import 'package:music_player/audio/engine.dart';
-import 'package:music_player/audio/sound.dart';
-import 'package:music_player/audio/sound_control.dart';
-import 'package:music_player/library/library.dart';
-import 'package:music_player/library/models.dart';
+import 'package:gleo/audio/engine.dart';
+import 'package:gleo/audio/sound.dart';
+import 'package:gleo/audio/sound_control.dart';
+import 'package:gleo/library/library.dart';
+import 'package:gleo/library/models.dart';
 import 'package:path/path.dart' as p;
 
 final dll = p.join(Directory.current.path, 'build', 'windows', 'x64', 'runner', 'Release', 'libmpv-2.dll');
@@ -102,7 +102,7 @@ Future<void> settle(Sound snd, [int ms = 1200]) async {
 
 /// (momentary loudness in LUFS, sample peak as a ratio) from the meter at the end of the chain.
 Future<(double, double)> meter(Engine e) async {
-  final j = jsonDecode(await e.getOption('af-metadata/lumen')) as Map<String, Object?>;
+  final j = jsonDecode(await e.getOption('af-metadata/gleo')) as Map<String, Object?>;
   return (double.parse(j['lavfi.r128.M']! as String), double.parse(j['lavfi.r128.sample_peak']! as String));
 }
 
@@ -111,7 +111,7 @@ void main() {
   setUpAll(() async {
     if (skip != null) return;
     initMediaKit(libmpv: dll);
-    final data = Directory.systemTemp.createTempSync('lumen_sound_');
+    final data = Directory.systemTemp.createTempSync('gleo_sound_');
     final tones = Directory(p.join(data.path, 'tones'))..createSync();
     final given = Platform.environment['MP_TONES'];
     for (final (name, amp) in [('tone_1k_m20.wav', 0.1), ('tone_1k_0dbfs.wav', 1.0)]) {
@@ -161,7 +161,7 @@ void main() {
       final before = e.position.value;
       await wait(300);
       expect(problems, isEmpty, reason: name);
-      expect(await e.getOption('af'), contains('lumen'), reason: name);
+      expect(await e.getOption('af'), contains('gleo'), reason: name);
       expect(e.playing, isTrue, reason: name);
       expect(e.position.value, greaterThan(before), reason: '$name: still playing');
     }
@@ -277,7 +277,7 @@ void main() {
     final said = <String>[];
     e.messages.listen(said.add);
     snd.change((s) => s.perDevice = true);
-    await e.setDevice('wasapi/{lumen-test-device}');
+    await e.setDevice('wasapi/{gleo-test-device}');
     await wait(100);
     expect(snd.s.eq.name, 'Rock', reason: 'a new device keeps the current EQ');
     snd.change((s) => s.eq = builtInPresets[1].copy()); // Bass boost, remembered for this device
@@ -285,7 +285,7 @@ void main() {
     await wait(100);
     expect(snd.s.eq.name, 'Rock');
     expect(said, contains("Using 'Rock' EQ for System default"));
-    await e.setDevice('wasapi/{lumen-test-device}');
+    await e.setDevice('wasapi/{gleo-test-device}');
     await wait(100);
     expect(snd.s.eq.name, 'Bass boost');
     await e.setDevice('auto');

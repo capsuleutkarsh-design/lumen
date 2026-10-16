@@ -1,4 +1,4 @@
-// Is an embedded or folder cover good enough to show, or should Lumen draw a
+// Is an embedded or folder cover good enough to show, or should Gleo draw a
 // generative one instead? Pure Dart (package:image), so it can run in an
 // isolate at scan time.
 import 'dart:math' as math;

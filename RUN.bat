@@ -1,6 +1,6 @@
 @echo off
 rem ------------------------------------------------------------------
-rem  Runs Lumen from the source code, to try your changes.
+rem  Runs Gleo from the source code, to try your changes.
 rem  In the console window: r = reload code, R = restart app, q = quit.
 rem  Needs Flutter (C:\dev\flutter) and Visual Studio 2022 with C++.
 rem ------------------------------------------------------------------
@@ -16,7 +16,7 @@ call flutter pub get >nul 2>nul
 powershell -NoProfile -ExecutionPolicy Bypass -File tool\link_plugins.ps1 >nul || goto :failed
 call flutter pub get || goto :failed
 
-echo Starting Lumen ...
+echo Starting Gleo ...
 call flutter run -d windows || goto :failed
 popd
 exit /b 0

@@ -1,19 +1,22 @@
-; Lumen installer (Inno Setup 6). Build with installer\build_installer.ps1, which passes the
+; Gleo installer (Inno Setup 6). Build with installer\build_installer.ps1, which passes the
 ; version from pubspec.yaml and makes ..\build\LICENSE.txt from LICENSE.md.
 #ifndef AppVersion
   #error Build with installer\build_installer.ps1 (it reads the version from pubspec.yaml)
 #endif
-#define AppName "Lumen"
+#define AppName "Gleo"
+; The repository; renamed only at release time (GitHub redirects the old name).
+#define AppURL "https://github.com/capsuleutkarsh-design/lumen"
 #define SrcDir "..\build\windows\x64\runner\Release"
 
 [Setup]
-AppId={{6E3F5A2C-8B1D-4C7E-9A41-2F0D3B6C9E15}
+; A new id for Gleo (Lumen 0.3 and older used {6E3F5A2C-...}), so it installs as its own app.
+AppId={{82310E11-6B4C-405C-96FB-5A68751146C2}
 AppName={#AppName}
 AppVersion={#AppVersion}
 AppVerName={#AppName} {#AppVersion}
 AppPublisher=Utkarsh Tripathi
-AppPublisherURL=https://github.com/capsuleutkarsh-design/lumen
-AppSupportURL=https://github.com/capsuleutkarsh-design/lumen/issues
+AppPublisherURL={#AppURL}
+AppSupportURL={#AppURL}/issues
 AppCopyright=Copyright (C) 2026 Utkarsh Tripathi - UT Community Licence 2.0
 VersionInfoVersion={#FileVersion}
 VersionInfoProductTextVersion={#AppVersion}
@@ -25,9 +28,9 @@ PrivilegesRequired=lowest
 PrivilegesRequiredOverridesAllowed=dialog
 LicenseFile=..\build\LICENSE.txt
 OutputDir=..\build\installer
-OutputBaseFilename=Lumen-Setup-{#AppVersion}
+OutputBaseFilename=Gleo-Setup-{#AppVersion}
 SetupIconFile=..\windows\runner\resources\app_icon.ico
-UninstallDisplayIcon={app}\lumen.exe
+UninstallDisplayIcon={app}\gleo.exe
 ArchitecturesAllowed=x64compatible
 ArchitecturesInstallIn64BitMode=x64compatible
 Compression=lzma2/max
@@ -35,15 +38,15 @@ SolidCompression=yes
 WizardStyle=modern
 WizardImageFile=wizard.bmp,wizard@2x.bmp
 WizardSmallImageFile=wizard_small.bmp,wizard_small@2x.bmp
-; lumen.exe holds this mutex (windows\runner\main.cpp): setup and uninstall ask to close Lumen first.
-AppMutex=Lumen.SingleInstance
+; gleo.exe holds this mutex (windows\runner\main.cpp): setup and uninstall ask to close Gleo first.
+AppMutex=Gleo.SingleInstance
 CloseApplications=no
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
 
 [Files]
-Source: "{#SrcDir}\lumen.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "{#SrcDir}\gleo.exe"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcDir}\*.dll"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcDir}\*.txt"; DestDir: "{app}"; Flags: ignoreversion
 Source: "{#SrcDir}\data\*"; DestDir: "{app}\data"; Flags: ignoreversion recursesubdirs createallsubdirs
@@ -56,11 +59,11 @@ Source: "..\assets\fonts\Inter-OFL.txt"; DestDir: "{app}"; Flags: ignoreversion
 Type: filesandordirs; Name: "{app}\data"
 
 [Icons]
-Name: "{group}\{#AppName}"; Filename: "{app}\lumen.exe"
-Name: "{autodesktop}\{#AppName}"; Filename: "{app}\lumen.exe"; Tasks: desktopicon
+Name: "{group}\{#AppName}"; Filename: "{app}\gleo.exe"
+Name: "{autodesktop}\{#AppName}"; Filename: "{app}\gleo.exe"; Tasks: desktopicon
 
 [Run]
-Filename: "{app}\lumen.exe"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
+Filename: "{app}\gleo.exe"; Description: "{cm:LaunchProgram,{#AppName}}"; Flags: nowait postinstall skipifsilent
 
 [Code]
 // The library data (database, cover thumbnails, log) is kept on uninstall unless the user says otherwise.
@@ -68,10 +71,10 @@ procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
 var
   Data: String;
 begin
-  Data := ExpandConstant('{userappdata}\Utkarsh Tripathi\Lumen');
+  Data := ExpandConstant('{userappdata}\Utkarsh Tripathi\Gleo');
   if (CurUninstallStep <> usPostUninstall) or UninstallSilent or not DirExists(Data) then
     Exit;
-  if MsgBox('Also delete your Lumen library data?' + #13#10#13#10 +
+  if MsgBox('Also delete your Gleo library data?' + #13#10#13#10 +
             'This is your library list, playlists, favourites, play counts and cover thumbnails in' + #13#10 +
             Data + #13#10#13#10 +
             'Your music files are never touched. Choose No to keep the data for a later install.',

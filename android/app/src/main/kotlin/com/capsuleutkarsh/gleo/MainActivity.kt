@@ -1,4 +1,4 @@
-package com.capsuleutkarsh.music_player
+package com.capsuleutkarsh.gleo
 
 import android.Manifest
 import android.content.Context
@@ -18,7 +18,7 @@ import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
 
 /// AudioServiceActivity shares its Flutter engine with the media service, so music plays on in the
-/// background. The "lumen/android" channel asks for the music permission and tells Dart where the
+/// background. The "gleo/android" channel asks for the music permission and tells Dart where the
 /// sound goes (speaker, wired, USB or Bluetooth) and at what rate the device runs. It also picks a music
 /// folder on any storage (the phone or an SD card) and saves a file where the user chooses.
 class MainActivity : AudioServiceActivity() {
@@ -40,7 +40,7 @@ class MainActivity : AudioServiceActivity() {
 
     override fun configureFlutterEngine(flutterEngine: FlutterEngine) {
         super.configureFlutterEngine(flutterEngine)
-        channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "lumen/android").apply {
+        channel = MethodChannel(flutterEngine.dartExecutor.binaryMessenger, "gleo/android").apply {
             setMethodCallHandler { call, result ->
                 when (call.method) {
                     "hasMusic" -> result.success(hasMusic())

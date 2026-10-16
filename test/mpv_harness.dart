@@ -6,9 +6,9 @@ import 'dart:convert';
 import 'dart:io';
 
 import 'package:media_kit/media_kit.dart' hide Track;
-import 'package:music_player/audio/engine.dart';
-import 'package:music_player/library/library.dart';
-import 'package:music_player/library/models.dart';
+import 'package:gleo/audio/engine.dart';
+import 'package:gleo/library/library.dart';
+import 'package:gleo/library/models.dart';
 import 'package:path/path.dart' as p;
 
 final root = Directory.current.path;
@@ -29,7 +29,7 @@ final _moved = <int, String>{};
 
 Future<void> setUpLibrary() async {
   initMediaKit(libmpv: dll);
-  data = Directory.systemTemp.createTempSync('lumen_test_').path;
+  data = Directory.systemTemp.createTempSync('gleo_test_').path;
   lib = Library(data)..load();
   lib.setSetting('folders', jsonEncode([testlib]));
   await lib.rescan();

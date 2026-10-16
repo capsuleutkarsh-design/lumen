@@ -13,9 +13,9 @@ import '../library/library.dart';
 /// Android's music folder on the phone's own storage (the default library folder there).
 const androidMusic = '/storage/emulated/0/Music';
 
-const _channel = MethodChannel('lumen/android'); // android/app/src/main/kotlin/.../MainActivity.kt
+const _channel = MethodChannel('gleo/android'); // android/app/src/main/kotlin/.../MainActivity.kt
 
-/// Lumen may read the music files (always true off Android).
+/// Gleo may read the music files (always true off Android).
 final musicAccess = ValueNotifier(true);
 
 /// Where Android plays the sound now (null off Android, or before it is known).
@@ -101,7 +101,7 @@ Future<void> startAndroidMedia(Engine engine) async {
   await AudioService.init(
     builder: () => _Session(engine),
     config: const AudioServiceConfig(
-      androidNotificationChannelId: 'com.capsuleutkarsh.lumen.playback',
+      androidNotificationChannelId: 'com.capsuleutkarsh.gleo.playback',
       androidNotificationChannelName: 'Playback',
       androidNotificationIcon: 'drawable/ic_launcher_foreground',
       androidStopForegroundOnPause: true,

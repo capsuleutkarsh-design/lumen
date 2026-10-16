@@ -3,15 +3,17 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 
+import 'licence.dart' show repository;
 import 'log.dart';
 
-/// The version from pubspec.yaml, baked into lumen.exe and passed in by main.cpp ("dev" in tests).
+/// The version from pubspec.yaml, baked into gleo.exe and passed in by main.cpp ("dev" in tests).
 var appVersion = 'dev';
 
 /// "0.2.0-beta" from "0.2.0-beta+3".
 String get shortVersion => appVersion.split('+').first;
 
-const releasesApi = 'https://api.github.com/repos/capsuleutkarsh-design/lumen/releases/latest'; // newest non-pre-release (Android test builds are pre-releases)
+/// The newest non-pre-release (Android test builds are pre-releases), from the [repository] named in licence.dart.
+final releasesApi = '${repository.replaceFirst('//github.com/', '//api.github.com/repos/')}/releases/latest';
 
 /// The result of the last check: (what to say, the release page or null).
 final updateStatus = ValueNotifier<(String, String?)?>(null);
@@ -38,15 +40,15 @@ Future<void> checkForUpdate() async {
     final req = await client.getUrl(Uri.parse(releasesApi));
     req.headers
       ..set(HttpHeaders.acceptHeader, 'application/vnd.github+json')
-      ..set(HttpHeaders.userAgentHeader, 'Lumen/$shortVersion');
+      ..set(HttpHeaders.userAgentHeader, 'Gleo/$shortVersion');
     final res = await req.close().timeout(const Duration(seconds: 15));
     final body = await res.transform(utf8.decoder).join();
     if (res.statusCode != 200) throw HttpException('GitHub answered ${res.statusCode}');
     final r = jsonDecode(body) as Map?;
     final tag = r?['tag_name'] as String?;
     updateStatus.value = tag != null && isNewer(tag, appVersion)
-        ? ('Lumen ${tag.replaceFirst('v', '')} is available.', r!['html_url'] as String?)
-        : ('Lumen $shortVersion is the newest version.', null);
+        ? ('Gleo ${tag.replaceFirst('v', '')} is available.', r!['html_url'] as String?)
+        : ('Gleo $shortVersion is the newest version.', null);
   } catch (e) {
     log('Update check: $e');
     updateStatus.value = ('Could not reach GitHub. Try again later.', null);

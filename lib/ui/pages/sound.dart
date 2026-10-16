@@ -282,7 +282,7 @@ class _Output extends StatelessWidget {
       ),
       _switchRow(
         'Exclusive mode',
-        'Lumen takes the device for itself and sends the file\'s samples unchanged, at their own rate. '
+        'Gleo takes the device for itself and sends the file\'s samples unchanged, at their own rate. '
             'Other apps go quiet while it plays. Needed for bit-perfect sound.',
         engine.exclusive,
         engine.setExclusive,
@@ -326,7 +326,7 @@ Widget _androidOutput(SoundSettings s) {
         [
           r?.name ?? 'Phone speaker',
           if (r != null && r.product.isNotEmpty && r.kind != 'speaker') r.product,
-          if (engine.outRate > 0) 'Lumen sends ${friendlyFormat(engine.outputFormat)}',
+          if (engine.outRate > 0) 'Gleo sends ${friendlyFormat(engine.outputFormat)}',
           if ((r?.nativeRate ?? 0) > 0) 'Android mixes at ${khz(r!.nativeRate)}',
         ].join(' · '),
         style: T.small,
@@ -348,7 +348,7 @@ Widget _androidOutput(SoundSettings s) {
       'Best quality on this device',
       'Converts to the rate Android plays at with the best resampler (soxr, highest quality), so Android never does a rough '
           'conversion. Works in 32-bit float, lowers the level just enough for EQ boosts, and a gentle limiter stops peaks '
-          'just below full scale. Off, Lumen sends each song at its own rate (up to 96 kHz).',
+          'just below full scale. Off, Gleo sends each song at its own rate (up to 96 kHz).',
       s.bestQuality,
       (v) => sound.change((s) => s.bestQuality = v),
     ),
@@ -457,7 +457,7 @@ class _EqualizerState extends State<_Equalizer> {
         if (!Platform.isAndroid) // Android has no device picker to switch with
         _switchRow(
           'Remember the EQ for each output device',
-          'Each device keeps its own EQ, and Lumen switches when you change device: your headphones\' correction only on the headphones.',
+          'Each device keeps its own EQ, and Gleo switches when you change device: your headphones\' correction only on the headphones.',
           s.perDevice,
           (v) => sound.change((s) {
             s.perDevice = v;
@@ -653,7 +653,7 @@ class _EqualizerState extends State<_Equalizer> {
       case 'autoeq':
         await showDialog<void>(context: context, builder: (_) => const AutoEqDialog());
       case 'import':
-        final f = await openFile(acceptedTypeGroups: const [XTypeGroup(label: 'Lumen EQ presets', extensions: ['json'])]);
+        final f = await openFile(acceptedTypeGroups: const [XTypeGroup(label: 'Gleo EQ presets', extensions: ['json'])]);
         if (f == null) return;
         try {
           final got = importPresets(await f.readAsString());
@@ -666,10 +666,10 @@ class _EqualizerState extends State<_Equalizer> {
           });
           notify('Imported ${plural(got.length, 'preset')}');
         } catch (_) {
-          notify('That file has no Lumen EQ presets');
+          notify('That file has no Gleo EQ presets');
         }
       case 'export':
-        final to = await saveText('Lumen EQ presets.json', exportPresets(s.presets), const XTypeGroup(label: 'JSON', extensions: ['json']));
+        final to = await saveText('Gleo EQ presets.json', exportPresets(s.presets), const XTypeGroup(label: 'JSON', extensions: ['json']));
         if (to != null) notify('Saved ${plural(s.presets.length, 'preset')}');
     }
   }
@@ -1036,7 +1036,7 @@ class _AutoEqDialogState extends State<AutoEqDialog> {
               ],
               const SizedBox(height: S.x3),
               Text(
-                'Equalizer APO files and AutoEQ\'s GraphicEQ.txt work too. Lumen downloads nothing: the link opens your browser.',
+                'Equalizer APO files and AutoEQ\'s GraphicEQ.txt work too. Gleo downloads nothing: the link opens your browser.',
                 style: T.caption,
               ),
             ],

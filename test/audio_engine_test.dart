@@ -1,4 +1,4 @@
-// Checks Lumen's own audio engine (libmpv-2.dll from github.com/capsuleutkarsh-design/lumen-audio-engine):
+// Checks Gleo's own audio engine (libmpv-2.dll from github.com/capsuleutkarsh-design/lumen-audio-engine):
 // the "best sound" filters and the soxr resampler load and process audio.
 // Needs `flutter build windows --release` first (skipped otherwise). Silent: ao=null and volume 0.
 @Tags(['mpv']) // run one file at a time: see dart_test.yaml
@@ -10,7 +10,7 @@ import 'dart:typed_data';
 
 import 'package:flutter_test/flutter_test.dart';
 import 'package:media_kit/media_kit.dart';
-import 'package:music_player/audio/engine.dart';
+import 'package:gleo/audio/engine.dart';
 
 const dll = r'build\windows\x64\runner\Release\libmpv-2.dll';
 
@@ -34,7 +34,7 @@ File sineWav(String path) {
 void main() {
   test('our engine: filters, bs2b and soxr work', () async {
     initMediaKit(libmpv: File(dll).absolute.path);
-    final wav = sineWav('${Directory.systemTemp.createTempSync('lumen_engine').path}\\sine.wav');
+    final wav = sineWav('${Directory.systemTemp.createTempSync('gleo_engine').path}\\sine.wav');
     final player = Player(configuration: const PlayerConfiguration(logLevel: MPVLogLevel.warn));
     final mpv = player.platform as NativePlayer;
     final errors = <String>[];

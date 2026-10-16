@@ -15,7 +15,7 @@ import 'package:path/path.dart' as p;
 
 import 'generative_cover.dart';
 
-/// A cover to show: the album's own image [file], or art Lumen draws, named by [key]:
+/// A cover to show: the album's own image [file], or art Gleo draws, named by [key]:
 /// `<style>@<seed in hex>` (a code style) or `pack:<pack>/<image>` (a bundled image, see art_sources.dart).
 @immutable
 class Art {

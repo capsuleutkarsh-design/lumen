@@ -38,7 +38,7 @@ TimeSpan Ms(int64_t ms) { return TimeSpan(ms * 10000); }
 
 MediaControls::MediaControls(HWND hwnd, flutter::BinaryMessenger* messenger) : hwnd_(hwnd) {
   channel_ = std::make_unique<flutter::MethodChannel<flutter::EncodableValue>>(
-      messenger, "music_player/media_controls", &flutter::StandardMethodCodec::GetInstance());
+      messenger, "gleo/media_controls", &flutter::StandardMethodCodec::GetInstance());
   try {
     auto interop = winrt::get_activation_factory<SystemMediaTransportControls, ISystemMediaTransportControlsInterop>();
     winrt::check_hresult(interop->GetForWindow(hwnd, winrt::guid_of<SystemMediaTransportControls>(),

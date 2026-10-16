@@ -122,7 +122,7 @@ class Sound extends ChangeNotifier {
     chain = c.chain;
     if (cmds == null) return engine.setAudioFilters(c.chain);
     for (final x in cmds) {
-      await engine.command(['af-command', 'lumen', ...x]);
+      await engine.command(['af-command', 'gleo', ...x]);
     }
   }
 
