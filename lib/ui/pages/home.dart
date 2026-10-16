@@ -83,8 +83,11 @@ class HomePage extends StatelessWidget {
                             style: T.small,
                           ),
                         ),
-                        const SizedBox(width: S.x4),
-                        PillButton('Shuffle all', icon: LucideIcons.shuffle, primary: true, onTap: () => shufflePlay(lib.tracks)),
+                        // Touch has Shuffle all in the header already.
+                        if (!isTouch) ...[
+                          const SizedBox(width: S.x4),
+                          PillButton('Shuffle all', icon: LucideIcons.shuffle, primary: true, onTap: () => shufflePlay(lib.tracks)),
+                        ],
                       ],
                     ),
                   ),

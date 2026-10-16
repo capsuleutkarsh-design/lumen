@@ -68,7 +68,17 @@ class AudioRoute {
 }
 
 /// The app's version name from the APK (pubspec.yaml's version without the build number).
-Future<String?> androidVersion() => _channel.invokeMethod<String>('version');
+/// A media button can start Gleo with no screen (audio_service runs main() for its service), and the
+/// "gleo/android" channel comes only with the activity: so this waits until Gleo is opened.
+Future<String?> androidVersion() async {
+  while (true) {
+    try {
+      return await _channel.invokeMethod<String>('version');
+    } on MissingPluginException {
+      await Future<void>.delayed(const Duration(milliseconds: 250));
+    }
+  }
+}
 
 /// Reads the permission and the output, and follows output changes. Off Android: nothing.
 Future<void> initAndroid() async {
