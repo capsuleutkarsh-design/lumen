@@ -27,7 +27,9 @@ Future<void> addMusicFolder() async {
   } on PlatformException {
     return notify('Gleo can only read folders on the phone or an SD card. Please choose one there.');
   }
-  if (dir != null && !lib.folders.contains(dir)) lib.folders = [...lib.folders, dir];
+  if (dir == null) return;
+  // A folder added again (on Android: so Gleo may read its .lrc and .cue files) is read again.
+  lib.folders.contains(dir) ? lib.rescan() : lib.folders = [...lib.folders, dir];
 }
 
 class SettingsPage extends StatelessWidget {

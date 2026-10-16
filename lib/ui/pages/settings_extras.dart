@@ -158,14 +158,25 @@ Future<void> restore(BuildContext context) async {
   // Android's file screen knows no .gleobackup type: any file can be picked there.
   final f = await openFile(acceptedTypeGroups: [Platform.isAndroid ? const XTypeGroup(label: 'Gleo backup') : _backup]);
   if (f == null) return;
-  final RestorePlan plan;
+  final String text;
   try {
-    plan = planRestore(lib, await f.readAsString());
+    text = await f.readAsString();
   } catch (e) {
-    if (context.mounted) toast(context, '${f.name} is not a Gleo backup');
+    if (context.mounted) toast(context, 'Could not read ${f.name}');
     return;
   }
-  if (!context.mounted) return;
+  if (context.mounted) await restoreFrom(context, text, f.name);
+}
+
+/// [restore] once the file is read: what it found, what it replaces, then the restore on OK.
+Future<void> restoreFrom(BuildContext context, String text, String name) async {
+  final RestorePlan plan;
+  try {
+    plan = planRestore(lib, text);
+  } on FormatException {
+    toast(context, '$name is not a Gleo backup');
+    return;
+  }
   final missing = plan.total - plan.matched;
   final ok = await confirm(
     context,

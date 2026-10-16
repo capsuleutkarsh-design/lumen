@@ -71,6 +71,16 @@ Future<void> initAndroid() async {
 /// null when cancelled. Throws a PlatformException for places with no path (cloud apps, Downloads shortcuts).
 Future<String?> pickAndroidFolder() => _channel.invokeMethod<String>('pickFolder');
 
+/// Android 13+ hides .lrc and .cue files from the music permission. Copies them, from the library's
+/// song folders that are inside a folder picked in Android's folder picker, to [Library.textMirror],
+/// where the lyrics and the scanner look (see MainActivity.kt). Returns how many copies changed.
+Future<int> mirrorTexts(Library lib) async =>
+    await _channel.invokeMethod<int>('mirror', {
+      'dest': lib.textMirror,
+      'folders': {...lib.folders, for (final t in lib.tracks) t.folder}.toList(),
+    }) ??
+    0;
+
 /// Saves [text] as a file the user places and names (Windows' Save dialog, Android's "Save to" screen).
 /// Returns where it went (the path; on Android the file name), or null when cancelled.
 Future<String?> saveText(String name, String text, XTypeGroup type) async {

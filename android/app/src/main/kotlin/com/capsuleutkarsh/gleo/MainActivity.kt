@@ -16,11 +16,13 @@ import android.os.Build
 import com.ryanheise.audioservice.AudioServiceActivity
 import io.flutter.embedding.engine.FlutterEngine
 import io.flutter.plugin.common.MethodChannel
+import java.io.File
 
 /// AudioServiceActivity shares its Flutter engine with the media service, so music plays on in the
 /// background. The "gleo/android" channel asks for the music permission and tells Dart where the
 /// sound goes (speaker, wired, USB or Bluetooth) and at what rate the device runs. It also picks a music
-/// folder on any storage (the phone or an SD card) and saves a file where the user chooses.
+/// folder on any storage (the phone or an SD card), saves a file where the user chooses, and copies the
+/// .lrc and .cue files Android 13+ hides from the music permission (see mirror).
 class MainActivity : AudioServiceActivity() {
     private var channel: MethodChannel? = null
     private var asked: MethodChannel.Result? = null
@@ -66,6 +68,14 @@ class MainActivity : AudioServiceActivity() {
                             SAVE,
                         )
                     }
+                    "mirror" -> {
+                        val dest = call.argument<String>("dest")!!
+                        val folders = call.argument<List<String>>("folders")!!
+                        Thread {
+                            val n = runCatching { mirror(dest, folders) }.getOrDefault(0)
+                            runOnUiThread { result.success(n) }
+                        }.start()
+                    }
                     "version" -> result.success(packageManager.getPackageInfo(packageName, 0).versionName)
                     "open" -> {
                         startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(call.arguments as String)))
@@ -97,6 +107,8 @@ class MainActivity : AudioServiceActivity() {
         when (requestCode) {
             PICK -> picked?.let { r ->
                 picked = null
+                // Kept: Android 13+ lets Gleo read the folder's .lrc and .cue files only through this access.
+                if (uri != null) runCatching { contentResolver.takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION) }
                 if (uri == null) r.success(null) else folderPath(uri)?.let { r.success(it) } ?: r.error("place", "not a storage folder", null)
             }
             SAVE -> saved?.let { r ->
@@ -118,6 +130,41 @@ class MainActivity : AudioServiceActivity() {
         val (volume, rel) = DocumentsContract.getTreeDocumentId(tree).split(":", limit = 2).let { it[0] to it.getOrElse(1) { "" } }
         val root = if (volume == "primary") Environment.getExternalStorageDirectory().path else "/storage/$volume"
         return if (rel.isEmpty()) root else "$root/$rel"
+    }
+
+    /// Android 13+ shows Gleo only the music (and image) files: .lrc lyrics and .cue sheets stay hidden.
+    /// For each of [folders] inside a folder picked in the folder picker (whose access Android keeps),
+    /// copies its .lrc and .cue files to [dest] + their own path, where the lyrics and the scanner look,
+    /// and removes copies whose file is gone. Returns how many copies changed.
+    /// ponytail: one folder listing per song folder on every rescan; a change journal if that gets slow.
+    private fun mirror(dest: String, folders: List<String>): Int {
+        val trees = contentResolver.persistedUriPermissions.filter { it.isReadPermission }.mapNotNull { p -> folderPath(p.uri)?.let { it to p.uri } }
+        var changed = 0
+        val kept = HashSet<String>()
+        for (folder in folders) {
+            val (root, tree) = trees.firstOrNull { folder == it.first || folder.startsWith(it.first + "/") } ?: continue
+            val top = DocumentsContract.getTreeDocumentId(tree)
+            val rel = folder.removePrefix(root).trim('/')
+            val id = if (rel.isEmpty()) top else if (top.endsWith(":")) top + rel else "$top/$rel"
+            val cols = arrayOf(DocumentsContract.Document.COLUMN_DOCUMENT_ID, DocumentsContract.Document.COLUMN_DISPLAY_NAME)
+            runCatching {
+                contentResolver.query(DocumentsContract.buildChildDocumentsUriUsingTree(tree, id), cols, null, null, null)?.use { c ->
+                    while (c.moveToNext()) {
+                        val name = c.getString(1) ?: continue
+                        if (name.substringAfterLast('.', "").lowercase() !in setOf("lrc", "cue")) continue
+                        val out = File(dest + folder, name)
+                        kept += out.path
+                        val bytes = contentResolver.openInputStream(DocumentsContract.buildDocumentUriUsingTree(tree, c.getString(0)))?.use { it.readBytes() } ?: continue
+                        if (out.exists() && out.readBytes().contentEquals(bytes)) continue
+                        out.parentFile?.mkdirs()
+                        out.writeBytes(bytes)
+                        changed++
+                    }
+                }
+            }
+        }
+        File(dest).walkBottomUp().forEach { if (it.isFile && it.path !in kept && it.delete()) changed++ }
+        return changed
     }
 
     /// Where media plays, in Android's own order for music: Bluetooth, then wired, then USB, then the speaker.

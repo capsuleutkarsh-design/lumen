@@ -100,6 +100,7 @@ Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error
   if (Platform.isAndroid) {
     // ponytail: AudioService.init runs once per process; Start fresh after it would throw (restart Gleo).
     await initAndroid();
+    lib.afterScan = () => mirrorTexts(lib);
     useMusicFolder(lib);
     await startAndroidMedia(engine);
     AppLifecycleListener(onResume: lib.rescan); // Android has no recursive folder watch: rescan on return

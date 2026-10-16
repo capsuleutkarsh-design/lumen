@@ -368,6 +368,10 @@ class Library extends ChangeNotifier {
 
   // ------------------------------------------------------------ scanning + watching
 
+  /// Android: after each scan, copies the .lrc and .cue files it may not read in place (see [textMirror])
+  /// and returns how many changed; a change scans once more, so a new sheet splits its file.
+  Future<int> Function()? afterScan;
+
   bool _again = false;
   Future<void> rescan() async {
     if (scan.value != null) {
@@ -396,6 +400,11 @@ class Library extends ChangeNotifier {
       scan.value = null;
     }
     load();
+    try {
+      if ((await afterScan?.call() ?? 0) > 0) _again = true;
+    } catch (e) {
+      debugPrint('After the scan: $e');
+    }
     if (_watching && !setEquals(_existing(), _watched)) watch();
     if (_again) {
       _again = false;
