@@ -284,7 +284,7 @@ void main() {
     await e.setDevice('auto');
     await wait(100);
     expect(snd.s.eq.name, 'Rock');
-    expect(said, contains("Using 'Rock' EQ for System default"));
+    expect(said, contains('Using “Rock” EQ for System default'));
     await e.setDevice('wasapi/{gleo-test-device}');
     await wait(100);
     expect(snd.s.eq.name, 'Bass boost');

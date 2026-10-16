@@ -100,4 +100,19 @@ void main() {
     );
     expect(suggest(ts, al, statsFrom([play(3, 1)]), now).because, isEmpty);
   });
+
+  test('because you played: another copy of the seed is not suggested', () {
+    Track song(int id, String title, String album, int ms) =>
+        Track(id: id, title: title, artist: 'Ana', album: album, genre: 'Jazz', year: 2015, trackNo: id, durationMs: ms);
+    final ts = [
+      song(1, 'First Light', 'Northern Lights', 200000),
+      song(2, 'first light!', 'Old rips', 201500), // the same song: an MP3 copy
+      song(3, 'First Light', 'Live', 260000), // same name, another length: a different take
+      song(4, 'Polar Drift', 'Northern Lights', 180000),
+    ];
+    final al = [
+      for (final a in {for (final x in ts) x.albumKey}) Album(a, ts.where((x) => x.albumKey == a).toList()),
+    ];
+    expect([for (final p in suggest(ts, al, statsFrom([play(1, 1)]), now).because) p.item.id], [3, 4]);
+  });
 }

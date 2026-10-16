@@ -222,6 +222,17 @@ class _AppState extends State<App> with WidgetsBindingObserver {
   @override
   void didChangePlatformBrightness() => _theme();
 
+  static double get _viewWidth => WidgetsBinding.instance.platformDispatcher.views.first.physicalSize.width;
+  double _width = _viewWidth;
+
+  /// A toast's side margins are measured for the window it opened in, so one that gets narrower
+  /// would squeeze it: a change of width closes it before the next frame is laid out.
+  @override
+  void didChangeMetrics() {
+    if (_viewWidth != _width) messengerKey.currentState?.removeCurrentSnackBar();
+    _width = _viewWidth;
+  }
+
   /// Switches the palette and rebuilds every widget (const widgets too, which a plain setState skips).
   void _theme() {
     final p = paletteFor(appearance.value, ui.PlatformDispatcher.instance.platformBrightness);
@@ -268,6 +279,8 @@ class _AppState extends State<App> with WidgetsBindingObserver {
       nav.toggleLyrics();
     } else if (ctrl && k == LogicalKeyboardKey.keyA) {
       selection.selectAll();
+    } else if (ctrl && k == LogicalKeyboardKey.keyF && nav.top.page == 'songs' && !nav.lyrics) {
+      songsFilterFocus.requestFocus();
     } else if (k == LogicalKeyboardKey.keyD && !ctrl && !nav.mini) {
       nav.setDisc(!nav.disc);
     } else if (k == LogicalKeyboardKey.f11 && nav.disc) {
@@ -369,7 +382,7 @@ class _ShellState extends State<Shell> {
                 enabled: !nav.nowPlaying && !nav.disc,
                 child: Column(
                   children: [
-                    const TitleBar(),
+                    const SizedBox(height: TitleBar.height), // the title bar is drawn on top (below)
                     Expanded(
                       child: Padding(
                         padding: const EdgeInsets.fromLTRB(S.x4, 0, S.x4, S.x4),
@@ -433,19 +446,23 @@ class _ShellState extends State<Shell> {
                   ],
                 ),
               ),
+              // Now Playing's glow runs under the (transparent) title bar, which stays usable on top.
               Positioned.fill(
-                top: TitleBar.height,
-                child: AnimatedSwitcher(
-                  duration: Motion.slow,
-                  switchInCurve: Motion.curve,
-                  switchOutCurve: Curves.easeInCubic,
-                  transitionBuilder: (child, a) => FadeTransition(
-                    opacity: a,
-                    child: ScaleTransition(scale: Tween(begin: 0.98, end: 1.0).animate(a), child: child),
+                child: MediaQuery(
+                  data: MediaQuery.of(context).copyWith(padding: const EdgeInsets.only(top: TitleBar.height)),
+                  child: AnimatedSwitcher(
+                    duration: Motion.slow,
+                    switchInCurve: Motion.curve,
+                    switchOutCurve: Curves.easeInCubic,
+                    transitionBuilder: (child, a) => FadeTransition(
+                      opacity: a,
+                      child: ScaleTransition(scale: Tween(begin: 0.98, end: 1.0).animate(a), child: child),
+                    ),
+                    child: nav.nowPlaying ? const NowPlaying(key: ValueKey('np')) : const SizedBox.shrink(),
                   ),
-                  child: nav.nowPlaying ? const NowPlaying(key: ValueKey('np')) : const SizedBox.shrink(),
                 ),
               ),
+              const Positioned(top: 0, left: 0, right: 0, child: TitleBar()),
               if (nav.search) const SearchConsole(),
               if (nav.disc) const Positioned.fill(child: DiscMode()),
               if (_dragging) const _DropHint(),
@@ -464,6 +481,7 @@ Widget pageFor(Place p) => switch (p.page) {
   'artist' => ArtistPage(p.arg as String),
   'songs' => const SongsPage(),
   'folders' => const FoldersPage(),
+  'folder' => FoldersPage(dir: p.arg as String),
   'playlists' => const PlaylistsPage(),
   'playlist' => PlaylistPage(p.arg as int),
   'smart' => SmartPlaylistPage(p.arg as int),
@@ -724,10 +742,11 @@ class ScanPill extends StatelessWidget {
 
 class Rail extends StatelessWidget {
   const Rail({super.key});
+  static final _scroll = ScrollController(); // one rail at a time
   static const items = [
     ('home', LucideIcons.house, 'Home'),
     ('albums', LucideIcons.disc3, 'Albums'),
-    ('artists', LucideIcons.micVocal, 'Artists'),
+    ('artists', LucideIcons.users, 'Artists'),
     ('songs', LucideIcons.music, 'Songs'),
     ('folders', LucideIcons.folder, 'Folders'),
     ('browse', LucideIcons.compass, 'Browse  (genres, years, composers, duplicates, statistics)'),
@@ -739,6 +758,7 @@ class Rail extends StatelessWidget {
     'album' => 'albums',
     'artist' => 'artists',
     'playlist' || 'smart' => 'playlists',
+    'folder' => 'folders',
     'genres' || 'genre' || 'years' || 'composers' || 'composer' || 'duplicates' || 'stats' => 'browse',
     _ => page,
   };
@@ -748,51 +768,73 @@ class Rail extends StatelessWidget {
 
   Widget _build(BuildContext context) {
     final current = _section(nav.top.page);
-    Widget item(String page, IconData icon, String label, VoidCallback onTap, {bool active = false}) => Padding(
-      padding: const EdgeInsets.symmetric(vertical: S.x1 / 2),
-      child: Clickable(
-        onTap: onTap,
-        tooltip: label,
-        semanticLabel: label.split('  ').first,
-        radius: R.card - S.x1,
-        selected: active,
-        hover: C.raised2,
-        selectedColor: C.raised3,
-        child: SizedBox(width: 44, height: 44, child: Icon(icon, size: 20, color: active ? C.text : C.faint)),
-      ),
-    );
+    final size = MediaQuery.sizeOf(context);
+    final wide = size.width >= 1280; // labels beside the icons; icons only when narrow
+    final gap = size.height < 720 ? 0.0 : S.x1 / 2;
+    Widget item(String page, IconData icon, String label, VoidCallback onTap, {bool active = false}) {
+      final name = label.split('  ').first;
+      return Padding(
+        padding: EdgeInsets.symmetric(vertical: gap),
+        child: Clickable(
+          onTap: onTap,
+          tooltip: wide && name == label ? null : label,
+          semanticLabel: name,
+          radius: R.card - S.x1,
+          selected: active,
+          hover: C.raised2,
+          selectedColor: C.raised3,
+          child: SizedBox(
+            height: 44,
+            child: Row(
+              children: [
+                SizedBox(width: 44, child: Icon(icon, size: 20, color: active ? C.text : C.faint)),
+                if (wide)
+                  Expanded(
+                    child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.label.copyWith(color: active ? C.text : C.dim)),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Panel(
       padding: const EdgeInsets.symmetric(horizontal: S.x3, vertical: S.x4),
-      // Search and Settings sit at the bottom; the rail scrolls if the window is very short.
+      // Search and Settings sit at the bottom; the rail scrolls (with a thin scrollbar) if the window is very short.
       child: SizedBox(
-        width: 44,
+        width: wide ? 152 : 44,
         child: ScrollConfiguration(
           behavior: ScrollConfiguration.of(context).copyWith(scrollbars: false),
-          child: CustomScrollView(
-            slivers: [
-              SliverFillRemaining(
-                hasScrollBody: false,
-                child: Column(
-                  children: [
-                    const AppMark(size: 36),
-                    const SizedBox(height: S.x6),
-                    for (final (page, icon, label) in items)
-                      item(page, icon, label, () => nav.go(page == 'browse' ? browseTab : page), active: !nav.lyrics && current == page),
-                    const Spacer(),
-                    const SizedBox(height: S.x6),
-                    item('search', LucideIcons.search, 'Search  (Ctrl+K)', () => nav.setSearch(true)),
-                    item('sound', LucideIcons.slidersVertical, 'Sound', () => nav.go('sound'), active: !nav.lyrics && current == 'sound'),
-                    item(
-                      'settings',
-                      LucideIcons.settings,
-                      'Settings',
-                      () => nav.go('settings'),
-                      active: !nav.lyrics && current == 'settings',
-                    ),
-                  ],
+          child: Scrollbar(
+            controller: _scroll,
+            thumbVisibility: true, // drawn only when something is out of view
+            thickness: 3,
+            child: CustomScrollView(
+              controller: _scroll,
+              slivers: [
+                SliverFillRemaining(
+                  hasScrollBody: false,
+                  child: Column(
+                    children: [
+                      for (final (page, icon, label) in items)
+                        item(page, icon, label, () => nav.go(page == 'browse' ? browseTab : page), active: !nav.lyrics && current == page),
+                      const Spacer(),
+                      const SizedBox(height: S.x6),
+                      item('search', LucideIcons.search, 'Search  (Ctrl+K)', () => nav.setSearch(true)),
+                      item('sound', LucideIcons.slidersVertical, 'Sound', () => nav.go('sound'), active: !nav.lyrics && current == 'sound'),
+                      item(
+                        'settings',
+                        LucideIcons.settings,
+                        'Settings',
+                        () => nav.go('settings'),
+                        active: !nav.lyrics && current == 'settings',
+                      ),
+                    ],
+                  ),
                 ),
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

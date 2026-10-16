@@ -2,11 +2,22 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../library/models.dart';
+import '../../platform/window.dart' show isTouch;
 import '../app.dart';
 import '../theme.dart';
 import '../tracks.dart';
 import '../widgets.dart';
 import 'albums.dart';
+
+/// Whether [t] matches the Songs filter [q] (lower case): in the title, artist or album.
+bool songMatches(Track t, String q) =>
+    t.title.toLowerCase().contains(q) || t.artist.toLowerCase().contains(q) || t.album.toLowerCase().contains(q);
+
+/// Ctrl+F on the Songs page focuses its filter.
+final songsFilterFocus = FocusNode();
+
+/// The Songs filter (Search's "Show all songs" sets it too), kept across navigation.
+final songsFilter = ValueNotifier('');
 
 /// Every song in a sortable table. Click a column title to sort; again to reverse.
 class SongsPage extends StatefulWidget {
@@ -16,6 +27,16 @@ class SongsPage extends StatefulWidget {
 }
 
 class _SongsPageState extends State<SongsPage> {
+  late final _filter = TextEditingController(text: songsFilter.value);
+
+  @override
+  void dispose() {
+    _filter.dispose();
+    super.dispose();
+  }
+
+  void _setFilter(String v) => songsFilter.value = v;
+
   // Kept across navigation.
   String get _by => nav.memo['songs.by'] as String? ?? 'title';
   set _by(String v) => nav.memo['songs.by'] = v;
@@ -67,9 +88,15 @@ class _SongsPageState extends State<SongsPage> {
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(
-    listenable: lib,
+    listenable: Listenable.merge([lib, songsFilter]),
     builder: (context, _) {
-      final tracks = List.of(lib.tracks)..sort(_cmp);
+      final m = songsFilter.value;
+      if (m != _filter.text) _filter.text = m; // set by Search while this page was open
+      final q = m.trim().toLowerCase();
+      final tracks = [
+        for (final t in lib.tracks)
+          if (q.isEmpty || songMatches(t, q)) t,
+      ]..sort(_cmp);
       if (_desc) {
         final r = tracks.reversed.toList();
         tracks
@@ -77,20 +104,89 @@ class _SongsPageState extends State<SongsPage> {
           ..addAll(r);
       }
       selection.primary = tracks;
+      final length = fmtLong(Duration(milliseconds: tracks.fold(0, (s, t) => s + t.durationMs)));
       return CustomScrollView(
         key: const PageStorageKey('songs'),
         slivers: [
           SliverToBoxAdapter(
             child: PageHeader(
               'Songs',
-              subtitle: '${plural(tracks.length, 'song')} · ${fmtLong(Duration(milliseconds: tracks.fold(0, (s, t) => s + t.durationMs)))}',
-              trailing: tracks.isEmpty
+              subtitle: q.isEmpty
+                  ? '${plural(tracks.length, 'song')} · $length'
+                  : '${fmtInt(tracks.length)} of ${plural(lib.tracks.length, 'song')} · $length',
+              trailing: lib.tracks.isEmpty
                   ? null
-                  : PillButton('Play all', icon: LucideIcons.play, primary: true, onTap: () => engine.playTracks(tracks)),
+                  : Wrap(
+                      spacing: S.x3,
+                      runSpacing: S.x2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        SizedBox(
+                          width: 240,
+                          child: TextField(
+                            controller: _filter,
+                            focusNode: songsFilterFocus,
+                            onChanged: _setFilter,
+                            style: T.body,
+                            decoration: InputDecoration(
+                              isDense: true,
+                              hintText: isTouch ? 'Filter songs' : 'Filter songs  (Ctrl+F)',
+                              prefixIcon: Icon(LucideIcons.listFilter, size: 16, color: C.faint),
+                              suffixIcon: q.isEmpty
+                                  ? null
+                                  : IconBtn(
+                                      LucideIcons.x,
+                                      size: 14,
+                                      box: 28,
+                                      tooltip: 'Clear filter',
+                                      onTap: () {
+                                        _filter.clear();
+                                        _setFilter('');
+                                      },
+                                    ),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(R.pill),
+                                borderSide: BorderSide(color: C.border),
+                              ),
+                              enabledBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(R.pill),
+                                borderSide: BorderSide(color: C.border),
+                              ),
+                              focusedBorder: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(R.pill),
+                                borderSide: BorderSide(color: C.accent),
+                              ),
+                            ),
+                          ),
+                        ),
+                        PillButton(
+                          'Play all',
+                          icon: LucideIcons.play,
+                          primary: true,
+                          onTap: tracks.isEmpty ? null : () => engine.playTracks(tracks),
+                        ),
+                      ],
+                    ),
             ),
           ),
-          if (tracks.isEmpty)
+          if (lib.tracks.isEmpty)
             const SliverFillRemaining(hasScrollBody: false, child: NoMusic())
+          else if (tracks.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: EmptyState(
+                icon: LucideIcons.listFilter,
+                title: 'No songs match “${_filter.text.trim()}”',
+                body: 'The filter looks at titles, artists and albums.',
+                action: PillButton(
+                  'Clear filter',
+                  onTap: () {
+                    _filter.clear();
+                    _setFilter('');
+                  },
+                ),
+              ),
+            )
           else ...[
             SliverPersistentHeader(
               pinned: true,
@@ -98,25 +194,36 @@ class _SongsPageState extends State<SongsPage> {
                 Container(
                   color: C.bg,
                   padding: const EdgeInsets.symmetric(horizontal: S.x2),
+                  alignment: Alignment.centerLeft,
+                  constraints: const BoxConstraints.tightFor(width: double.infinity),
                   // The same columns the rows show at this width (they drop out in a small window).
-                  child: LayoutBuilder(
-                    builder: (context, c) {
-                      final cols = TrackCols(c.maxWidth, table: true, album: true, badge: true);
-                      return Row(
-                        children: [
-                          const SizedBox(width: 40 + S.x3),
-                          _head('Title', 'title', flex: 5),
-                          if (cols.artist) ...[const SizedBox(width: S.x4), _head('Artist', 'artist', flex: 3)],
-                          if (cols.album) ...[const SizedBox(width: S.x4), _head('Album', 'album', flex: 3)],
-                          if (cols.year) _head('Year', 'year', width: 56),
-                          if (cols.badge) ...[const SizedBox(width: S.x4), _head('Format', 'format', width: 104)],
-                          if (cols.rating) _head('Rating', 'rating', width: 84),
-                          const SizedBox(width: 32),
-                          _head('Time', 'time', width: 48, align: TextAlign.right),
-                          const SizedBox(width: 32),
-                        ],
-                      );
-                    },
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: TrackRow.maxWidth - S.x2 * 2),
+                    child: LayoutBuilder(
+                      builder: (context, c) {
+                        final cols = TrackCols(
+                          c.maxWidth,
+                          table: true,
+                          album: true,
+                          badge: true,
+                          k: MediaQuery.textScalerOf(context).scale(1),
+                        );
+                        return Row(
+                          children: [
+                            const SizedBox(width: 40 + S.x3),
+                            _head('Title', 'title', flex: 5),
+                            if (cols.artist) ...[const SizedBox(width: S.x4), _head('Artist', 'artist', flex: 3)],
+                            if (cols.album) ...[const SizedBox(width: S.x4), _head('Album', 'album', flex: 3)],
+                            if (cols.year) ...[const SizedBox(width: S.x4), _head('Year', 'year', width: cols.yearW)],
+                            if (cols.badge) ...[const SizedBox(width: S.x4), _head('Format', 'format', width: cols.badgeW)],
+                            if (cols.rating) _head('Rating', 'rating', width: cols.ratingW),
+                            const SizedBox(width: 32),
+                            _head('Time', 'time', width: cols.timeW, align: TextAlign.right),
+                            const SizedBox(width: 32),
+                          ],
+                        );
+                      },
+                    ),
                   ),
                 ),
               ),

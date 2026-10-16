@@ -46,6 +46,7 @@ class PlayQueue {
     index = items.isEmpty ? -1 : start.clamp(0, items.length - 1);
     _nextCycle = null;
     _removed = null;
+    _cleared = null;
     if (shuffle) _shuffleAroundCurrent();
   }
 
@@ -111,14 +112,33 @@ class PlayQueue {
     _nextCycle = null;
   }
 
-  /// Everything except the current entry goes.
+  /// Everything except the current entry goes ([undoClear] puts it back).
   void clear() {
     final cur = current;
+    _cleared = (items, original);
     items = [?cur];
     original = List.of(items);
     index = items.isEmpty ? -1 : 0;
     _nextCycle = null;
     _removed = null;
+  }
+
+  (List<Entry>, List<Entry>)? _cleared;
+
+  /// Put back what [clear] took, keeping anything queued since at the end.
+  /// Nothing happens once another song is playing.
+  void undoClear() {
+    final c = _cleared, cur = current;
+    _cleared = null;
+    if (c == null || cur == null || !c.$1.contains(cur)) return;
+    final added = [
+      for (final e in items)
+        if (!c.$1.contains(e)) e,
+    ];
+    items = [...c.$1, ...added];
+    original = [...c.$2, ...added];
+    index = items.indexOf(cur);
+    _nextCycle = null;
   }
 
   /// Jump to an entry (click in the queue).
@@ -248,6 +268,7 @@ class PlayQueue {
     repeat = Repeat.values[j['repeat'] as int];
     _nextCycle = null;
     _removed = null;
+    _cleared = null;
     // Drop tracks that left the library; a gone current track hands over to the next one.
     final kept = current != null && exists(current!.trackId);
     final before = index < 0 ? 0 : items.take(index).where((e) => exists(e.trackId)).length;

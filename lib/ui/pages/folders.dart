@@ -9,17 +9,15 @@ import '../tracks.dart';
 import '../widgets.dart';
 import 'albums.dart';
 
-/// Browse the library the way it sits on disk.
-class FoldersPage extends StatefulWidget {
-  const FoldersPage({super.key});
-  @override
-  State<FoldersPage> createState() => _FoldersPageState();
-}
+/// Browse the library the way it sits on disk. Each folder level is its own page
+/// (nav.push('folder', path)), so Back, Esc and the mouse's back button go up again.
+class FoldersPage extends StatelessWidget {
+  const FoldersPage({super.key, this.dir});
 
-class _FoldersPageState extends State<FoldersPage> {
-  /// The open folder (null = the library folders themselves); kept across navigation.
-  String? get _dir => nav.memo['folders.dir'] as String?;
-  set _dir(String? v) => nav.memo['folders.dir'] = v;
+  /// The open folder (null = the library folders themselves).
+  final String? dir;
+
+  void _open(String? target) => target == null ? nav.go('folders') : nav.push('folder', target);
 
   /// Every song in [dir] and below it.
   List<Track> _under(String dir) => [
@@ -32,7 +30,7 @@ class _FoldersPageState extends State<FoldersPage> {
     listenable: lib,
     builder: (context, _) {
       final roots = lib.folders;
-      final dir = _dir;
+      final dir = this.dir;
       final subdirs = <String, int>{}; // child folder -> songs inside
       final here = <Track>[];
       for (final t in lib.tracks) {
@@ -110,7 +108,7 @@ class _FoldersPageState extends State<FoldersPage> {
           SliverList.builder(
             itemCount: names.length,
             itemBuilder: (_, i) => Clickable(
-              onTap: () => setState(() => _dir = names[i]),
+              onTap: () => _open(names[i]),
               onSecondaryTapDown: (d) => showCollectionMenu(context, d.globalPosition, _under(names[i])),
               semanticLabel: 'Folder ${p.basename(names[i])}',
               radius: R.small,
@@ -152,13 +150,13 @@ class _FoldersPageState extends State<FoldersPage> {
     },
   );
 
-  Widget _crumb(String label, String? target) => target == _dir
+  Widget _crumb(String label, String? target) => target == dir
       ? Padding(
           padding: const EdgeInsets.symmetric(horizontal: S.x2, vertical: S.x1),
           child: Text(label, style: T.small.copyWith(color: C.text)),
         )
       : Clickable(
-          onTap: () => setState(() => _dir = target),
+          onTap: () => _open(target),
           radius: R.tiny + 2,
           padding: const EdgeInsets.symmetric(horizontal: S.x2, vertical: S.x1),
           child: Text(label, style: T.small),

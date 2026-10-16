@@ -157,7 +157,7 @@ Future<void> showTrackMenu(BuildContext context, Offset at, List<Track> tracks, 
     const PopupMenuDivider(height: S.x2),
     menuItem('fav', LucideIcons.heart, allFav ? 'Remove from Favourites' : 'Add to Favourites'),
     menuItem('rate', LucideIcons.star, 'Rate ▸'),
-    if (t != null) ...[menuItem('album', LucideIcons.disc3, 'Go to album'), menuItem('artist', LucideIcons.micVocal, 'Go to artist')],
+    if (t != null) ...[menuItem('album', LucideIcons.disc3, 'Go to album'), menuItem('artist', LucideIcons.users, 'Go to artist')],
   ]);
   if (!context.mounted) return;
   switch (v) {
@@ -232,49 +232,65 @@ Offset below(BuildContext context) {
 }
 
 Future<void> addToPlaylistDialog(BuildContext context, List<Track> tracks) async {
+  var filter = '';
   final id = await showDialog<int>(
     context: context,
-    builder: (ctx) => AlertDialog(
-      title: Text('Add ${plural(tracks.length, 'song')} to a playlist'),
-      content: SizedBox(
-        width: 360,
-        child: SingleChildScrollView(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Clickable(
-                onTap: () async {
-                  final name = await askText(ctx, 'New playlist', action: 'Create');
-                  if (name != null && ctx.mounted) Navigator.pop(ctx, lib.createPlaylist(name));
-                },
-                padding: const EdgeInsets.all(S.x3),
-                child: Row(
-                  children: [
-                    Icon(LucideIcons.plus, size: 16, color: C.text),
-                    const SizedBox(width: S.x3),
-                    Text('New playlist', style: T.label),
-                  ],
-                ),
-              ),
-              for (final pl in lib.playlists)
-                Clickable(
-                  onTap: () => Navigator.pop(ctx, pl.id),
-                  padding: const EdgeInsets.all(S.x3),
-                  child: Row(
-                    children: [
-                      Icon(LucideIcons.listMusic, size: 16, color: C.dim),
-                      const SizedBox(width: S.x3),
-                      Expanded(
-                        child: Text(pl.name, style: T.label, maxLines: 1, overflow: TextOverflow.ellipsis),
-                      ),
-                      Text(plural(pl.trackIds.length, 'song'), style: T.caption),
-                    ],
+    builder: (ctx) => StatefulBuilder(
+      builder: (ctx, setState) => AlertDialog(
+        title: Text('Add ${plural(tracks.length, 'song')} to a playlist'),
+        content: SizedBox(
+          width: 360,
+          child: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                // Type a name and press Enter: a new playlist with these songs.
+                TextField(
+                  autofocus: true,
+                  style: T.body,
+                  decoration: InputDecoration(
+                    isDense: true,
+                    hintText: 'New playlist name…',
+                    prefixIcon: Icon(LucideIcons.plus, size: 16, color: C.text),
                   ),
+                  onSubmitted: (v) {
+                    if (v.trim().isNotEmpty) Navigator.pop(ctx, lib.createPlaylist(v.trim()));
+                  },
                 ),
-            ],
+                if (lib.playlists.length > 8) ...[
+                  const SizedBox(height: S.x2),
+                  TextField(
+                    style: T.body,
+                    decoration: InputDecoration(
+                      isDense: true,
+                      hintText: 'Filter playlists',
+                      prefixIcon: Icon(LucideIcons.listFilter, size: 16, color: C.faint),
+                    ),
+                    onChanged: (v) => setState(() => filter = v.trim().toLowerCase()),
+                  ),
+                ],
+                const SizedBox(height: S.x2),
+                for (final pl in lib.playlists.where((pl) => pl.name.toLowerCase().contains(filter)))
+                  Clickable(
+                    onTap: () => Navigator.pop(ctx, pl.id),
+                    padding: const EdgeInsets.all(S.x3),
+                    child: Row(
+                      children: [
+                        Icon(LucideIcons.listMusic, size: 16, color: C.dim),
+                        const SizedBox(width: S.x3),
+                        Expanded(
+                          child: Text(pl.name, style: T.label, maxLines: 1, overflow: TextOverflow.ellipsis),
+                        ),
+                        Text(plural(pl.trackIds.length, 'song'), style: T.caption),
+                      ],
+                    ),
+                  ),
+              ],
+            ),
           ),
         ),
+        actions: [PillButton('Cancel', onTap: () => Navigator.pop(ctx))],
       ),
     ),
   );
@@ -292,15 +308,21 @@ Future<void> addToPlaylistDialog(BuildContext context, List<Track> tracks) async
 
 // ------------------------------------------------------------ rows
 
-/// Which columns a song row has room for at [width].
+/// Which columns a song row has room for at [width], and how wide the fixed ones are:
+/// they grow with the text size [k], so bigger text drops columns (Year first) instead of cutting them.
 class TrackCols {
-  TrackCols(double width, {required bool table, required bool album, required bool badge})
-    : artist = table && width >= 520,
-      album = album && width >= (table ? 640 : 600),
-      year = table && width >= 760,
-      rating = table && width >= 860,
-      badge = badge && width >= (table ? 700 : 520);
+  TrackCols(double width, {required bool table, required bool album, required bool badge, this.k = 1})
+    : artist = table && width / k >= 520,
+      album = album && width / k >= (table ? 640 : 600),
+      year = table && width / k >= 760,
+      rating = table && width / k >= 860,
+      badge = badge && width / k >= (table ? 700 : 520);
   final bool artist, album, year, rating, badge;
+  final double k;
+  double get yearW => 56 * k;
+  double get badgeW => 104 * k;
+  double get timeW => 48 * k;
+  double get ratingW => 84 * k;
 }
 
 /// One song row. Click selects, double-click or Enter plays [list] from here,
@@ -320,8 +342,12 @@ class TrackRow extends StatefulWidget {
     this.trailing,
     this.lead,
     this.table = false,
+    this.title,
   });
   final Track track;
+
+  /// Shown instead of the song's title (a movement under its work's header).
+  final String? title;
   final List<Track> list;
   final int index;
   final int? number;
@@ -336,6 +362,9 @@ class TrackRow extends StatefulWidget {
   final bool table;
 
   static const height = 56.0;
+
+  /// Rows stop growing here, so a maximised window doesn't spread one song across the screen.
+  static const maxWidth = 1200.0;
 
   /// Row height at the user's text size.
   static double extentOf(BuildContext context) => max(height, textHeight(context, [T.label, T.small]) + S.x4);
@@ -372,6 +401,24 @@ class _TrackRowState extends State<TrackRow> {
       final fav = lib.isFavourite(track.id);
       final selected = selection.has(track.id);
       final quiet = !(_hover || selected || isCurrent);
+      // Hovering shows a play button on the lead: one click plays from this row.
+      final playBtn = _hover && !isCurrent && !isTouch;
+      Widget scrim(Widget child) => Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(color: C.scrim, borderRadius: BorderRadius.circular(R.tiny + 2)),
+        child: child,
+      );
+      Widget play({bool onCover = false}) => Clickable(
+        onTap: _play,
+        tooltip: 'Play',
+        semanticLabel: 'Play ${track.title}',
+        radius: R.tiny + 2,
+        hover: Colors.transparent,
+        child: onCover
+            ? scrim(Icon(LucideIcons.play, size: 16, color: C.text))
+            : SizedBox(height: 40, child: Icon(LucideIcons.play, size: 16, color: C.text)),
+      );
       Widget lead;
       if (widget.lead != null) {
         lead = widget.lead!;
@@ -380,14 +427,8 @@ class _TrackRowState extends State<TrackRow> {
           alignment: Alignment.center,
           children: [
             CoverArt.track(track, size: 40, radius: R.tiny + 2),
-            if (isCurrent) ...[
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(color: C.scrim, borderRadius: BorderRadius.circular(R.tiny + 2)),
-              ),
-              PlayingBars(playing: engine.playing),
-            ],
+            if (isCurrent) scrim(Center(child: PlayingBars(playing: engine.playing))),
+            if (playBtn) play(onCover: true),
           ],
         );
       } else {
@@ -395,6 +436,8 @@ class _TrackRowState extends State<TrackRow> {
           width: 40,
           child: isCurrent
               ? Center(child: PlayingBars(playing: engine.playing))
+              : playBtn
+              ? play()
               : Text(
                   '${widget.number ?? widget.index + 1}',
                   textAlign: TextAlign.center,
@@ -402,10 +445,10 @@ class _TrackRowState extends State<TrackRow> {
                 ),
         );
       }
-      final sub = widget.table
+      // A suggestion's reason ([why]) shows in the tooltip; the row keeps the artist.
+      final sub = widget.table || (widget.albumArtist != null && track.artist.toLowerCase() == widget.albumArtist!.toLowerCase())
           ? null
-          : widget.why ??
-                (widget.albumArtist != null && track.artist.toLowerCase() == widget.albumArtist!.toLowerCase() ? null : track.artist);
+          : track.artist;
       final row = Listener(
         onPointerDown: _select,
         child: Clickable(
@@ -428,7 +471,13 @@ class _TrackRowState extends State<TrackRow> {
             height: TrackRow.extentOf(context),
             child: LayoutBuilder(
               builder: (context, c) {
-                final cols = TrackCols(c.maxWidth, table: widget.table, album: widget.showAlbum, badge: widget.showBadge);
+                final cols = TrackCols(
+                  c.maxWidth,
+                  table: widget.table,
+                  album: widget.showAlbum,
+                  badge: widget.showBadge,
+                  k: MediaQuery.textScalerOf(context).scale(1),
+                );
                 return Row(
                   children: [
                     lead,
@@ -439,11 +488,25 @@ class _TrackRowState extends State<TrackRow> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            track.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: T.label.copyWith(color: isCurrent ? C.accent : C.text),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  widget.title ?? track.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: T.label.copyWith(color: isCurrent ? C.accent : C.text),
+                                ),
+                              ),
+                              if (engine.cantPlay.contains(track.id))
+                                Padding(
+                                  padding: const EdgeInsets.only(left: S.x2),
+                                  child: Tooltip(
+                                    message: "Can't play this file (missing or unreadable)",
+                                    child: Icon(LucideIcons.fileX, size: 14, color: C.faint),
+                                  ),
+                                ),
+                            ],
                           ),
                           if (sub != null) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
                         ],
@@ -463,21 +526,28 @@ class _TrackRowState extends State<TrackRow> {
                         child: Text(track.album, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
                       ),
                     ],
-                    if (cols.year)
+                    if (cols.year) ...[
+                      const SizedBox(width: S.x4),
                       SizedBox(
-                        width: 56,
+                        width: cols.yearW,
                         child: Text(track.year?.toString() ?? '', style: T.small.copyWith(fontFeatures: T.tabular)),
                       ),
+                    ],
                     if (cols.badge) ...[
                       const SizedBox(width: S.x4),
                       SizedBox(
-                        width: 104,
-                        child: Align(alignment: Alignment.centerLeft, child: FormatBadge(track.badge)),
+                        width: cols.badgeW,
+                        child: Align(
+                          alignment: Alignment.centerLeft,
+                          child: track.bitrate > 0
+                              ? Tooltip(message: '${fmtInt(track.bitrate)} kbps', child: FormatBadge(track.badge))
+                              : FormatBadge(track.badge),
+                        ),
                       ),
                     ],
                     if (cols.rating)
                       SizedBox(
-                        width: 84,
+                        width: cols.ratingW,
                         child: AnimatedOpacity(
                           opacity: lib.rating(track.id) > 0 || !quiet ? 1 : 0,
                           duration: Motion.fast,
@@ -497,7 +567,7 @@ class _TrackRowState extends State<TrackRow> {
                       ),
                     ),
                     SizedBox(
-                      width: 48,
+                      width: cols.timeW,
                       child: Text(
                         fmtTime(track.duration),
                         textAlign: TextAlign.right,
@@ -526,7 +596,14 @@ class _TrackRowState extends State<TrackRow> {
           ),
         ),
       );
-      return widget.why == null ? row : Tooltip(message: 'Why: ${widget.why}', waitDuration: const Duration(seconds: 1), child: row);
+      final capped = Align(
+        alignment: Alignment.centerLeft,
+        child: ConstrainedBox(
+          constraints: const BoxConstraints(maxWidth: TrackRow.maxWidth),
+          child: row,
+        ),
+      );
+      return widget.why == null ? capped : Tooltip(message: 'Why: ${widget.why}', waitDuration: const Duration(seconds: 1), child: capped);
     },
   );
 }

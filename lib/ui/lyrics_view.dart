@@ -139,10 +139,10 @@ class _LyricsViewState extends State<LyricsView> {
     final style = widget.embedded ? T.lyric.copyWith(fontSize: 24) : T.lyric;
     Widget body;
     if (t == null) {
-      body = const EmptyState(icon: LucideIcons.micVocal, title: 'Nothing playing', body: 'Play a song to see its lyrics here.');
+      body = const EmptyState(icon: LucideIcons.messageSquareQuote, title: 'Nothing playing', body: 'Play a song to see its lyrics here.');
     } else if (l == null) {
       body = EmptyState(
-        icon: LucideIcons.micVocal,
+        icon: LucideIcons.messageSquareQuote,
         title: 'No lyrics for this song',
         body:
             _online ??
@@ -171,7 +171,11 @@ class _LyricsViewState extends State<LyricsView> {
         child: LayoutBuilder(
           builder: (context, c) => ListView.builder(
             controller: _scroll,
-            padding: EdgeInsets.symmetric(horizontal: widget.embedded ? S.x2 : S.x16, vertical: c.maxHeight * 0.4),
+            // A centred column of at most 720 px in the big view.
+            padding: EdgeInsets.symmetric(
+              horizontal: widget.embedded ? S.x2 : max(S.x16, (c.maxWidth - 720) / 2),
+              vertical: c.maxHeight * 0.4,
+            ),
             itemCount: l.lines.length,
             itemBuilder: (_, i) {
               final (time, words) = l.lines[i];
@@ -233,6 +237,27 @@ class _LyricsViewState extends State<LyricsView> {
               ),
             ),
             body,
+            if (t != null)
+              Positioned(
+                left: S.x5,
+                top: S.x5,
+                right: S.x5,
+                child: Row(
+                  children: [
+                    CoverArt.track(t, size: 48, radius: R.tiny + 2),
+                    const SizedBox(width: S.x3),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(t.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.label),
+                          Text(t.artist, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
             if (l != null)
               Positioned(
                 right: S.x5,

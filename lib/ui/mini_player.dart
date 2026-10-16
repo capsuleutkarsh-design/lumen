@@ -9,6 +9,7 @@ import 'package:window_manager/window_manager.dart';
 import '../platform/window.dart';
 import 'app.dart';
 import 'disc.dart';
+import 'player_bar.dart' show PlayButton;
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -120,20 +121,15 @@ class MiniPlayer extends StatelessWidget {
             tooltip: big ? 'Smaller' : 'Bigger',
             onTap: () => setMiniExpanded(!big),
           ),
-          IconBtn(LucideIcons.appWindow, size: 14, box: 28, tooltip: 'Back to the full window', onTap: () => setMini(false)),
+          IconBtn(LucideIcons.appWindow, size: 14, box: 28, tooltip: 'Full window', onTap: () => setMini(false)),
         ];
         final transport = Row(
           mainAxisSize: MainAxisSize.min,
           children: [
             IconBtn(LucideIcons.skipBack, size: 16, box: 32, color: C.text, tooltip: 'Previous', onTap: t == null ? null : engine.previous),
-            IconBtn(
-              engine.playing ? LucideIcons.pause : LucideIcons.play,
-              size: 18,
-              box: 36,
-              color: C.text,
-              tooltip: engine.playing ? 'Pause' : 'Play',
-              onTap: t == null ? null : engine.togglePlay,
-            ),
+            const SizedBox(width: S.x1),
+            PlayButton(playing: engine.playing, size: 32, onTap: t == null ? null : engine.togglePlay),
+            const SizedBox(width: S.x1),
             IconBtn(LucideIcons.skipForward, size: 16, box: 32, color: C.text, tooltip: 'Next', onTap: t == null ? null : engine.next),
           ],
         );
@@ -207,7 +203,7 @@ class _SeekLine extends StatelessWidget {
                 final total = engine.duration.inMilliseconds;
                 return FractionallySizedBox(
                   widthFactor: total <= 0 ? 0 : (pos.inMilliseconds / total).clamp(0.0, 1.0),
-                  child: Container(height: 3, color: C.accent),
+                  child: Container(height: 2, color: C.text.withValues(alpha: 0.6)),
                 );
               },
             ),

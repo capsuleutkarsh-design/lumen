@@ -22,24 +22,24 @@ class SoundPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([sound, engine]),
-    builder: (context, _) => Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
+    builder: (context, _) => ListView(
+      key: const PageStorageKey('sound'),
+      padding: EdgeInsets.zero,
+      // Not const: the sections read [sound] and [engine], so they rebuild with this builder.
+      // The signal path scrolls with the page (pinned, it cut into the cards in a short window).
       children: [
-        const PageHeader('Sound', subtitle: 'How your music reaches your ears'),
-        if (!Platform.isAndroid) ...[const _Narrow(child: SignalPathPanel()), const SizedBox(height: S.x4)],
-        Expanded(
-          child: ListView(
-            key: const PageStorageKey('sound'),
-            padding: EdgeInsets.zero,
-            // Not const: the sections read [sound] and [engine], so they rebuild with this builder.
+        Narrow(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              if (Platform.isAndroid) ...[const SignalPathPanel(), const SizedBox(height: S.x4)], // scrolls with the page
-              _Narrow(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [_Output(), _Playback(), _Equalizer(), _Headphones(), _Loudness()],
-                ),
-              ),
+              const PageHeader('Sound', subtitle: 'How your music reaches your ears'),
+              const SignalPathPanel(),
+              const SizedBox(height: S.x4),
+              _Output(),
+              _Playback(),
+              _Equalizer(),
+              _Headphones(),
+              _Loudness(),
             ],
           ),
         ),
@@ -48,12 +48,13 @@ class SoundPage extends StatelessWidget {
   );
 }
 
-class _Narrow extends StatelessWidget {
-  const _Narrow({required this.child});
+/// A column of at most 880 px, centred in a wide window (Settings, Sound).
+class Narrow extends StatelessWidget {
+  const Narrow({super.key, required this.child});
   final Widget child;
   @override
   Widget build(BuildContext context) => Align(
-    alignment: Alignment.topLeft,
+    alignment: Alignment.topCenter,
     child: ConstrainedBox(constraints: const BoxConstraints(maxWidth: 880), child: child),
   );
 }
@@ -79,8 +80,8 @@ Widget _card(String title, String? subtitle, List<Widget> children, {Widget? tra
   ),
 );
 
-/// A setting with a title, a plain explanation and a switch.
-Widget _switchRow(String title, String body, bool value, ValueChanged<bool> onChanged, {String? tag}) => Padding(
+/// A setting with a title, a plain explanation (and [more] behind "How it works") and a switch.
+Widget _switchRow(String title, String body, bool value, ValueChanged<bool> onChanged, {String? tag, String? more}) => Padding(
   padding: const EdgeInsets.only(bottom: S.x4),
   child: Row(
     children: [
@@ -95,6 +96,7 @@ Widget _switchRow(String title, String body, bool value, ValueChanged<bool> onCh
             ),
             const SizedBox(height: 2),
             Text(body, style: T.small),
+            if (more != null) HowItWorks(more),
           ],
         ),
       ),
@@ -104,7 +106,7 @@ Widget _switchRow(String title, String body, bool value, ValueChanged<bool> onCh
   ),
 );
 
-Widget _labelled(String label, Widget child, {String? caption}) => Padding(
+Widget _labelled(String label, Widget child, {String? caption, String? more}) => Padding(
   padding: const EdgeInsets.only(bottom: S.x4),
   child: Column(
     crossAxisAlignment: CrossAxisAlignment.start,
@@ -113,9 +115,43 @@ Widget _labelled(String label, Widget child, {String? caption}) => Padding(
       const SizedBox(height: S.x2),
       child,
       if (caption != null) ...[const SizedBox(height: S.x2), Text(caption, style: T.caption)],
+      if (more != null) HowItWorks(more),
     ],
   ),
 );
+
+/// "How it works", folded: the long explanation of a setting, for whoever wants it.
+class HowItWorks extends StatefulWidget {
+  const HowItWorks(this.text, {super.key});
+  final String text;
+  @override
+  State<HowItWorks> createState() => _HowItWorksState();
+}
+
+class _HowItWorksState extends State<HowItWorks> {
+  bool _open = false;
+  @override
+  Widget build(BuildContext context) => Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      const SizedBox(height: S.x1),
+      Clickable(
+        onTap: () => setState(() => _open = !_open),
+        semanticLabel: 'How it works',
+        radius: R.tiny,
+        hover: Colors.transparent,
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text('How it works', style: T.caption.copyWith(color: C.dim, fontWeight: FontWeight.w600)),
+            Icon(_open ? LucideIcons.chevronUp : LucideIcons.chevronDown, size: 12, color: C.dim),
+          ],
+        ),
+      ),
+      if (_open) ...[const SizedBox(height: S.x1), Text(widget.text, style: T.caption)],
+    ],
+  );
+}
 
 class _Tag extends StatelessWidget {
   const _Tag(this.text);
@@ -289,11 +325,13 @@ class _Output extends StatelessWidget {
       ),
       _switchRow(
         'Best quality on this device',
-        'Converts to the rate your device runs at with the best resampler (soxr, highest quality), so Windows never does a rough '
-            'conversion. Works in 32-bit float, adds fine dither when the device takes whole numbers, lowers the level just enough '
-            'for EQ boosts, and a gentle limiter stops peaks just below full scale so nothing ever crackles on cheap speakers.',
+        "Converts to your device's rate with the best resampler, so Windows never does a rough conversion.",
         s.bestQuality,
         (v) => sound.change((s) => s.bestQuality = v),
+        more:
+            'The resampler is soxr at its highest quality. Gleo works in 32-bit float, adds fine dither when the device takes '
+            'whole numbers, lowers the level just enough for EQ boosts, and a gentle limiter stops peaks just below full scale '
+            'so nothing ever crackles on cheap speakers.',
       ),
       _labelled(
         'Upsampling',
@@ -303,9 +341,10 @@ class _Output extends StatelessWidget {
           s.upsample,
           (u) => sound.change((s) => s.upsample = u),
         ),
-        caption: engine.exclusive
-            ? 'Sends a higher rate to your DAC, converted with soxr. 44.1 kHz music goes to 88.2 or 176.4 kHz (an exact multiple), 48 kHz music to 96 or 192 kHz.'
-            : 'Works in Exclusive mode. In Shared mode Windows fixes the rate, and Best quality already converts to it with soxr.',
+        caption: engine.exclusive ? 'Sends a higher rate to your DAC, converted with soxr.' : 'Works in Exclusive mode.',
+        more: engine.exclusive
+            ? '44.1 kHz music goes to 88.2 or 176.4 kHz (an exact multiple), 48 kHz music to 96 or 192 kHz.'
+            : 'In Shared mode Windows fixes the rate, and Best quality already converts to it with soxr.',
       ),
       _labelled(
         'Buffer',
@@ -998,7 +1037,7 @@ class _AutoEqDialogState extends State<AutoEqDialog> {
         ..add(eq.copy());
     });
     Navigator.pop(context);
-    notify("Using '$name' — saved in your presets");
+    notify('Using “$name” — saved in your presets');
   }
 
   @override

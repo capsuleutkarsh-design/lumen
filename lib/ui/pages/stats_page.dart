@@ -1,6 +1,7 @@
 import 'dart:math';
 
 import 'package:flutter/material.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../library/stats.dart';
 import '../app.dart';
@@ -43,6 +44,21 @@ class _StatsPageState extends State<StatsPage> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: Listenable.merge([lib, lib.plays]),
     builder: (context, _) {
+      if (lib.firstPlay == null) {
+        return const Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            BrowseHeader('stats'),
+            Expanded(
+              child: EmptyState(
+                icon: LucideIcons.chartColumn,
+                title: 'No listening yet',
+                body: 'Play some music and your listening shows up here.',
+              ),
+            ),
+          ],
+        );
+      }
       final now = DateTime.now();
       final today = DateTime(now.year, now.month, now.day);
       final (from, bucket) = _range(today);
@@ -58,7 +74,8 @@ class _StatsPageState extends State<StatsPage> {
           ),
           _Card(
             'Listening time',
-            subtitle: 'Each play counted in full: a song played past its play count point. Skips are left out.',
+            subtitle:
+                'A play counts after half a song (or 4 minutes), then in full. Songs left in the first 30 seconds are skips and are left out.',
             child: _Bars(s.buckets, bucket),
           ),
           LayoutBuilder(

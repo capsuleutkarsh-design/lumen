@@ -36,7 +36,7 @@ class _AlbumCardState extends State<AlbumCard> {
   @override
   Widget build(BuildContext context) {
     final a = widget.album;
-    final caption = widget.why ?? [if (a.year != null) '${a.year}', a.badge].join(' · ');
+    final caption = widget.why ?? [if (a.year != null) '${a.year}', a.bestBadge].join(' · ');
     final card = DecoratedBox(
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(R.card),
@@ -117,7 +117,7 @@ Future<void> albumMenu(BuildContext context, Offset at, Album a) => showCollecti
   at,
   a.tracks,
   extra: [
-    ('artist', LucideIcons.micVocal, 'Go to artist', () => nav.push('artist', a.artist)),
+    ('artist', LucideIcons.users, 'Go to artist', () => nav.push('artist', a.artist)),
     ('cover', LucideIcons.image, 'Change cover…', () => showCoverPicker(context, a)),
   ],
 );
@@ -165,12 +165,21 @@ class _AlbumShelfState extends State<AlbumShelf> {
           onNotification: (n) => _update(n.metrics),
           child: NotificationListener<ScrollNotification>(
             onNotification: (n) => _update(n.metrics),
-            child: ListView.separated(
-              controller: _c,
-              scrollDirection: Axis.horizontal,
-              itemCount: widget.albums.length,
-              separatorBuilder: (_, _) => const SizedBox(width: S.x4),
-              itemBuilder: (_, i) => AlbumCard(widget.albums[i], width: _card - S.x2 * 2, why: widget.whys?[i]),
+            // Lined up with the section title; the right edge fades while there is more.
+            child: ShaderMask(
+              blendMode: BlendMode.dstIn,
+              shaderCallback: (r) => LinearGradient(
+                colors: [Colors.black, _right ? Colors.transparent : Colors.black],
+                stops: [1 - 24 / r.width, 1],
+              ).createShader(r),
+              child: ListView.separated(
+                controller: _c,
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: S.x2),
+                itemCount: widget.albums.length,
+                separatorBuilder: (_, _) => const SizedBox(width: S.x4),
+                itemBuilder: (_, i) => AlbumCard(widget.albums[i], width: _card - S.x2 * 2, why: widget.whys?[i]),
+              ),
             ),
           ),
         ),
@@ -353,7 +362,7 @@ class AlbumPage extends StatelessWidget {
               onArtist: () => nav.push('artist', a.artist),
               tracks: a.tracks,
               menu: [
-                ('artist', LucideIcons.micVocal, 'Go to artist', () => nav.push('artist', a.artist)),
+                ('artist', LucideIcons.users, 'Go to artist', () => nav.push('artist', a.artist)),
                 ('cover', LucideIcons.image, 'Change cover…', () => showCoverPicker(context, a)),
               ],
             ),
@@ -451,9 +460,11 @@ class PageHero extends StatelessWidget {
             LayoutBuilder(
               builder: (context, c) {
                 final w = c.maxWidth;
-                final size = (w * 0.3).clamp(120.0, 232.0);
+                // A short window gets a compact header, so the first songs stay in view.
+                final compact = MediaQuery.sizeOf(context).height < 760;
+                final size = compact ? 96.0 : (w * 0.3).clamp(120.0, 200.0);
                 final stacked = w < 480;
-                final titleStyle = w >= 720 ? T.display : T.title;
+                final titleStyle = w >= 720 && !compact ? T.display : T.title;
                 final art = DecoratedBox(
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(round ? R.pill : R.card),
@@ -465,9 +476,15 @@ class PageHero extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    Text(
-                      label.toUpperCase(),
-                      style: T.caption.copyWith(letterSpacing: 1.2, fontWeight: FontWeight.w600, color: C.dim),
+                    // Back shares the row with the label, so the header stays short.
+                    Row(
+                      children: [
+                        if (nav.canBack) ...[const _BackPill(), const SizedBox(width: S.x3)],
+                        Text(
+                          label.toUpperCase(),
+                          style: T.caption.copyWith(letterSpacing: 1.2, fontWeight: FontWeight.w600, color: C.dim),
+                        ),
+                      ],
                     ),
                     const SizedBox(height: S.x2),
                     Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: titleStyle),
@@ -491,7 +508,7 @@ class PageHero extends StatelessWidget {
                         if (badge != null) FormatBadge(badge!),
                       ],
                     ),
-                    const SizedBox(height: S.x5),
+                    SizedBox(height: compact ? S.x3 : S.x5),
                     Wrap(
                       spacing: S.x3,
                       runSpacing: S.x2,
@@ -524,19 +541,17 @@ class PageHero extends StatelessWidget {
                   ],
                 );
                 return Padding(
-                  padding: EdgeInsets.all(w >= 720 ? S.x6 : S.x5),
+                  padding: EdgeInsets.all(w >= 720 && !compact ? S.x6 : S.x4),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (nav.canBack) const _BackPill() else const SizedBox(height: S.x8),
-                      SizedBox(height: w >= 720 ? S.x16 : S.x8),
                       if (stacked) ...[
                         art,
                         const SizedBox(height: S.x5),
                         text,
                       ] else
                         Row(
-                          crossAxisAlignment: CrossAxisAlignment.end,
+                          crossAxisAlignment: compact ? CrossAxisAlignment.center : CrossAxisAlignment.end,
                           children: [
                             art,
                             const SizedBox(width: S.x6),

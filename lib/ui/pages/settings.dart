@@ -15,8 +15,10 @@ import '../app.dart';
 import '../disc.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'browse.dart' show Segmented;
 import 'credits.dart';
 import 'settings_extras.dart';
+import 'sound.dart' show Narrow;
 
 /// Asks for a folder and adds it to the library (Settings, the empty Home, drag and drop).
 /// On Android the folder may be on the phone or on an SD card / USB stick.
@@ -60,14 +62,11 @@ class SettingsPage extends StatelessWidget {
         key: const PageStorageKey('settings'),
         padding: EdgeInsets.zero,
         children: [
-          const PageHeader('Settings'),
-          Align(
-            alignment: Alignment.topLeft,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 880),
-              child: Column(
+          Narrow(
+            child: Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  const PageHeader('Settings'),
                   _card(
                     'Library folders',
                     Platform.isAndroid
@@ -159,15 +158,10 @@ class SettingsPage extends StatelessWidget {
                     Row(
                       children: [
                         SizedBox(width: 140, child: Text('Spinning disc', style: T.label)),
-                        Expanded(
-                          child: Wrap(
-                            spacing: S.x2,
-                            runSpacing: S.x2,
-                            children: [
-                              for (final (s, label) in const [(DiscStyle.cd, 'CD'), (DiscStyle.vinyl, 'Vinyl'), (DiscStyle.off, 'Off')])
-                                PillButton(label, dense: true, primary: discStyle.value == s, onTap: () => discStyle.value = s),
-                            ],
-                          ),
+                        Segmented(
+                          value: discStyle.value,
+                          options: const [(DiscStyle.cd, 'CD'), (DiscStyle.vinyl, 'Vinyl'), (DiscStyle.off, 'Off')],
+                          onChanged: (s) => discStyle.value = s,
                         ),
                       ],
                     ),
@@ -186,16 +180,33 @@ class SettingsPage extends StatelessWidget {
                             spacing: S.x2,
                             runSpacing: S.x2,
                             children: [
+                              // Check chips: any number can be on.
                               for (final s in artSources.where((s) => s.weight > 0))
-                                PillButton(
-                                  s.name,
-                                  dense: true,
-                                  icon: sourcesInUse(lib.artSourcesOn).contains(s) ? LucideIcons.check : null,
-                                  primary: sourcesInUse(lib.artSourcesOn).contains(s),
-                                  onTap: () => lib.artSourcesOn = lib.artSourcesOn.contains(s.id)
-                                      ? ({...lib.artSourcesOn}..remove(s.id))
-                                      : {...lib.artSourcesOn, s.id},
-                                ),
+                                if (sourcesInUse(lib.artSourcesOn).contains(s) case final on)
+                                  DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(R.pill),
+                                      border: Border.all(color: on ? C.borderStrong : C.border),
+                                    ),
+                                    child: Clickable(
+                                      onTap: () => lib.artSourcesOn = lib.artSourcesOn.contains(s.id)
+                                          ? ({...lib.artSourcesOn}..remove(s.id))
+                                          : {...lib.artSourcesOn, s.id},
+                                      selected: on,
+                                      selectedColor: C.raised3,
+                                      semanticLabel: s.name,
+                                      radius: R.pill,
+                                      padding: const EdgeInsets.symmetric(horizontal: S.x3, vertical: S.x1 + 2),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(on ? LucideIcons.check : LucideIcons.plus, size: 14, color: on ? C.text : C.faint),
+                                          const SizedBox(width: S.x1 + 2),
+                                          Text(s.name, style: T.label.copyWith(color: on ? C.text : C.dim)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                             ],
                           ),
                         ),
@@ -260,24 +271,37 @@ class SettingsPage extends StatelessWidget {
                       children: [
                         const Wordmark(height: 40),
                         const SizedBox(width: S.x4),
-                        Expanded(
-                          child: Text(
-                            'Gleo · © 2026 Utkarsh Tripathi · UT Community Licence 2.0\n\n'
-                            'Version $shortVersion · Gleo audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/lumen-audio-engine). '
-                            'Design inspired by Wora (MIT). '
-                            'Font: Inter (SIL Open Font License). Icons: Lucide (ISC). No AI. Suggestions come only from what you play here, '
-                            'and nothing goes to the internet unless you turn on the update check or lyrics downloads.',
-                            style: T.small,
-                          ),
-                        ),
+                        Expanded(child: Text('Gleo · © 2026 Utkarsh Tripathi · UT Community Licence 2.0', style: T.label)),
                       ],
+                    ),
+                    const SizedBox(height: S.x4),
+                    for (final (k, v) in [
+                      ('Version', shortVersion),
+                      ('Audio engine', 'Gleo audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/lumen-audio-engine)'),
+                      ('Design', 'Inspired by Wora (MIT)'),
+                      ('Font', 'Inter (SIL Open Font License)'),
+                      ('Icons', 'Lucide (ISC)'),
+                    ])
+                      Padding(
+                        padding: const EdgeInsets.only(bottom: S.x2),
+                        child: Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            SizedBox(width: 140, child: Text(k, style: T.small.copyWith(color: C.faint))),
+                            Expanded(child: SelectableText(v, style: T.small.copyWith(color: C.text))),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: S.x2),
+                    Text(
+                      'No AI. Suggestions come only from what you play here, and nothing goes to the internet unless you turn on the update check or lyrics downloads.',
+                      style: T.small,
                     ),
                     const SizedBox(height: S.x4),
                     PillButton('Credits', icon: LucideIcons.award, onTap: () => showCredits(context)),
                   ]),
                 ],
               ),
-            ),
           ),
         ],
       );

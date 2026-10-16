@@ -158,4 +158,21 @@ void main() {
     expect(q.current!.trackId, 3);
     expect(q.peekNext(), isNull);
   });
+
+  test('undo clear puts the queue back around the playing song, keeping songs queued since', () {
+    final q = PlayQueue()..playNow(album, 2); // track 3
+    q.clear();
+    expect(ids(q.items), [3]);
+    q.addToQueue([99]);
+    q.undoClear();
+    expect(ids(q.items), [...album, 99]);
+    expect(q.current!.trackId, 3);
+    expect(q.next()!.trackId, 4);
+    q.undoClear(); // only once
+    expect(q.items.length, 11);
+    q.clear();
+    q.playNow([7]); // another song started: nothing to undo
+    q.undoClear();
+    expect(ids(q.items), [7]);
+  });
 }

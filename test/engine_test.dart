@@ -35,7 +35,7 @@ void main() {
       await waitFor(() => e.current?.id == t[2].id && e.position.value > const Duration(milliseconds: 500));
       expect(e.current!.id, t[2].id);
       expect(e.playing, isTrue);
-      expect(said, ["Can't play '${gone.title}' — skipped"]);
+      expect(said, ["Can't play “${gone.title}” — skipped"]);
     });
 
     test('W2: a missing last/only song stops (not "playing" at 0:00 forever) and says so', () async {
@@ -47,7 +47,7 @@ void main() {
       await waitFor(() => said.isNotEmpty);
       await wait(300);
       expect(e.playing, isFalse);
-      expect(said, ["Can't play '${gone.title}'"]);
+      expect(said, ["Can't play “${gone.title}”"]);
     });
 
     test('a corrupt first song: the next one plays', () async {
@@ -69,7 +69,7 @@ void main() {
       await waitFor(() => said.isNotEmpty);
       await wait(300);
       expect(e.playing, isFalse);
-      expect(said, ["Can't play '${bad.title}'"]);
+      expect(said, ["Can't play “${bad.title}”"]);
     });
   });
 

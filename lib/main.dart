@@ -142,7 +142,13 @@ Future<void> start(String data) async {
       return engine.shutdown();
     }, background: C.bg);
     runApp(const App());
-    trayItems.add(('Mini player', () => setMini(!nav.mini)));
+    trayItems.add((() => nav.mini ? 'Full window' : 'Mini player', () => setMini(!nav.mini)));
+    var mini = nav.mini;
+    nav.addListener(() {
+      if (nav.mini == mini) return;
+      mini = nav.mini;
+      trayMenu().catchError((Object e) => log('Tray menu: $e'));
+    });
     setupTray(lib, engine).catchError((Object e) => log('Tray icon: $e')); // Gleo works without it
     if (lib.setting('updateCheck') == '1') checkForUpdate();
   } catch (e, s) {

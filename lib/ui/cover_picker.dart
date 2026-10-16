@@ -5,6 +5,7 @@ import '../art/art_cache.dart';
 import '../art/art_sources.dart';
 import '../library/models.dart';
 import 'app.dart';
+import 'pages/browse.dart' show Segmented;
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -83,21 +84,16 @@ class _CoverPickerState extends State<_CoverPicker> {
               ],
             ),
             const SizedBox(height: S.x4),
-            Wrap(
-              spacing: S.x2,
-              runSpacing: S.x2,
-              children: [
-                for (final s in _sources)
-                  PillButton(
-                    s.name,
-                    dense: true,
-                    primary: s == _tab,
-                    onTap: () => setState(() {
-                      _tab = s;
-                      _pages = 1;
-                    }),
-                  ),
-              ],
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Segmented(
+                value: _tab,
+                options: [for (final s in _sources) (s, s.name)],
+                onChanged: (s) => setState(() {
+                  _tab = s;
+                  _pages = 1;
+                }),
+              ),
             ),
             const SizedBox(height: S.x3),
             Flexible(
@@ -105,9 +101,8 @@ class _CoverPickerState extends State<_CoverPicker> {
                 key: PageStorageKey('cover-picker/${_tab.id}'),
                 shrinkWrap: true,
                 maxCrossAxisExtent: 92,
-                mainAxisSpacing: S.x3,
-                crossAxisSpacing: S.x3,
-                childAspectRatio: 0.78,
+                mainAxisSpacing: S.x2,
+                crossAxisSpacing: S.x2,
                 children: [
                   for (final art in items) _tile(art, '', current, art.key!),
                   if (!_tab.pack)
@@ -115,21 +110,12 @@ class _CoverPickerState extends State<_CoverPicker> {
                       onTap: () => setState(() => _pages++),
                       semanticLabel: 'More covers',
                       radius: R.small,
-                      child: Column(
-                        children: [
-                          AspectRatio(
-                            aspectRatio: 1,
-                            child: DecoratedBox(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(R.small),
-                                border: Border.all(color: C.borderStrong),
-                              ),
-                              child: Center(child: Icon(LucideIcons.ellipsis, color: C.dim)),
-                            ),
-                          ),
-                          const SizedBox(height: S.x1),
-                          Text('More…', style: T.caption),
-                        ],
+                      child: DecoratedBox(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(R.small),
+                          border: Border.all(color: C.borderStrong),
+                        ),
+                        child: Center(child: Text('More…', style: T.caption)),
                       ),
                     ),
                 ],
@@ -161,8 +147,10 @@ class _CoverPickerState extends State<_CoverPicker> {
             ),
             child: CoverArt.art(art, radius: R.small),
           ),
-          const SizedBox(height: S.x1),
-          Text(label, style: T.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+          if (label.isNotEmpty) ...[
+            const SizedBox(height: S.x1),
+            Text(label, style: T.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+          ],
         ],
       ),
     );

@@ -11,7 +11,7 @@ import '../widgets.dart';
 import 'albums.dart';
 import 'browse.dart';
 
-/// A smart playlist's cover: its songs' covers with a sparkle badge, so it never looks like a plain playlist.
+/// A smart playlist's cover: its songs' covers with a filter badge, so it never looks like a plain playlist.
 class SmartCover extends StatelessWidget {
   const SmartCover(this.s, this.tracks, {super.key, this.radius = R.cover});
   final SmartPlaylist s;
@@ -31,7 +31,7 @@ class SmartCover extends StatelessWidget {
             shape: BoxShape.circle,
             border: Border.all(color: C.glassBorder),
           ),
-          child: Icon(LucideIcons.sparkles, size: 14, color: C.text, semanticLabel: 'Smart playlist'),
+          child: Icon(LucideIcons.listFilter, size: 14, color: C.text, semanticLabel: 'Smart playlist'),
         ),
       ),
     ],
@@ -46,7 +46,7 @@ List<Widget> smartPlaylistSlivers(BuildContext context) {
       child: SectionTitle(
         'Smart playlists',
         subtitle: 'Fill themselves from rules and stay up to date',
-        trailing: PillButton('New smart playlist', icon: LucideIcons.sparkles, dense: true, onTap: () => editSmart(context)),
+        trailing: PillButton('New smart playlist', icon: LucideIcons.listFilter, dense: true, onTap: () => editSmart(context)),
       ),
     ),
     sliverCards(
@@ -80,7 +80,7 @@ class SmartPlaylistPage extends StatelessWidget {
       final s = lib.smartPlaylist(id);
       if (s == null) {
         return EmptyState(
-          icon: LucideIcons.sparkles,
+          icon: LucideIcons.listFilter,
           title: 'Smart playlist not found',
           body: 'It may have been deleted.',
           action: PillButton('Back', onTap: nav.back),
@@ -141,7 +141,7 @@ class SmartPlaylistPage extends StatelessWidget {
             const SliverFillRemaining(
               hasScrollBody: false,
               child: EmptyState(
-                icon: LucideIcons.sparkles,
+                icon: LucideIcons.listFilter,
                 title: 'No songs match yet',
                 body: 'Songs appear here by themselves as soon as they match the rules.',
               ),

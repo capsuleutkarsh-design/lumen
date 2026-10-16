@@ -9,6 +9,7 @@ import '../library/library.dart';
 import '../library/models.dart';
 import 'app.dart';
 import 'pages/artists.dart';
+import 'pages/songs.dart' show songMatches, songsFilter;
 import 'theme.dart';
 import 'tracks.dart';
 import 'widgets.dart';
@@ -73,6 +74,11 @@ class _SearchConsoleState extends State<SearchConsole> {
     final albums = best<Album>(lib.albums, (a) => '${a.title} ${a.artist}', 4);
     final artists = best<Artist>(lib.artists, (a) => a.name, 3);
     final songs = best<Track>(lib.tracks, (t) => '${t.title} ${t.artist}', 8);
+    // More songs than fit: a last row opens Songs, filtered by the same words.
+    final all = [
+      for (final t in lib.tracks)
+        if (songMatches(t, s)) t,
+    ];
     setState(() {
       _sel = 0;
       _groups = [
@@ -125,6 +131,12 @@ class _SearchConsoleState extends State<SearchConsole> {
                   [t],
                   song: t,
                 ),
+              if (all.length > songs.length)
+                _Hit('', 'Show all ${plural(all.length, 'song')}', 'Opens Songs, filtered by “${q.trim()}”', null, () {
+                  close();
+                  songsFilter.value = q.trim();
+                  nav.go('songs');
+                }, all),
             ],
           ),
       ];
@@ -264,7 +276,24 @@ class _SearchConsoleState extends State<SearchConsole> {
                           if (_text.text.trim().isEmpty)
                             _hint('Type to search. ↑ ↓ to move, Enter to open or play, Shift+Enter to play next, Esc to close.')
                           else if (_groups.isEmpty)
-                            _hint('Nothing matches “${_text.text.trim()}”.')
+                            Padding(
+                              padding: const EdgeInsets.all(S.x6),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('Nothing matches “${_text.text.trim()}”. Search looks at titles, artists and albums.', style: T.small),
+                                  const SizedBox(height: S.x4),
+                                  PillButton(
+                                    'Browse genres',
+                                    icon: LucideIcons.compass,
+                                    onTap: () {
+                                      nav.setSearch(false);
+                                      nav.go('genres');
+                                    },
+                                  ),
+                                ],
+                              ),
+                            )
                           else
                             Flexible(
                               child: ListView(

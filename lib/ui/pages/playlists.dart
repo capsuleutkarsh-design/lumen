@@ -80,7 +80,10 @@ class PlaylistsPage extends StatelessWidget {
         SliverToBoxAdapter(
           child: PageHeader(
             'Playlists',
-            subtitle: plural(lib.playlists.length, 'playlist'),
+            subtitle: [
+              if (lib.playlists.isNotEmpty) plural(lib.playlists.length, 'playlist'),
+              if (lib.smartPlaylists.isNotEmpty) '${lib.smartPlaylists.length} smart',
+            ].join(' · '),
             trailing: Wrap(
               spacing: S.x3,
               runSpacing: S.x2,
@@ -100,6 +103,7 @@ class PlaylistsPage extends StatelessWidget {
           ),
         ),
         ...smartPlaylistSlivers(context),
+        const SliverToBoxAdapter(child: SectionTitle('Your playlists')),
         if (lib.playlists.isEmpty)
           SliverFillRemaining(
             hasScrollBody: false,
@@ -230,6 +234,7 @@ class PlaylistPage extends StatelessWidget {
                 icon: LucideIcons.listPlus,
                 title: 'This playlist is empty',
                 body: '${menuWord[0].toUpperCase()}${menuWord.substring(1)} any song and choose Add to playlist.',
+                action: PillButton('Go to Songs', icon: LucideIcons.music, onTap: () => nav.go('songs')),
               ),
             )
           else

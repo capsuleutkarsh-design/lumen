@@ -134,6 +134,10 @@ class Engine extends ChangeNotifier {
   /// A message from elsewhere (the Sound page's per-device EQ switch).
   void say(String m) => _say(m);
 
+  /// Songs that could not be played this session (their rows are marked), and the last one.
+  final cantPlay = <int>{};
+  int? lastFailed;
+
   /// Sleep timer: the volume fades out over the last 10 s, then playback pauses.
   DateTime? sleepAt;
   StopAfter stopAfter = StopAfter.none;
@@ -310,7 +314,8 @@ class Engine extends ChangeNotifier {
       bool failed(Entry? x) =>
           x != null && (open ? p.equals(lib.byId[x.trackId]?.path ?? '', path) : idle && identical(x, queue.current));
       final bad = queue.items.where(failed).firstOrNull;
-      final title = bad == null && !open ? 'a song' : "'${lib.byId[bad?.trackId]?.title ?? p.basenameWithoutExtension(path)}'";
+      if ((lastFailed = bad?.trackId) != null) cantPlay.add(bad!.trackId);
+      final title = bad == null && !open ? 'a song' : '“${lib.byId[bad?.trackId]?.title ?? p.basenameWithoutExtension(path)}”';
       if (failed(_mpvNext) && !failed(queue.current)) {
         // The preloaded next song can't be opened (found while the current one plays): drop it.
         queue.remove(queue.items.indexOf(_mpvNext!), undoable: false);
@@ -365,6 +370,7 @@ class Engine extends ChangeNotifier {
 
   /// Everything but the playing song leaves the queue.
   Future<void> clearQueue() => _edit(queue.clear);
+  Future<void> undoClearQueue() => _edit(queue.undoClear);
 
   /// A new playlist with the queue in play order; returns its id.
   int saveQueueAsPlaylist(String name) => lib.createPlaylist(name, [for (final e in queue.items) e.trackId]);

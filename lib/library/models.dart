@@ -139,12 +139,13 @@ class Album {
   Duration get duration => Duration(milliseconds: tracks.fold(0, (s, t) => s + t.durationMs));
   int get discCount => tracks.map((t) => t.discNo ?? 1).toSet().length;
 
-  /// The badge if every track shares it, else the best one with "+".
+  /// The best track's badge, e.g. "FLAC 24/96" (album cards: short enough to fit).
+  String get bestBadge => tracks.reduce((a, b) => (a.bitDepth * a.sampleRate) >= (b.bitDepth * b.sampleRate) ? a : b).badge;
+
+  /// The badge if every track shares it, else "Mixed · up to" the best one.
   String get badge {
     final badges = tracks.map((t) => t.badge).toSet();
-    if (badges.length == 1) return badges.first;
-    final best = tracks.reduce((a, b) => (a.bitDepth * a.sampleRate) >= (b.bitDepth * b.sampleRate) ? a : b);
-    return 'Mixed · up to ${best.badge}';
+    return badges.length == 1 ? badges.first : 'Mixed · up to $bestBadge';
   }
 }
 
