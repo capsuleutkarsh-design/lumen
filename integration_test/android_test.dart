@@ -80,7 +80,12 @@ void main() {
     // The library: a real folder on shared storage, read through dart:io.
     lib.folders = [music];
     await waitFor(() => lib.tracks.isNotEmpty, timeout: const Duration(minutes: 3), what: 'scan');
-    await waitFor(() => lib.scan.value == null, timeout: const Duration(minutes: 3), what: 'scan end');
+    // A first start scans the whole Music folder first (other test folders too): wait for the rescan of this one.
+    await waitFor(
+      () => lib.scan.value == null && lib.tracks.every((t) => t.path.startsWith(music)),
+      timeout: const Duration(minutes: 3),
+      what: 'scan end',
+    );
     final deep = lib.albums.firstWhere((a) => a.title == 'Deep Water');
     final northern = lib.albums.firstWhere((a) => a.title.startsWith('Northern Lights'));
     final etude = lib.tracks.firstWhere((t) => t.title == 'Etude in Glass');
