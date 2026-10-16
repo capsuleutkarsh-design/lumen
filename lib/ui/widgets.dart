@@ -746,7 +746,14 @@ final messengerKey = GlobalKey<ScaffoldMessengerState>();
 /// A short message above the player bar (never over it), with optional actions
 /// such as "Show queue" or "Undo".
 /// [action] + [onAction] is the single-action form the playback track uses.
-void toast(BuildContext? context, String text, {String? action, VoidCallback? onAction, List<(String, VoidCallback)> actions = const []}) {
+void toast(
+  BuildContext? context,
+  String text, {
+  String? action,
+  VoidCallback? onAction,
+  List<(String, VoidCallback)> actions = const [],
+  int? seconds,
+}) {
   if (action != null) actions = [(action, onAction ?? () {}), ...actions];
   final m = messengerKey.currentState ?? (context == null ? null : ScaffoldMessenger.maybeOf(context));
   if (m == null) return;
@@ -758,7 +765,7 @@ void toast(BuildContext? context, String text, {String? action, VoidCallback? on
     ..hideCurrentSnackBar()
     ..showSnackBar(
       SnackBar(
-        duration: Duration(seconds: actions.isEmpty ? 2 : 5),
+        duration: Duration(seconds: seconds ?? (actions.isEmpty ? 2 : 5)),
         margin: EdgeInsets.fromLTRB(side, 0, side, 136 + (scale - 1) * 48),
         padding: const EdgeInsets.fromLTRB(S.x4, S.x2, S.x2, S.x2),
         content: Row(

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../../platform/window.dart' show isTouch;
 import '../app.dart';
 import '../theme.dart';
 import '../tracks.dart';
@@ -26,12 +27,12 @@ class FavouritesPage extends StatelessWidget {
             ),
           ),
           if (tracks.isEmpty)
-            const SliverFillRemaining(
+            SliverFillRemaining(
               hasScrollBody: false,
               child: EmptyState(
                 icon: LucideIcons.heart,
                 title: 'No favourites yet',
-                body: 'Tap the heart on any song, or in the player bar, to keep it here.',
+                body: '${isTouch ? 'Tap' : 'Click'} the heart on any song, or in the player bar, to keep it here.',
               ),
             )
           else

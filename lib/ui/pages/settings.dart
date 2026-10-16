@@ -15,6 +15,7 @@ import '../app.dart';
 import '../disc.dart';
 import '../theme.dart';
 import '../widgets.dart';
+import 'browse.dart' show Segmented;
 import 'credits.dart';
 import 'settings_extras.dart';
 
@@ -157,15 +158,10 @@ class SettingsPage extends StatelessWidget {
                     Row(
                       children: [
                         SizedBox(width: 140, child: Text('Spinning disc', style: T.label)),
-                        Expanded(
-                          child: Wrap(
-                            spacing: S.x2,
-                            runSpacing: S.x2,
-                            children: [
-                              for (final (s, label) in const [(DiscStyle.cd, 'CD'), (DiscStyle.vinyl, 'Vinyl'), (DiscStyle.off, 'Off')])
-                                PillButton(label, dense: true, primary: discStyle.value == s, onTap: () => discStyle.value = s),
-                            ],
-                          ),
+                        Segmented(
+                          value: discStyle.value,
+                          options: const [(DiscStyle.cd, 'CD'), (DiscStyle.vinyl, 'Vinyl'), (DiscStyle.off, 'Off')],
+                          onChanged: (s) => discStyle.value = s,
                         ),
                       ],
                     ),
@@ -184,16 +180,33 @@ class SettingsPage extends StatelessWidget {
                             spacing: S.x2,
                             runSpacing: S.x2,
                             children: [
+                              // Check chips: any number can be on.
                               for (final s in artSources.where((s) => s.weight > 0))
-                                PillButton(
-                                  s.name,
-                                  dense: true,
-                                  icon: sourcesInUse(lib.artSourcesOn).contains(s) ? LucideIcons.check : null,
-                                  primary: sourcesInUse(lib.artSourcesOn).contains(s),
-                                  onTap: () => lib.artSourcesOn = lib.artSourcesOn.contains(s.id)
-                                      ? ({...lib.artSourcesOn}..remove(s.id))
-                                      : {...lib.artSourcesOn, s.id},
-                                ),
+                                if (sourcesInUse(lib.artSourcesOn).contains(s) case final on)
+                                  DecoratedBox(
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(R.pill),
+                                      border: Border.all(color: on ? C.borderStrong : C.border),
+                                    ),
+                                    child: Clickable(
+                                      onTap: () => lib.artSourcesOn = lib.artSourcesOn.contains(s.id)
+                                          ? ({...lib.artSourcesOn}..remove(s.id))
+                                          : {...lib.artSourcesOn, s.id},
+                                      selected: on,
+                                      selectedColor: C.raised3,
+                                      semanticLabel: s.name,
+                                      radius: R.pill,
+                                      padding: const EdgeInsets.symmetric(horizontal: S.x3, vertical: S.x1 + 2),
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(on ? LucideIcons.check : LucideIcons.plus, size: 14, color: on ? C.text : C.faint),
+                                          const SizedBox(width: S.x1 + 2),
+                                          Text(s.name, style: T.label.copyWith(color: on ? C.text : C.dim)),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                             ],
                           ),
                         ),

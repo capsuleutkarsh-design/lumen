@@ -156,7 +156,7 @@ Future<void> showTrackMenu(BuildContext context, Offset at, List<Track> tracks, 
     menuItem('playlist', LucideIcons.listPlus, 'Add to playlist…'),
     const PopupMenuDivider(height: S.x2),
     menuItem('fav', LucideIcons.heart, allFav ? 'Remove from Favourites' : 'Add to Favourites'),
-    if (t != null) ...[menuItem('album', LucideIcons.disc3, 'Go to album'), menuItem('artist', LucideIcons.micVocal, 'Go to artist')],
+    if (t != null) ...[menuItem('album', LucideIcons.disc3, 'Go to album'), menuItem('artist', LucideIcons.users, 'Go to artist')],
   ]);
   if (!context.mounted) return;
   switch (v) {
@@ -358,6 +358,24 @@ class _TrackRowState extends State<TrackRow> {
       final fav = lib.isFavourite(track.id);
       final selected = selection.has(track.id);
       final quiet = !(_hover || selected || isCurrent);
+      // Hovering shows a play button on the lead: one click plays from this row.
+      final playBtn = _hover && !isCurrent && !isTouch;
+      Widget scrim(Widget child) => Container(
+        width: 40,
+        height: 40,
+        decoration: BoxDecoration(color: C.scrim, borderRadius: BorderRadius.circular(R.tiny + 2)),
+        child: child,
+      );
+      Widget play({bool onCover = false}) => Clickable(
+        onTap: _play,
+        tooltip: 'Play',
+        semanticLabel: 'Play ${track.title}',
+        radius: R.tiny + 2,
+        hover: Colors.transparent,
+        child: onCover
+            ? scrim(Icon(LucideIcons.play, size: 16, color: C.text))
+            : SizedBox(height: 40, child: Icon(LucideIcons.play, size: 16, color: C.text)),
+      );
       Widget lead;
       if (widget.lead != null) {
         lead = widget.lead!;
@@ -366,14 +384,8 @@ class _TrackRowState extends State<TrackRow> {
           alignment: Alignment.center,
           children: [
             CoverArt.track(track, size: 40, radius: R.tiny + 2),
-            if (isCurrent) ...[
-              Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(color: C.scrim, borderRadius: BorderRadius.circular(R.tiny + 2)),
-              ),
-              PlayingBars(playing: engine.playing),
-            ],
+            if (isCurrent) scrim(Center(child: PlayingBars(playing: engine.playing))),
+            if (playBtn) play(onCover: true),
           ],
         );
       } else {
@@ -381,6 +393,8 @@ class _TrackRowState extends State<TrackRow> {
           width: 40,
           child: isCurrent
               ? Center(child: PlayingBars(playing: engine.playing))
+              : playBtn
+              ? play()
               : Text(
                   '${widget.number ?? widget.index + 1}',
                   textAlign: TextAlign.center,
@@ -388,10 +402,10 @@ class _TrackRowState extends State<TrackRow> {
                 ),
         );
       }
-      final sub = widget.table
+      // A suggestion's reason ([why]) shows in the tooltip; the row keeps the artist.
+      final sub = widget.table || (widget.albumArtist != null && track.artist.toLowerCase() == widget.albumArtist!.toLowerCase())
           ? null
-          : widget.why ??
-                (widget.albumArtist != null && track.artist.toLowerCase() == widget.albumArtist!.toLowerCase() ? null : track.artist);
+          : track.artist;
       final row = Listener(
         onPointerDown: _select,
         child: Clickable(
@@ -425,11 +439,25 @@ class _TrackRowState extends State<TrackRow> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text(
-                            track.title,
-                            maxLines: 1,
-                            overflow: TextOverflow.ellipsis,
-                            style: T.label.copyWith(color: isCurrent ? C.accent : C.text),
+                          Row(
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  track.title,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: T.label.copyWith(color: isCurrent ? C.accent : C.text),
+                                ),
+                              ),
+                              if (engine.cantPlay.contains(track.id))
+                                Padding(
+                                  padding: const EdgeInsets.only(left: S.x2),
+                                  child: Tooltip(
+                                    message: "Can't play this file (missing or unreadable)",
+                                    child: Icon(LucideIcons.fileX, size: 14, color: C.faint),
+                                  ),
+                                ),
+                            ],
                           ),
                           if (sub != null) Text(sub, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
                         ],

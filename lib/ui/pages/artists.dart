@@ -72,7 +72,7 @@ class ArtistPage extends StatelessWidget {
       final a = lib.artistNamed(name);
       if (a == null) {
         return EmptyState(
-          icon: LucideIcons.micVocal,
+          icon: LucideIcons.users,
           title: 'Artist not found',
           body: 'They may have been removed from your library.',
           action: PillButton('Back', onTap: nav.back),

@@ -27,7 +27,10 @@ class QueuePanel extends StatelessWidget {
                 children: [
                   Expanded(child: Text('Queue', style: T.heading)),
                   Text([if (q.items.isNotEmpty) plural(q.items.length, 'song'), if (q.shuffle) 'shuffled'].join(' · '), style: T.caption),
-                  if (upcoming.isNotEmpty) IconBtn(LucideIcons.listX, size: 16, tooltip: 'Clear the queue', onTap: engine.clearQueue),
+                  if (upcoming.isNotEmpty) ...[
+                    const SizedBox(width: S.x2),
+                    PillButton('Clear', dense: true, onTap: () => _clear(context, upcoming.length)),
+                  ],
                   if (cur != null) IconBtn(LucideIcons.listPlus, size: 16, tooltip: 'Save as playlist', onTap: () => _save(context)),
                   IconBtn(LucideIcons.x, size: 16, tooltip: 'Close', onTap: nav.toggleQueue),
                 ],
@@ -94,17 +97,22 @@ class QueuePanel extends StatelessWidget {
     child: Text(s, style: T.caption),
   );
 
+  Future<void> _clear(BuildContext context, int n) async {
+    await engine.clearQueue();
+    if (context.mounted) toast(context, 'Cleared ${plural(n, 'song')}', action: 'Undo', onAction: engine.undoClearQueue);
+  }
+
   Future<void> _save(BuildContext context) async {
     final name = await askText(context, 'Save the queue as a playlist', action: 'Save');
     if (name == null || !context.mounted) return;
     engine.saveQueueAsPlaylist(name);
-    toast(context, "Saved the queue as '$name'");
+    toast(context, 'Saved the queue as “$name”');
   }
 
   void _remove(BuildContext context, Entry e) {
     final t = lib.byId[e.trackId];
     engine.removeFromQueue(engine.queue.items.indexOf(e));
-    toast(context, "Removed '${t?.title ?? 'the song'}'", action: 'Undo', onAction: engine.undoRemove);
+    toast(context, 'Removed “${t?.title ?? 'the song'}”', action: 'Undo', onAction: engine.undoRemove);
   }
 
   Widget _entry(BuildContext context, Entry e, {bool current = false, int? dragIndex}) {

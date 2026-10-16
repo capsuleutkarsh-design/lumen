@@ -94,10 +94,10 @@ class _LyricsViewState extends State<LyricsView> {
     final style = widget.embedded ? T.lyric.copyWith(fontSize: 24) : T.lyric;
     Widget body;
     if (t == null) {
-      body = const EmptyState(icon: LucideIcons.micVocal, title: 'Nothing playing', body: 'Play a song to see its lyrics here.');
+      body = const EmptyState(icon: LucideIcons.messageSquareQuote, title: 'Nothing playing', body: 'Play a song to see its lyrics here.');
     } else if (l == null) {
       body = const EmptyState(
-        icon: LucideIcons.micVocal,
+        icon: LucideIcons.messageSquareQuote,
         title: 'No lyrics for this song',
         body: 'Put a .lrc file with the same name next to the song, or add a LYRICS tag, and they will show here.',
       );

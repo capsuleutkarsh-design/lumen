@@ -104,7 +104,7 @@ class _NowPlayingState extends State<NowPlaying> {
                         const Spacer(),
                         if (_hasLyrics)
                           _GlassBtn(
-                            LucideIcons.micVocal,
+                            LucideIcons.messageSquareQuote,
                             _showLyrics ? 'Hide lyrics' : 'Show lyrics',
                             () => MediaQuery.sizeOf(context).width < 880
                                 ? nav.toggleLyrics()
@@ -235,8 +235,10 @@ class _Player extends StatelessWidget {
       const SizedBox(height: S.x3),
       Row(
         children: [
-          Flexible(child: FormatBadge(t.badge)),
-          const Spacer(),
+          // Expanded, so the volume sits flush right under the seek bar.
+          Expanded(
+            child: Align(alignment: Alignment.centerLeft, child: FormatBadge(t.badge)),
+          ),
           const SizedBox(width: 168, child: VolumeControl()),
         ],
       ),

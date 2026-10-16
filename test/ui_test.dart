@@ -609,4 +609,13 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Play next'), findsOneWidget);
   });
+
+  test('W-10: playback failures close together merge into one toast count', () {
+    final f = FailureTally();
+    final t0 = DateTime(2026, 10, 16, 12);
+    expect(f.add(t0), 1);
+    expect(f.add(t0.add(const Duration(seconds: 2))), 2);
+    expect(f.add(t0.add(const Duration(seconds: 7))), 3, reason: 'within 6 s of the last one');
+    expect(f.add(t0.add(const Duration(seconds: 20))), 1, reason: 'a new run');
+  });
 }

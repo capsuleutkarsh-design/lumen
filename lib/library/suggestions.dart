@@ -112,8 +112,13 @@ HomeData suggest(List<Track> tracks, List<Album> albums, Map<int, PlayStat> allS
   h.seed = seed;
   if (seed != null) {
     final recent = now.subtract(const Duration(days: 2));
+    // Another copy of the seed is no suggestion (Duplicates' rule: same artist and title, lengths within 2 s).
+    bool copy(Track t) =>
+        normalise(t.title) == normalise(seed.title) &&
+        normalise(t.artist) == normalise(seed.artist) &&
+        (t.durationMs - seed.durationMs).abs() <= 2000;
     bool excluded(Track t) {
-      if (t.id == seed.id) return true;
+      if (t.id == seed.id || copy(t)) return true;
       final s = stats[t.id];
       if (s == null) return false;
       if (s.last != null && s.last!.isAfter(recent)) return true; // played lately

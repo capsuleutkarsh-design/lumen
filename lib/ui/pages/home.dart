@@ -3,7 +3,6 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../library/models.dart';
 import '../../library/suggestions.dart';
-import '../../platform/window.dart' show isTouch;
 import '../app.dart';
 import '../theme.dart';
 import '../tracks.dart';
@@ -16,7 +15,7 @@ class HomePage extends StatelessWidget {
   static String _greeting() {
     final h = DateTime.now().hour;
     return h < 5
-        ? 'Late night listening'
+        ? 'Good night'
         : h < 12
         ? 'Good morning'
         : h < 18
@@ -69,15 +68,16 @@ class HomePage extends StatelessWidget {
                     padding: const EdgeInsets.all(S.x5),
                     child: Row(
                       children: [
-                        Icon(LucideIcons.sparkles, size: 20, color: C.dim),
+                        Icon(LucideIcons.history, size: 20, color: C.dim),
                         const SizedBox(width: S.x4),
                         Expanded(
                           child: Text(
-                            'Play a few songs and suggestions will appear here. They come only from what you play ${isTouch ? 'on this phone' : 'on this computer'}: '
-                            'plays count after half a song (or 4 minutes), skips are songs left in the first 30 seconds.',
+                            'Suggestions appear after you play a few songs. They come only from what you play here.',
                             style: T.small,
                           ),
                         ),
+                        const SizedBox(width: S.x4),
+                        PillButton('Shuffle all', icon: LucideIcons.shuffle, primary: true, onTap: () => shufflePlay(lib.tracks)),
                       ],
                     ),
                   ),
@@ -87,7 +87,7 @@ class HomePage extends StatelessWidget {
             if (h.seed != null)
               ..._tracks(
                 'Because you played “${h.seed!.title}”',
-                'Same artist first, then album artist, then same genre and decade',
+                'More like this, from your library',
                 h.because,
               ),
             ..._tracks('Most played', 'Your most-played songs', h.mostPlayed),

@@ -1,11 +1,15 @@
 import 'dart:async';
+import 'dart:io';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:path/path.dart' as p;
 
 import '../audio/engine.dart';
 import '../audio/queue.dart';
+import '../platform/log.dart' show openPath;
+import '../platform/window.dart' show isDesktop;
 import 'app.dart';
 import 'art_accent.dart';
 import 'cover_picker.dart';
@@ -37,13 +41,39 @@ List<(int, IconData, String)> sleepChoices() => [
   if (sleepOn) (0, LucideIcons.x, 'Turn off'),
 ];
 
+/// The sleep choice made last (to tick it in the menu while it is still on).
+int? _sleepChoice;
+
+/// Whether sleep choice [v] is the one running now.
+bool sleepActive(int v) => switch (v) {
+  -1 => engine.stopAfter == StopAfter.song,
+  -2 => engine.stopAfter == StopAfter.queue,
+  0 => false,
+  _ => engine.sleepAt != null && _sleepChoice == v,
+};
+
 void setSleep(int v) {
+  _sleepChoice = v;
   engine.sleepIn(v > 0 ? Duration(minutes: v) : null);
   engine.setStopAfter(switch (v) {
     -1 => StopAfter.song,
     -2 => StopAfter.queue,
     _ => StopAfter.none,
   });
+}
+
+/// Playback failures close together become one toast ("3 songs couldn't be played").
+class FailureTally {
+  static const window = Duration(seconds: 6); // as long as the toast shows
+  int count = 0;
+  DateTime? _last;
+
+  /// Counts a failure at [now]; returns how many there were in a row.
+  int add(DateTime now) {
+    count = _last != null && now.difference(_last!) < window ? count + 1 : 1;
+    _last = now;
+    return count;
+  }
 }
 
 class PlayerBar extends StatefulWidget {
@@ -54,13 +84,25 @@ class PlayerBar extends StatefulWidget {
 
 class _PlayerBarState extends State<PlayerBar> {
   StreamSubscription<String>? _messages;
+  final _fails = FailureTally();
 
   @override
   void initState() {
     super.initState();
     // The engine's messages (a song can't be played, the device is gone, ...) as toasts.
     _messages = engine.messages.listen((m) {
-      if (mounted) toast(context, m);
+      if (!mounted) return;
+      if (!m.startsWith("Can't play ")) return toast(context, m);
+      // A song that can't be played: say why, offer its folder, and merge a run of them.
+      final t = lib.byId[engine.lastFailed];
+      final n = _fails.add(DateTime.now());
+      final missing = t != null && !File(t.path).existsSync();
+      toast(
+        context,
+        n > 1 ? "$n songs couldn't be played" : (missing ? "Can't play “${t.title}”: the file is missing" : m),
+        actions: [if (t != null && isDesktop) ('Show folder', () => openPath(p.dirname(t.path)))],
+        seconds: 6,
+      );
     });
   }
 
@@ -76,29 +118,52 @@ class _PlayerBarState extends State<PlayerBar> {
     PopupMenuItem<int> item(int v, String label) => PopupMenuItem(
       value: v,
       height: 36,
-      child: Text(label, style: T.label),
+      child: Row(
+        children: [
+          SizedBox(width: 24, child: sleepActive(v) ? Icon(LucideIcons.check, size: 14, color: C.text) : null),
+          Text(label, style: T.label),
+        ],
+      ),
     );
+    final until = engine.sleepAt;
     final v = await showMenu<int>(
       context: context,
       position: RelativeRect.fromLTRB(at.dx, at.dy - 8, at.dx + box.size.width, at.dy),
       items: [
+        if (sleepOn) ...[
+          // What it does now, e.g. "Pauses at 23:15 · 12 min left".
+          PopupMenuItem(
+            enabled: false,
+            height: 32,
+            child: Text(
+              until == null
+                  ? sleepTip(context)
+                  : 'Pauses at ${TimeOfDay.fromDateTime(until).format(context)} · ${until.difference(DateTime.now()).inMinutes + 1} min left',
+              style: T.caption,
+            ),
+          ),
+          const PopupMenuDivider(height: 8),
+        ],
         for (final (v, _, label) in sleepChoices()) ...[if (v == 0) const PopupMenuDivider(height: 8), item(v, label)],
       ],
     );
     if (v != null) setSleep(v);
   }
 
-  /// •••: Disc mode, the mini player, and Change cover for the song playing.
-  Future<void> _moreMenu(BuildContext b) async {
+  /// •••: Disc mode, the mini player, and Change cover for the song playing (and the sleep timer in a small window).
+  Future<void> _moreMenu(BuildContext b, {bool sleep = false}) async {
     final album = lib.albumByKey[engine.current?.albumKey];
     final box = b.findRenderObject()! as RenderBox;
     final v = await popMenu(context, box.localToGlobal(Offset.zero) - const Offset(0, 8), [
+      if (sleep) menuItem('sleep', LucideIcons.moon, sleepOn ? sleepTip(context) : 'Sleep timer…'),
       menuItem('disc', LucideIcons.disc3, 'Disc mode', hint: 'D'),
       menuItem('mini', LucideIcons.pictureInPicture2, 'Mini player'),
       if (album != null) ...[const PopupMenuDivider(height: S.x2), menuItem('cover', LucideIcons.image, 'Change cover…')],
     ]);
     if (!mounted) return;
     switch (v) {
+      case 'sleep':
+        if (b.mounted) await _sleepMenu(b);
       case 'disc':
         nav.setDisc(true);
       case 'mini':
@@ -117,8 +182,10 @@ class _PlayerBarState extends State<PlayerBar> {
         listenable: Listenable.merge([engine, lib, nav]),
         builder: (context, _) => LayoutBuilder(
           builder: (context, c) {
-            // The sides share what the transport leaves, up to 300 px each (at least four buttons + mute).
+            // The sides share what the transport leaves, up to 300 px each. In a small window the sleep
+            // timer moves into ••• so the volume slider keeps at least 72 px.
             final side = ((c.maxWidth - 380) / 2).clamp(184.0, 300.0);
+            final compact = side < 260;
             return Row(
               children: [
                 SizedBox(width: side, child: const _NowPlayingInfo()),
@@ -138,23 +205,32 @@ class _PlayerBarState extends State<PlayerBar> {
                   ),
                 ),
                 SizedBox(
-                  width: side,
+                  width: compact ? 224 : side,
                   child: Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      IconBtn(LucideIcons.micVocal, size: 18, active: nav.lyrics, tooltip: 'Lyrics  (Ctrl+L)', onTap: nav.toggleLyrics),
+                      IconBtn(LucideIcons.messageSquareQuote, size: 18, active: nav.lyrics, tooltip: 'Lyrics  (Ctrl+L)', onTap: nav.toggleLyrics),
                       IconBtn(LucideIcons.listMusic, size: 18, active: nav.queue, tooltip: 'Queue', onTap: nav.toggleQueue),
+                      if (!compact)
+                        Builder(
+                          builder: (b) => IconBtn(
+                            LucideIcons.moon,
+                            size: 18,
+                            active: sleepOn,
+                            tooltip: sleepTip(context),
+                            onTap: () => _sleepMenu(b),
+                          ),
+                        ),
                       Builder(
                         builder: (b) => IconBtn(
-                          LucideIcons.moon,
+                          LucideIcons.ellipsis,
                           size: 18,
-                          active: sleepOn,
-                          tooltip: sleepTip(context),
-                          onTap: () => _sleepMenu(b),
+                          active: compact && sleepOn,
+                          tooltip: compact && sleepOn ? 'More · ${sleepTip(context)}' : 'More',
+                          onTap: () => _moreMenu(b, sleep: compact),
                         ),
                       ),
-                      Builder(builder: (b) => IconBtn(LucideIcons.ellipsis, size: 18, tooltip: 'More', onTap: () => _moreMenu(b))),
-                      const SizedBox(width: S.x1),
+                      if (!compact) const SizedBox(width: S.x1),
                       const Flexible(child: VolumeControl()),
                     ],
                   ),
@@ -230,10 +306,13 @@ class _NowPlayingInfoState extends State<_NowPlayingInfo> {
                 _Link(t.title, T.label, () => nav.push('album', t.albumKey)),
                 _Link(t.artist, T.small, () => nav.push('artist', t.artist)),
                 const SizedBox(height: S.x1),
-                Tooltip(
-                  message: engine.outputFormat.isEmpty ? 'File format' : sound.summary,
-                  child: FormatBadge(t.badge),
-                ),
+                if (engine.cantPlay.contains(t.id))
+                  Text("Can't play this file", maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption)
+                else
+                  Tooltip(
+                    message: engine.outputFormat.isEmpty ? 'File format' : sound.summary,
+                    child: FormatBadge(t.badge),
+                  ),
               ],
             ),
           ),
