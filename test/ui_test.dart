@@ -14,6 +14,7 @@ import 'package:gleo/art/art_sources.dart';
 import 'package:gleo/audio/engine.dart';
 import 'package:gleo/library/library.dart';
 import 'package:gleo/library/models.dart';
+import 'package:gleo/platform/window.dart' show touchForTests;
 import 'package:gleo/ui/app.dart';
 import 'package:gleo/ui/lyrics_view.dart';
 import 'package:gleo/ui/pages/albums.dart';
@@ -608,5 +609,77 @@ void main() {
     onDrop(ctx, [lib.tracks.first.path], const Offset(400, 300));
     await tester.pumpAndSettle();
     expect(find.text('Play next'), findsOneWidget);
+  });
+
+  // ---- The phone layout (0.4 Android round), checked here with a touch screen faked on the desktop.
+  Future<void> pumpPhone(WidgetTester tester) async {
+    touchForTests = true;
+    addTearDown(() => touchForTests = null);
+    // The real font: the test font's square letters are twice as wide, and a phone is narrow.
+    await (FontLoader('Inter')..addFont(rootBundle.load('assets/fonts/Inter-Regular.ttf'))).load();
+    await pumpApp(tester, size: const Size(411, 891));
+  }
+
+  uiTest('A-01: phone search opens full screen, finds a song and plays it', (tester) async {
+    addTracks();
+    await pumpPhone(tester);
+    nav.setSearch(true);
+    await tester.pumpAndSettle();
+    expect(tester.takeException(), isNull, reason: 'it was a grey error screen');
+    await tester.enterText(find.byType(TextField), 'Song 3 of Album B');
+    await tester.pumpAndSettle();
+    await tester.tap(find.textContaining('Song 3 of Album B  Song')); // the result row (title and kind)
+    await tester.pumpAndSettle();
+    expect(nav.search, isFalse);
+    expect(engine.current?.title, 'Song 3 of Album B');
+  });
+
+  uiTest('A-08: five tabs, Library holds the rest, Settings is in the top bar', (tester) async {
+    addTracks();
+    await pumpPhone(tester);
+    for (final k in ['home', 'songs', 'albums', 'artists', 'library', 'settings']) {
+      expect(find.byKey(ValueKey('nav.$k')), findsOneWidget, reason: k);
+    }
+    expect(find.byKey(const ValueKey('nav.more')), findsNothing);
+    await tester.tap(find.byKey(const ValueKey('nav.library')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const ValueKey('library.stats')));
+    await tester.pumpAndSettle();
+    expect((nav.top.page, nav.canBack), ('stats', true));
+    expect(tester.takeException(), isNull);
+  });
+
+  uiTest('A-03 + A-09 + A-10: song rows show the artist; a long press opens a bottom sheet, then clears the row', (tester) async {
+    addTracks();
+    nav.go('songs');
+    await pumpPhone(tester);
+    await tester.pumpAndSettle();
+    expect(find.text('Artist 0 · Album A'), findsWidgets);
+    expect(find.byIcon(LucideIcons.ellipsis), findsWidgets, reason: 'the row menu shows without hover');
+    await tester.longPress(find.text('Song 0 of Album A'));
+    await tester.pumpAndSettle();
+    expect(find.byType(BottomSheet), findsOneWidget);
+    expect(find.text('Play next'), findsOneWidget);
+    await tester.tap(find.text('Play next'));
+    await tester.pumpAndSettle();
+    expect(selection.length, 0);
+  });
+
+  uiTest('A-06: on touch a swipe over the EQ scrolls the page and never changes the bands', (tester) async {
+    nav.go('sound');
+    await pumpPhone(tester);
+    await tester.pumpAndSettle();
+    final band = find.byType(RotatedBox).at(5);
+    await tester.ensureVisible(band);
+    await tester.pumpAndSettle();
+    final list = find.ancestor(of: band, matching: find.byType(Scrollable)).first;
+    final before = tester.state<ScrollableState>(list).position.pixels;
+    final r = tester.getRect(band);
+    await tester.dragFrom(r.center + Offset(0, r.height * 0.35), const Offset(0, -200));
+    await tester.pumpAndSettle();
+    expect(sound.s.eq.graphic.every((g) => g == 0), isTrue);
+    expect(sound.s.eq.on, isFalse);
+    expect(tester.state<ScrollableState>(list).position.pixels, greaterThan(before));
+    expect(find.text('EQ is off'), findsOneWidget);
   });
 }
