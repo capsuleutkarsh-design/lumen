@@ -156,6 +156,7 @@ Future<void> showTrackMenu(BuildContext context, Offset at, List<Track> tracks, 
     menuItem('playlist', LucideIcons.listPlus, 'Add to playlist…'),
     const PopupMenuDivider(height: S.x2),
     menuItem('fav', LucideIcons.heart, allFav ? 'Remove from Favourites' : 'Add to Favourites'),
+    menuItem('rate', LucideIcons.star, 'Rate ▸'),
     if (t != null) ...[menuItem('album', LucideIcons.disc3, 'Go to album'), menuItem('artist', LucideIcons.micVocal, 'Go to artist')],
   ]);
   if (!context.mounted) return;
@@ -170,11 +171,23 @@ Future<void> showTrackMenu(BuildContext context, Offset at, List<Track> tracks, 
       await addToPlaylistDialog(context, tracks);
     case 'fav':
       favouriteAll(tracks);
+    case 'rate':
+      await rateMenu(context, at, tracks);
     case 'album':
       nav.push('album', t!.albumKey);
     case 'artist':
       nav.push('artist', t!.artist);
   }
+}
+
+/// Rate ▸: 5 to 1 stars, or none, for [tracks].
+Future<void> rateMenu(BuildContext context, Offset at, List<Track> tracks) async {
+  final now = tracks.map((t) => lib.rating(t.id)).toSet();
+  final v = await popMenu(context, at, [
+    for (var n = 5; n >= 1; n--) menuItem('$n', now.length == 1 && now.first == n ? LucideIcons.check : LucideIcons.star, '★' * n),
+    menuItem('0', LucideIcons.starOff, 'No rating'),
+  ]);
+  if (v != null) lib.setRating([for (final t in tracks) t.id], int.parse(v));
 }
 
 /// Right-click menu for an album, artist, folder or playlist (and their ••• buttons).
@@ -285,8 +298,9 @@ class TrackCols {
     : artist = table && width >= 520,
       album = album && width >= (table ? 640 : 600),
       year = table && width >= 760,
+      rating = table && width >= 860,
       badge = badge && width >= (table ? 700 : 520);
-  final bool artist, album, year, badge;
+  final bool artist, album, year, rating, badge;
 }
 
 /// One song row. Click selects, double-click or Enter plays [list] from here,
@@ -461,6 +475,15 @@ class _TrackRowState extends State<TrackRow> {
                         child: Align(alignment: Alignment.centerLeft, child: FormatBadge(track.badge)),
                       ),
                     ],
+                    if (cols.rating)
+                      SizedBox(
+                        width: 84,
+                        child: AnimatedOpacity(
+                          opacity: lib.rating(track.id) > 0 || !quiet ? 1 : 0,
+                          duration: Motion.fast,
+                          child: Stars(lib.rating(track.id), size: 13, onRate: (n) => lib.setRating([track.id], n)),
+                        ),
+                      ),
                     AnimatedOpacity(
                       opacity: fav || !quiet ? 1 : 0,
                       duration: Motion.fast,

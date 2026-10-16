@@ -210,6 +210,51 @@ class _ClickableState extends State<Clickable> {
   }
 }
 
+/// A star rating, 0-5. With [onRate] the stars can be clicked (hovering shows what a click gives;
+/// clicking the current rating clears it). Ratings live in the database only.
+class Stars extends StatefulWidget {
+  const Stars(this.rating, {super.key, this.onRate, this.size = 14});
+  final int rating;
+  final ValueChanged<int>? onRate;
+  final double size;
+  @override
+  State<Stars> createState() => _StarsState();
+}
+
+class _StarsState extends State<Stars> {
+  int? _hover;
+  @override
+  Widget build(BuildContext context) {
+    final shown = _hover ?? widget.rating;
+    final rate = widget.onRate;
+    return Semantics(
+      label: '${widget.rating} of 5 stars',
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          for (var i = 1; i <= 5; i++)
+            MouseRegion(
+              cursor: rate == null ? MouseCursor.defer : SystemMouseCursors.click,
+              onEnter: rate == null ? null : (_) => setState(() => _hover = i),
+              onExit: rate == null ? null : (_) => setState(() => _hover = null),
+              child: GestureDetector(
+                onTap: rate == null ? null : () => rate(i == widget.rating ? 0 : i),
+                child: Padding(
+                  padding: EdgeInsets.all(isTouch && rate != null ? 6 : 1),
+                  child: Icon(
+                    i <= shown ? Icons.star_rounded : LucideIcons.star,
+                    size: widget.size,
+                    color: i <= shown ? C.accent : C.faint,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+}
+
 class IconBtn extends StatelessWidget {
   const IconBtn(this.icon, {super.key, this.onTap, this.tooltip, this.size = 18, this.box = 36, this.color, this.active = false});
   final IconData icon;

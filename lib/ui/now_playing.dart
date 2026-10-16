@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:window_manager/window_manager.dart';
 
+import '../library/lrclib.dart';
 import '../library/models.dart';
 import '../platform/window.dart';
 import 'app.dart';
@@ -72,6 +73,12 @@ class _NowPlayingState extends State<NowPlaying> {
       _id = t?.id;
       _hasLyrics = lyricsFor(t) != null;
     });
+    // Download lyrics is on: the lyrics button shows once LRCLIB has them.
+    if (t != null && !_hasLyrics && lyricsOnline) {
+      lrclibLyrics(t, lib.dataDir, lrclibAgent).then((x) {
+        if (mounted && x != null && _id == t.id) setState(() => _hasLyrics = true);
+      }, onError: (Object e) => debugPrint('LRCLIB: $e'));
+    }
   }
 
   @override
@@ -215,6 +222,10 @@ class _Player extends StatelessWidget {
                 ),
               ],
             ),
+          ),
+          Padding(
+            padding: const EdgeInsets.only(top: S.x3),
+            child: Stars(lib.rating(t.id), size: 16, onRate: (n) => lib.setRating([t.id], n)),
           ),
           IconBtn(
             fav ? Icons.favorite_rounded : LucideIcons.heart,

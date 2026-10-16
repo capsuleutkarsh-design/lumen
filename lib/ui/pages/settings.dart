@@ -250,7 +250,8 @@ class SettingsPage extends StatelessWidget {
                           ),
                         ),
                     ]),
-                  _card('Data and updates', null, [const DataAndUpdates()]),
+                  _card('Data and updates', null, [const DataAndUpdates(), const SizedBox(height: S.x5), const BackupButtons()]),
+                  _card('Online', null, [const OnlineSettings()]),
                   _card('About', null, [
                     Row(
                       children: [
@@ -262,7 +263,7 @@ class SettingsPage extends StatelessWidget {
                             'Version $shortVersion · Gleo audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/lumen-audio-engine). '
                             'Design inspired by Wora (MIT). '
                             'Font: Inter (SIL Open Font License). Icons: Lucide (ISC). No AI. Suggestions come only from what you play here, '
-                            'and nothing goes to the internet unless you turn on the update check.',
+                            'and nothing goes to the internet unless you turn on the update check or lyrics downloads.',
                             style: T.small,
                           ),
                         ),

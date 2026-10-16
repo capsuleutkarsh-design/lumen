@@ -48,13 +48,18 @@ Lyrics parseLyrics(String text) {
   return Lyrics([for (final l in const LineSplitter().convert(text)) (Duration.zero, l.trim())], false);
 }
 
-/// A `.lrc` file next to the track wins; otherwise the embedded LYRICS tag.
-Lyrics? loadLyrics(String trackPath, String? embedded) {
-  final lrc = File('${p.withoutExtension(trackPath)}.lrc');
-  if (lrc.existsSync()) {
-    return parseLyrics(readText(lrc.path));
+/// A `.lrc` file next to the track wins (on Android 13+ its copy under [mirror], see Library.textMirror);
+/// then the embedded LYRICS tag; then lyrics downloaded from LRCLIB ([saved]). A CUE track passes no
+/// [trackPath]: a .lrc next to its file would be the whole file's.
+Lyrics? loadLyrics(String? trackPath, String? embedded, {String? mirror, String? saved}) {
+  if (trackPath != null) {
+    final lrc = '${p.withoutExtension(trackPath)}.lrc';
+    for (final f in [lrc, if (mirror != null) p.join(mirror, p.relative(lrc, from: p.rootPrefix(lrc)))]) {
+      if (File(f).existsSync()) return parseLyrics(readText(f));
+    }
   }
   if (embedded != null && embedded.trim().isNotEmpty) return parseLyrics(embedded);
+  if (saved != null && File(saved).existsSync()) return parseLyrics(readText(saved));
   return null;
 }
 

@@ -1,0 +1,4 @@
+[{"id":1,"trackName":"Blue Hour","artistName":"Ana","albumName":"Live","duration":260.0,"instrumental":false,"plainLyrics":"Live version","syncedLyrics":"[00:01.00] Live version"},
+ {"id":2,"trackName":"Blue Hour","artistName":"Ana","albumName":"Night","duration":201.0,"instrumental":false,"plainLyrics":"Plain only","syncedLyrics":null},
+ {"id":3,"trackName":"Blue Hour","artistName":"Ana","albumName":"Night (Deluxe)","duration":199.0,"instrumental":false,"plainLyrics":"Synced one","syncedLyrics":"[00:02.00] Synced one"},
+ {"id":4,"trackName":"Blue Hour (Instrumental)","artistName":"Ana","albumName":"Night","duration":200.0,"instrumental":true,"plainLyrics":null,"syncedLyrics":null}]
