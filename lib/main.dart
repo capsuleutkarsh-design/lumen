@@ -20,6 +20,7 @@ import 'ui/app.dart';
 import 'ui/mini_player.dart';
 import 'ui/pages/credits.dart';
 import 'ui/theme.dart';
+import 'ui/widgets.dart' show fmtTime, toast;
 
 /// Where the database, cover cache and log live:
 /// - `--dart-define=MP_DATA=<folder>` (tests, so they never touch the real library);
@@ -93,11 +94,13 @@ Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error
   await loadArtPacks();
   engine = Engine(lib, silent: silent, logLevel: logLevel);
   await engine.init();
+  engine.resumed.listen((at) => toast(null, 'Resumed at ${fmtTime(at)}', action: 'Start over', onAction: () => engine.seek(Duration.zero)));
   await sound.init();
   MediaControls(engine);
   if (Platform.isAndroid) {
     // ponytail: AudioService.init runs once per process; Start fresh after it would throw (restart Gleo).
     await initAndroid();
+    lib.afterScan = () => mirrorTexts(lib);
     useMusicFolder(lib);
     await startAndroidMedia(engine);
     // Back in Gleo (from Settings, say): the music permission again, and a rescan (Android has no recursive folder watch).

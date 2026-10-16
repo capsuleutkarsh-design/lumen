@@ -3,7 +3,7 @@ import 'package:path/path.dart' as p;
 /// The columns [Track.fromValues] reads, in its order.
 const trackColumns =
     'id, path, folder, title, artist, album_artist, album, album_key, track_no, disc_no, year, genre, duration_ms, codec, sample_rate, '
-    'bit_depth, bitrate, cover, added_at, composer, work, movement, movement_no, artist_sort, album_artist_sort, album_sort, rg_track_gain, rg_track_peak, rg_album_gain, rg_album_peak';
+    'bit_depth, bitrate, cover, added_at, composer, work, movement, movement_no, artist_sort, album_artist_sort, album_sort, rg_track_gain, rg_track_peak, rg_album_gain, rg_album_peak, cue_start_ms';
 
 class Track {
   Track({
@@ -38,6 +38,7 @@ class Track {
     this.rgTrackPeak,
     this.rgAlbumGain,
     this.rgAlbumPeak,
+    this.startMs,
   }) : artists = artists ?? [artist],
        albumArtist = albumArtist ?? artist,
        albumKey = albumKey ?? '${(albumArtist ?? artist).toLowerCase()}\u0000${album.toLowerCase()}';
@@ -47,7 +48,8 @@ class Track {
   /// [albumArtist] override the row while a first scan has not grouped it yet.
   Track.fromValues(List<Object?> v, this.artists, [String? albumKey, String? albumArtist])
     : id = v[0] as int,
-      path = v[1] as String,
+      startMs = v[30] as int?,
+      path = v[30] == null ? v[1] as String : cueFile(v[1] as String),
       folder = v[2] as String,
       title = v[3] as String,
       artist = v[4] as String? ?? 'Unknown artist',
@@ -87,14 +89,20 @@ class Track {
   final double? rgTrackGain, rgTrackPeak, rgAlbumGain, rgAlbumPeak;
   final int durationMs, sampleRate, bitDepth, bitrate, addedAt;
 
+  /// A CUE track: where it starts in its file ([path], shared with the album's other tracks). Null for a whole file.
+  final int? startMs;
+
   Duration get duration => Duration(milliseconds: durationMs);
 
   /// Genre values: a tag "Rock; Pop" or "Rock/Pop" is two genres.
   List<String> get genres => splitGenres(genre);
 
-  /// "FLAC 24/96", "WAV 16/44.1", "MP3 320k", "DSD64".
-  String get badge => formatBadge(codec, bitDepth, sampleRate, bitrate);
+  /// "FLAC 24/96", "WAV 16/44.1", "MP3 320k", "DSD64"; "FLAC 16/44.1 · CUE" for a CUE track.
+  String get badge => '${formatBadge(codec, bitDepth, sampleRate, bitrate)}${startMs == null ? '' : ' · CUE'}';
 }
+
+/// A CUE track's file: its database path is `<file>#<track no>` (unique per track).
+String cueFile(String dbPath) => dbPath.substring(0, dbPath.lastIndexOf('#'));
 
 List<String> splitGenres(String? g) => g == null
     ? const []
@@ -138,6 +146,12 @@ class Album {
     final best = tracks.reduce((a, b) => (a.bitDepth * a.sampleRate) >= (b.bitDepth * b.sampleRate) ? a : b);
     return 'Mixed · up to ${best.badge}';
   }
+}
+
+/// The best-sounding of some copies of a song (Duplicates' "Best copy"): the most bits × rate, then the highest bitrate.
+Track bestCopy(List<Track> copies) {
+  int q(Track t) => t.bitDepth * t.sampleRate * 100000 + t.bitrate;
+  return copies.reduce((a, b) => q(b) > q(a) ? b : a);
 }
 
 int compareAlbumOrder(Track a, Track b) {

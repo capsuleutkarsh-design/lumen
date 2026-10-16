@@ -1,16 +1,33 @@
+import 'dart:io';
 import 'dart:math';
 
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
+import '../library/lrclib.dart';
 import '../library/lyrics.dart';
 import '../library/models.dart';
+import '../platform/licence.dart' show repository;
+import '../platform/update.dart' show shortVersion;
 import 'app.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-/// The lyrics of [t] (a `.lrc` next to the file, else the LYRICS tag), or null.
-Lyrics? lyricsFor(Track? t) => t == null ? null : loadLyrics(t.path, lib.embeddedLyrics(t.id));
+/// The lyrics of [t] (a `.lrc` next to the file, the LYRICS tag, or downloaded from LRCLIB), or null.
+Lyrics? lyricsFor(Track? t) => t == null
+    ? null
+    : loadLyrics(
+        t.startMs == null ? t.path : null,
+        lib.embeddedLyrics(t.id),
+        mirror: Platform.isAndroid ? lib.textMirror : null,
+        saved: savedLyrics(lib.dataDir, t.id),
+      );
+
+/// Settings → Online → Download lyrics (off by default).
+bool get lyricsOnline => lib.setting('lyricsOnline') == '1';
+
+/// How Gleo introduces itself to LRCLIB.
+String get lrclibAgent => 'Gleo/$shortVersion ($repository)';
 
 /// Big lyrics over a dark, quiet wash of the cover's colours; the current line
 /// is bright. [embedded] = the side panel of Now Playing (no frame, no glow).
@@ -27,6 +44,9 @@ class _LyricsViewState extends State<LyricsView> {
   int? _trackId;
   Lyrics? _lyrics;
   int _line = -1;
+
+  /// What LRCLIB said for a song with no lyrics of its own (null: not asked).
+  String? _online;
 
   @override
   void initState() {
@@ -49,13 +69,38 @@ class _LyricsViewState extends State<LyricsView> {
     if (t?.id == _trackId) return;
     setState(() {
       _trackId = t?.id;
-      _lyrics = lyricsFor(t);
-      _keys
-        ..clear()
-        ..addAll(List.generate(_lyrics?.lines.length ?? 0, (_) => GlobalKey()));
-      _line = -1;
+      _show(lyricsFor(t));
+      _online = null;
     });
     if (_scroll.hasClients) _scroll.jumpTo(0);
+    _follow();
+    if (t != null && _lyrics == null && lyricsOnline) _ask(t);
+  }
+
+  void _show(Lyrics? l) {
+    _lyrics = l;
+    _keys
+      ..clear()
+      ..addAll(List.generate(l?.lines.length ?? 0, (_) => GlobalKey()));
+    _line = -1;
+  }
+
+  /// No lyrics here: ask LRCLIB (once per song; misses are remembered).
+  Future<void> _ask(Track t) async {
+    setState(() => _online = 'Looking on LRCLIB…');
+    String? text, status;
+    try {
+      text = await lrclibLyrics(t, lib.dataDir, lrclibAgent);
+      if (text == null) status = 'LRCLIB has no lyrics for this song either.';
+    } catch (e) {
+      debugPrint('LRCLIB: $e');
+      status = 'Could not reach LRCLIB. Try again later.';
+    }
+    if (!mounted || _trackId != t.id) return;
+    setState(() {
+      if (text != null) _show(parseLyrics(text));
+      _online = status;
+    });
     _follow();
   }
 
@@ -96,10 +141,23 @@ class _LyricsViewState extends State<LyricsView> {
     if (t == null) {
       body = const EmptyState(icon: LucideIcons.micVocal, title: 'Nothing playing', body: 'Play a song to see its lyrics here.');
     } else if (l == null) {
-      body = const EmptyState(
+      body = EmptyState(
         icon: LucideIcons.micVocal,
         title: 'No lyrics for this song',
-        body: 'Put a .lrc file with the same name next to the song, or add a LYRICS tag, and they will show here.',
+        body:
+            _online ??
+            'Put a .lrc file with the same name next to the song, or add a LYRICS tag, and they will show here.'
+                '${Platform.isAndroid ? ' On Android 13 and later, add the folder with Add folder in Settings so Gleo may read its .lrc files.' : ''}',
+        action: lyricsOnline
+            ? null
+            : PillButton(
+                'Find lyrics online…',
+                icon: LucideIcons.globe,
+                onTap: () {
+                  nav.setNowPlaying(false);
+                  nav.go('settings');
+                },
+              ),
       );
     } else {
       body = ShaderMask(

@@ -37,7 +37,7 @@ class SoundPage extends StatelessWidget {
               _Narrow(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [_Output(), _Equalizer(), _Headphones(), _Loudness()],
+                  children: [_Output(), _Playback(), _Equalizer(), _Headphones(), _Loudness()],
                 ),
               ),
             ],
@@ -311,6 +311,46 @@ class _Output extends StatelessWidget {
         'Buffer',
         Choice([false, true], (b) => b ? 'Large' : 'Normal', s.largeBuffer, (b) => sound.change((s) => s.largeBuffer = b)),
         caption: 'Choose Large if the sound drops out or crackles when the computer is busy.',
+      ),
+    ]);
+  }
+}
+
+/// Crossfade, trim silence and the place in long files: all off by default.
+class _Playback extends StatelessWidget {
+  const _Playback();
+  @override
+  Widget build(BuildContext context) {
+    final x = engine.crossfade;
+    return _card('Playback', null, [
+      _switchRow(
+        'Crossfade',
+        engine.exclusive
+            ? 'Off while exclusive mode is on: a crossfade plays two songs at once, and exclusive mode gives the device to one.'
+            : 'The next song fades in as this one fades out. Never between neighbouring tracks of one album, so live and '
+                  'gapless albums stay seamless, and never when you skip.',
+        x > 0,
+        (v) => engine.setPlayback(crossfade: v ? 6 : 0),
+      ),
+      if (x > 0)
+        _labelled(
+          'Length  $x s',
+          SizedBox(
+            width: 360,
+            child: Slider(value: x.toDouble(), min: 1, max: 12, divisions: 11, onChanged: (v) => engine.setPlayback(crossfade: v.round())),
+          ),
+        ),
+      _switchRow(
+        'Trim silence',
+        'Skips the silence at the start and end of songs. Only near-silence longer than a second goes, so quiet intros and endings stay.',
+        engine.trimSilence,
+        (v) => engine.setPlayback(trimSilence: v),
+      ),
+      _switchRow(
+        'Remember the place in long files',
+        'Files over 20 minutes (audiobooks, DJ mixes, whole concerts) start again where you stopped.',
+        engine.resumeLong,
+        (v) => engine.setPlayback(resumeLong: v),
       ),
     ]);
   }

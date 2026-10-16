@@ -2,6 +2,7 @@ import 'dart:async';
 import 'dart:convert';
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:math';
 
 import 'package:ffi/ffi.dart';
 import 'package:flutter/foundation.dart';
@@ -48,6 +49,39 @@ DateTime processStart() {
 /// Stop after the current song, or at the end of the queue (even with repeat on).
 enum StopAfter { none, song, queue }
 
+/// Crossfade from [a] into [b]? Not between neighbouring tracks of one album (gapless albums, CUE
+/// tracks): [b] is the next track number on [a]'s disc, or the first of the next disc. The engine
+/// also never crossfades a skip, or in exclusive mode.
+bool crossfades(Track a, Track b) {
+  if (a.albumKey != b.albumKey) return true;
+  final (da, db, ta, tb) = (a.discNo ?? 1, b.discNo ?? 1, a.trackNo, b.trackNo);
+  if (ta == null || tb == null) return false; // untagged: keep the album gapless
+  return !((db == da && tb == ta + 1) || (db == da + 1 && tb <= 1));
+}
+
+/// Long files (audiobooks, DJ mixes, whole concerts) start where they were left (Sound → Playback).
+const longFile = Duration(minutes: 20);
+
+/// Where a long file starts again: null at the very start or end (a finished file starts over).
+Duration? resumePoint(Duration length, Duration at) =>
+    length > longFile && at > const Duration(seconds: 30) && at < length - const Duration(seconds: 30) ? at : null;
+
+/// Trim silence: where a track starts and ends (null: its real end) from the peak level (dBFS) of
+/// every 100 ms: [head] from the track's start, [tail] up to its end. Only near-digital silence (peaks
+/// below -60 dBFS: dither, a little hiss) longer than a second goes, and a quarter second is kept on
+/// each side, so a quiet intro or ending (pianissimo peaks far above that) is never cut. A wholly
+/// silent stretch is left alone.
+(Duration, Duration?) silenceTrim(List<double> head, List<double> tail, Duration length) {
+  const gate = -60.0, step = 100, keep = 250, least = Duration(seconds: 1);
+  final first = head.indexWhere((m) => m > gate);
+  var lead = Duration(milliseconds: first * step - keep);
+  if (first < 0 || lead < least) lead = Duration.zero;
+  final last = tail.lastIndexWhere((m) => m > gate);
+  Duration? end = length - Duration(milliseconds: (tail.length - last - 1) * step - keep);
+  if (last < 0 || length - end < least || end <= lead) end = null;
+  return (lead, end);
+}
+
 /// Plays the [PlayQueue] through libmpv. mpv's own playlist only ever holds
 /// [current, next]: the next track is preloaded so mpv can join them gaplessly,
 /// while every decision about order stays in [PlayQueue].
@@ -61,8 +95,15 @@ class Engine extends ChangeNotifier {
   /// mpv log detail (tests read the log to prove gapless joins).
   final MPVLogLevel logLevel;
 
-  late final Player player;
+  /// The player that plays now. A second one exists only while crossfade is on: the song coming in
+  /// starts there, the two swap, and the old one fades out.
+  Player get player => _players[_active];
+  final _players = <Player>[];
+  int _active = 0;
   NativePlayer get _mpv => player.platform as NativePlayer;
+
+  /// Every mpv property set for the sound (settings, device...), for a player made later.
+  final _props = <String, String>{};
   final queue = PlayQueue();
   final position = ValueNotifier(Duration.zero);
   Duration duration = Duration.zero;
@@ -102,6 +143,15 @@ class Engine extends ChangeNotifier {
   /// Counts seeks, so the OS media overlay can follow them.
   int seeks = 0;
 
+  /// Sound → Playback, all off by default: crossfade length in seconds (0 = off), trim silence at the
+  /// start and end, and resume long files where they were left.
+  int crossfade = 0;
+  bool trimSilence = false, resumeLong = false;
+
+  /// A long file started where it was left (the UI offers "Start over").
+  Stream<Duration> get resumed => _resumed.stream;
+  final _resumed = StreamController<Duration>.broadcast();
+
   /// The playing track. It stays known when it leaves the library mid-song.
   Track? get current {
     final id = queue.current?.trackId;
@@ -128,50 +178,68 @@ class Engine extends ChangeNotifier {
   });
 
   Future<void> init() async {
-    player = Player(
-      configuration: PlayerConfiguration(title: 'Gleo', logLevel: logLevel),
-    );
-    await _mpv.setProperty('gapless-audio', 'weak'); // gapless whenever formats match; never resample to force it
-    await _mpv.setProperty('prefetch-playlist', 'yes');
-    await _mpv.setProperty('audio-display', 'no');
-    if (silent) {
-      await _mpv.setProperty('ao', 'null');
-    } else if (Platform.isAndroid) {
-      // AudioTrack first (media_kit picks OpenSL ES, which runs at a fixed rate); AAudio and OpenSL ES as fallbacks.
-      await _mpv.setProperty('ao', 'audiotrack,aaudio,opensles');
-      await _mpv.setProperty('cache-on-disk', 'no'); // no cache folder there ("Failed to create file cache")
-      // Float to AudioTrack: otherwise it gets 16 bits, and 24-bit files would lose theirs.
-      await _mpv.setProperty('audiotrack-pcm-float', 'yes');
-      await _mpv.setProperty('audio-format', 'float');
-    }
     device = lib.setting('audio_device') ?? 'auto';
     exclusive = !Platform.isAndroid && lib.setting('exclusive') == '1'; // WASAPI only
     volume = double.tryParse(lib.setting('volume') ?? '') ?? 100;
     muted = lib.setting('muted') == '1';
+    crossfade = int.tryParse(lib.setting('crossfade') ?? '') ?? 0;
+    trimSilence = lib.setting('trimSilence') == '1';
+    resumeLong = lib.setting('resumeLong') == '1';
+    await _newPlayer();
     // The saved device is gone (USB DAC unplugged): the system default for this session.
     final there = (await _mpv.getProperty('audio-device-list')).contains(jsonEncode(device));
-    await _mpv.setProperty('audio-device', there ? device : 'auto');
-    await _mpv.setProperty('audio-exclusive', exclusive ? 'yes' : 'no');
+    await _set('audio-device', there ? device : 'auto');
+    await _set('audio-exclusive', exclusive ? 'yes' : 'no');
     await player.setVolume(volume);
-    await _mpv.setProperty('mute', muted ? 'yes' : 'no');
+    await _set('mute', muted ? 'yes' : 'no');
+    _saveTimer = Timer.periodic(const Duration(seconds: 5), (_) {
+      if (playing) _savePos();
+    });
+    _restore();
+  }
 
-    player.stream.position.listen(_onPosition);
-    player.stream.duration.listen((d) {
-      if (d <= Duration.zero) return;
-      duration = d;
+  /// A player with Gleo's mpv settings, and every property set so far. Its events count only while it is [player].
+  Future<Player> _newPlayer() async {
+    final pl = Player(configuration: PlayerConfiguration(title: 'Gleo', logLevel: logLevel));
+    final m = pl.platform as NativePlayer;
+    await m.setProperty('gapless-audio', 'weak'); // gapless whenever formats match; never resample to force it
+    await m.setProperty('prefetch-playlist', 'yes');
+    await m.setProperty('audio-display', 'no');
+    if (silent) {
+      await m.setProperty('ao', 'null');
+    } else if (Platform.isAndroid) {
+      // AudioTrack first (media_kit picks OpenSL ES, which runs at a fixed rate); AAudio and OpenSL ES as fallbacks.
+      await m.setProperty('ao', 'audiotrack,aaudio,opensles');
+      await m.setProperty('cache-on-disk', 'no'); // no cache folder there ("Failed to create file cache")
+      // Float to AudioTrack: otherwise it gets 16 bits, and 24-bit files would lose theirs.
+      await m.setProperty('audiotrack-pcm-float', 'yes');
+      await m.setProperty('audio-format', 'float');
+    }
+    for (final e in _props.entries) {
+      await m.setProperty(e.key, e.value);
+    }
+    _players.add(pl);
+    bool on() => identical(pl, player);
+    pl.stream.position.listen((d) {
+      if (on()) _onPosition(d);
+    });
+    pl.stream.duration.listen((d) {
       final t = current;
+      if (d <= Duration.zero || !on() || t?.startMs != null) return; // a CUE track's length is its own
+      duration = d;
       if (t != null && t.durationMs == 0) lib.fixDuration(t.id, d.inMilliseconds);
       notifyListeners();
     });
-    player.stream.playing.listen((p) {
+    pl.stream.playing.listen((p) {
+      if (!on()) return;
       playing = p;
       notifyListeners();
     });
-    player.stream.completed.listen((c) {
-      if (c && _mpvNext == null) _end();
+    pl.stream.completed.listen((c) {
+      if (on() && c && _mpvNext == null) _end();
     });
-    player.stream.playlist.listen((pl) {
-      if (pl.index < 1 || _mpvNext == null) return;
+    pl.stream.playlist.listen((x) {
+      if (!on() || x.index < 1 || _mpvNext == null) return;
       final g = _gen;
       _serial(() async {
         if (g != _gen) return; // a manual load since made it stale
@@ -179,28 +247,40 @@ class Engine extends ChangeNotifier {
         await _verify();
       });
     });
-    player.stream.error.listen(_onError);
-    player.stream.audioDevices.listen((d) {
+    pl.stream.error.listen((e) {
+      if (on()) _onError(e);
+    });
+    pl.stream.audioDevices.listen((d) {
       devices = d;
       notifyListeners();
     });
-    player.stream.audioParams.listen((a) {
+    pl.stream.audioParams.listen((a) {
+      if (!on()) return;
       srcFormat = a.format ?? '';
       srcRate = a.sampleRate ?? 0;
       srcChannels = a.channelCount ?? 0;
       srcBits = current?.bitDepth ?? 0;
       notifyListeners();
     });
-    await _mpv.observeProperty('audio-out-params', (_) async {
-      outFormat = await _mpv.getProperty('audio-out-params/format');
-      outRate = int.tryParse(await _mpv.getProperty('audio-out-params/samplerate')) ?? 0;
-      outChannels = int.tryParse(await _mpv.getProperty('audio-out-params/channel-count')) ?? 0;
-      notifyListeners();
+    await m.observeProperty('audio-out-params', (_) async {
+      if (on()) await _readOut();
     });
-    _saveTimer = Timer.periodic(const Duration(seconds: 5), (_) {
-      if (playing) _savePos();
-    });
-    _restore();
+    return pl;
+  }
+
+  Future<void> _readOut() async {
+    outFormat = await _mpv.getProperty('audio-out-params/format');
+    outRate = int.tryParse(await _mpv.getProperty('audio-out-params/samplerate')) ?? 0;
+    outChannels = int.tryParse(await _mpv.getProperty('audio-out-params/channel-count')) ?? 0;
+    notifyListeners();
+  }
+
+  /// Sets an mpv property on every player, and remembers it for one made later.
+  Future<void> _set(String name, String value) async {
+    _props[name] = value;
+    for (final pl in _players) {
+      await (pl.platform as NativePlayer).setProperty(name, value);
+    }
   }
 
   /// mpv errors: a lost output device, or a file that can't be opened.
@@ -208,7 +288,7 @@ class Engine extends ChangeNotifier {
     if (e.startsWith('Could not open/initialize audio device')) {
       if (_deviceFailed) return;
       _deviceFailed = true;
-      _mpv.setProperty('audio-device', 'auto'); // this session only; the saved choice stays
+      _set('audio-device', 'auto'); // this session only; the saved choice stays
       _load(play: false);
       _say("Can't open the output device. Switched to the system default — press Play.");
       return;
@@ -336,6 +416,7 @@ class Engine extends ChangeNotifier {
       queue.next(); // songs added after the end play next; otherwise the last one again
       return _load();
     }
+    _endFade();
     return player.playOrPause();
   }
 
@@ -345,15 +426,19 @@ class Engine extends ChangeNotifier {
     return _ended ? togglePlay() : player.play();
   }
 
-  Future<void> pause() => player.pause();
+  Future<void> pause() {
+    _endFade();
+    return player.pause();
+  }
 
   Future<void> seek(Duration d) {
+    _endFade();
     _ended = false;
     _lastPos = d;
     position.value = d;
     seeks++;
     notifyListeners();
-    return _serial(() => player.seek(d));
+    return _serial(() => player.seek(d + _off(current)));
   }
 
   Future<void> seekBy(Duration d) {
@@ -375,7 +460,7 @@ class Engine extends ChangeNotifier {
     muted = !muted;
     lib.setSetting('muted', muted ? '1' : '0');
     notifyListeners();
-    return _mpv.setProperty('mute', muted ? 'yes' : 'no');
+    return _set('mute', muted ? 'yes' : 'no');
   }
 
   /// Pauses after [d], fading the volume out over the last 10 s; null cancels.
@@ -419,57 +504,249 @@ class Engine extends ChangeNotifier {
     return setOption('af', chain.isEmpty ? '' : '@gleo:lavfi=[$chain]');
   }
 
-  /// Any mpv option or property (e.g. "replaygain"). The caller persists it.
-  Future<void> setOption(String name, String value) => _serial(() => _mpv.setProperty(name, value));
+  /// Any mpv option or property (e.g. "replaygain"), on every player. The caller persists it.
+  Future<void> setOption(String name, String value) => _serial(() => _set(name, value));
 
   /// Reads an mpv property ('' when it is unavailable).
   Future<String> getOption(String name) => _mpv.getProperty(name);
 
-  /// An mpv command, in order with the other mpv calls (e.g. af-command).
-  Future<void> command(List<String> args) => _serial(() => _mpv.command(args));
+  /// An mpv command for every player, in order with the other mpv calls (e.g. af-command).
+  Future<void> command(List<String> args) => _serial(() async {
+    for (final pl in _players) {
+      await (pl.platform as NativePlayer).command(args);
+    }
+  });
 
   Future<void> setDevice(String name) {
     _deviceFailed = false;
     device = name;
     lib.setSetting('audio_device', name);
     notifyListeners();
-    return _mpv.setProperty('audio-device', name);
+    return _set('audio-device', name);
   }
 
   /// WASAPI exclusive mode: mpv owns the device and sends samples unchanged
   /// (keep volume at 100 % for bit-perfect output).
   Future<void> setExclusive(bool on) async {
+    _endFade();
     exclusive = on;
     lib.setSetting('exclusive', on ? '1' : '0');
     notifyListeners();
-    await _mpv.setProperty('audio-exclusive', on ? 'yes' : 'no');
+    await _set('audio-exclusive', on ? 'yes' : 'no');
     await _mpv.command(['ao-reload']);
+  }
+
+  /// Sound → Playback settings (saved here).
+  void setPlayback({int? crossfade, bool? trimSilence, bool? resumeLong}) {
+    if (crossfade != null) lib.setSetting('crossfade', '${this.crossfade = crossfade}');
+    if (trimSilence != null) lib.setSetting('trimSilence', (this.trimSilence = trimSilence) ? '1' : '0');
+    if (resumeLong != null) lib.setSetting('resumeLong', (this.resumeLong = resumeLong) ? '1' : '0');
+    notifyListeners();
   }
 
   // ------------------------------------------------------------ mpv sync
 
-  Future<void> _load({bool play = true, Duration start = Duration.zero}) {
+  Future<void> _load({bool play = true, Duration? start}) {
     final g = ++_gen;
     return _serial(() async {
       if (g == _gen) await _open(play: play, start: start); // else a newer load replaces it (fast Next presses)
     });
   }
 
-  Future<void> _open({bool play = true, Duration start = Duration.zero}) async {
+  /// Opens the queue's current song at [start]; none (or zero): at its natural start, a remembered
+  /// place in a long file or the end of trimmed silence.
+  Future<void> _open({bool play = true, Duration? start}) async {
+    _endFade();
     _mpvNext = null;
     _ended = false;
-    _lastPos = start;
-    position.value = start;
     final t = current;
+    if (t != null) await _scanTrim(t);
+    final from = start != null && start > Duration.zero ? start : null;
+    final at = from ?? _resumeAt(t) ?? Duration.zero;
+    _lastPos = at;
+    position.value = at;
     notifyListeners();
     if (t == null) {
       await player.stop();
       return;
     }
     duration = t.duration;
-    await player.open(Media(t.path, start: start > Duration.zero ? start : null), play: play);
+    await player.open(_media(t, from), play: play);
+    if (from == null) _announce(t);
     await _syncNext();
     _save();
+  }
+
+  /// Where [t] starts in its file: a CUE track's offset (mpv's clock is the file's).
+  static Duration _off(Track? t) => Duration(milliseconds: t?.startMs ?? 0);
+
+  /// [t] for mpv, from [at] (null: its natural start): a CUE track is its part of the file, and
+  /// trimmed silence moves its start and end.
+  Media _media(Track t, [Duration? at]) {
+    final trim = trimSilence ? _trims[t.id] : null;
+    final from = _off(t) + (at ?? _resumeAt(t) ?? trim?.$1 ?? Duration.zero);
+    final end = trim?.$2 ?? (t.startMs == null ? null : t.duration);
+    return Media(t.path, start: from > Duration.zero ? from : null, end: end == null ? null : _off(t) + end);
+  }
+
+  // ------------------------------------------------------------ long files
+
+  Map<String, Object?> get _places => jsonDecode(lib.setting('resume') ?? '{}') as Map<String, Object?>;
+
+  /// The remembered place in [t], when Resume long files is on.
+  Duration? _resumeAt(Track? t) {
+    final ms = resumeLong && t != null && t.duration > longFile ? _places['${t.id}'] as int? : null;
+    return ms == null ? null : Duration(milliseconds: ms);
+  }
+
+  /// Tells the UI a long file started where it was left.
+  void _announce(Track t) {
+    final at = _resumeAt(t);
+    if (at != null && !_resumed.isClosed) _resumed.add(at);
+  }
+
+  /// Remembers (or forgets, at the start or end) the place in a long file.
+  void _remember(Track? t, Duration at) {
+    if (!resumeLong || t == null || t.duration <= longFile) return;
+    final m = _places, key = '${t.id}', keep = resumePoint(t.duration, at);
+    if (m.remove(key) == null && keep == null) return;
+    if (keep != null) m[key] = keep.inMilliseconds;
+    // ponytail: the 100 newest places; a table if anyone needs more.
+    while (m.length > 100) {
+      m.remove(m.keys.first);
+    }
+    lib.setSetting('resume', jsonEncode(m));
+  }
+
+  // ------------------------------------------------------------ trim silence
+
+  /// Trimmed silence per track id (start, end), measured once per run.
+  final _trims = <int, (Duration, Duration?)>{};
+  Player? _meter;
+  final _pcm = p.join(Directory.systemTemp.path, 'gleo_meter_$pid.pcm');
+
+  /// Measures the silence at [t]'s start and end (its first and last 30 s) when Trim silence is on.
+  Future<void> _scanTrim(Track t) async {
+    if (!trimSilence || _trims.containsKey(t.id) || t.duration < const Duration(seconds: 5)) return;
+    try {
+      const span = Duration(seconds: 30);
+      final head = await _levels(t, Duration.zero, t.duration < span ? t.duration : span);
+      final tail = t.duration > span ? await _levels(t, t.duration - span, t.duration) : head;
+      _trims[t.id] = silenceTrim(head, tail, t.duration);
+    } catch (e) {
+      debugPrint('engine: trim $e');
+      _trims[t.id] = (Duration.zero, null);
+    }
+  }
+
+  /// The peak level (dBFS) of every 100 ms of [t] from [from] to [to]: a silent mpv decodes it, as fast
+  /// as it can, to 8 kHz mono samples in a temporary file (some milliseconds for 30 s), read here.
+  Future<List<double>> _levels(Track t, Duration from, Duration to) async {
+    final meter = _meter ??= await () async {
+      final pl = Player();
+      final m = pl.platform as NativePlayer;
+      for (final (k, v) in const [
+        ('ao', 'pcm'),
+        ('ao-pcm-waveheader', 'no'),
+        ('gapless-audio', 'no'),
+        ('audio-channels', 'mono'),
+        ('audio-samplerate', '8000'),
+        ('audio-format', 's16'),
+        ('audio-display', 'no'),
+      ]) {
+        await m.setProperty(k, v);
+      }
+      await m.setProperty('ao-pcm-file', _pcm);
+      return pl;
+    }();
+    final done = meter.stream.completed.firstWhere((c) => c);
+    await meter.open(Media(t.path, start: _off(t) + from, end: _off(t) + to));
+    await done.timeout(const Duration(seconds: 10));
+    await meter.stop(); // closes the file
+    final b = File(_pcm).readAsBytesSync().buffer.asByteData();
+    const block = 800; // 100 ms at 8 kHz, 2 bytes a sample
+    return [
+      for (var i = 0; i + block * 2 <= b.lengthInBytes; i += block * 2)
+        () {
+          var peak = 1;
+          for (var j = i; j < i + block * 2; j += 2) {
+            peak = max(peak, b.getInt16(j, Endian.little).abs());
+          }
+          return 20 * log(peak / 32768) / ln10;
+        }(),
+    ];
+  }
+
+  /// Where the playing track really ends: trimmed silence, else its length.
+  Duration _endOf(Track t) => (trimSilence ? _trims[t.id]?.$2 : null) ?? t.duration;
+
+  // ------------------------------------------------------------ crossfade
+
+  Timer? _fade;
+  Player? _fadingOut;
+  bool _crossing = false;
+
+  /// [pos] is near the end of the song and the next one may crossfade in: start it on the other player.
+  void _maybeCrossfade(Duration pos) {
+    if (crossfade <= 0 || exclusive || _crossing || !playing || _mpvNext == null) return;
+    final a = current, b = lib.byId[_mpvNext!.trackId];
+    if (a == null || b == null || !crossfades(a, b)) return;
+    final left = _endOf(a) - pos;
+    if (left > Duration(seconds: crossfade) || left < const Duration(milliseconds: 300)) return;
+    _crossing = true;
+    final g = _gen;
+    _serial(() async {
+      final e = _mpvNext;
+      final t = lib.byId[e?.trackId];
+      final now = current;
+      if (g != _gen || t == null || now == null || !identical(queue.peekNext(), e) || await _playingPos() != 0 ||
+          _endOf(now) - position.value > Duration(seconds: crossfade)) {
+        _crossing = false;
+        return;
+      }
+      final old = player;
+      if (_players.length < 2) await _newPlayer();
+      await old.remove(1); // the old song stops at its end instead of moving on
+      _mpvNext = null;
+      _leaveTrack(manual: false);
+      queue.next(auto: true);
+      _active = 1 - _active;
+      await _mpv.setProperty('volume', '0');
+      _lastPos = Duration.zero;
+      position.value = Duration.zero;
+      duration = t.duration;
+      await _scanTrim(t);
+      await player.open(_media(t));
+      _announce(t);
+      _fadeFrom(old, left);
+      await _syncNext();
+      _save();
+      notifyListeners();
+    });
+  }
+
+  /// The new song fades in on [player] while [old] fades out over [len], then [old] stops.
+  void _fadeFrom(Player old, Duration len) {
+    _fadingOut = old;
+    final from = old.platform as NativePlayer, to = _mpv;
+    final sw = Stopwatch()..start();
+    _fade = Timer.periodic(const Duration(milliseconds: 50), (_) {
+      final f = (sw.elapsedMilliseconds / len.inMilliseconds).clamp(0.0, 1.0);
+      from.setProperty('volume', '${volume * (1 - f)}');
+      to.setProperty('volume', '${volume * f}');
+      if (f >= 1) _endFade();
+    });
+  }
+
+  /// Ends a crossfade now (a skip, pause or seek): the old song stops, the new one plays at full volume.
+  void _endFade() {
+    _crossing = false;
+    final old = _fadingOut;
+    if (old == null) return;
+    _fade?.cancel();
+    _fadingOut = null;
+    old.stop();
+    _mpv.setProperty('volume', '$volume');
   }
 
   /// Keeps mpv's preloaded next track equal to what the queue says comes next.
@@ -486,8 +763,9 @@ class Engine extends ChangeNotifier {
     }
     final t = lib.byId[want?.trackId];
     _mpvNext = t == null ? null : want;
+    if (t != null) await _scanTrim(t);
     // Add before removing, so mpv never meets the end of its list in between.
-    if (t != null) await player.add(Media(t.path));
+    if (t != null) await player.add(_media(t));
     if (old != null) await player.remove(1);
   }
 
@@ -556,13 +834,18 @@ class Engine extends ChangeNotifier {
       await _open(); // the queue changed at the very last moment: load what it says
     }
     duration = current?.duration ?? Duration.zero;
+    if (current case final t?) _announce(t);
     _save();
     notifyListeners();
   }
 
   // ------------------------------------------------------------ plays and skips
 
-  void _onPosition(Duration pos) {
+  /// mpv's clock is the file's: a CUE track's is its own from its start.
+  void _onPosition(Duration filePos) {
+    final off = _off(current);
+    final pos = filePos > off ? filePos - off : Duration.zero;
+    _maybeCrossfade(pos);
     final delta = pos - _lastPos;
     _lastPos = pos;
     position.value = pos;
@@ -578,6 +861,7 @@ class Engine extends ChangeNotifier {
 
   void _leaveTrack({required bool manual, Track? track}) {
     final t = track ?? current;
+    _remember(t, position.value);
     if (t != null && manual && !_counted && ListenRules.isSkip(_listened, _before)) lib.recordPlay(t.id, skipped: true);
     _listened = _before = Duration.zero;
     _counted = false;
@@ -591,7 +875,10 @@ class Engine extends ChangeNotifier {
     _savePos();
   }
 
-  void _savePos() => lib.setSetting('queue_pos', '${_ended ? 0 : position.value.inMilliseconds}');
+  void _savePos() {
+    lib.setSetting('queue_pos', '${_ended ? 0 : position.value.inMilliseconds}');
+    if (!_ended) _remember(current, position.value);
+  }
 
   void _restore() {
     final s = lib.setting('queue');
@@ -600,9 +887,9 @@ class Engine extends ChangeNotifier {
       final j = jsonDecode(s) as Map<String, Object?>;
       final kept = queue.restore(j, lib.byId.containsKey);
       final ms = int.tryParse(lib.setting('queue_pos') ?? '') ?? j['pos'] as int? ?? 0;
-      final start = kept ? Duration(milliseconds: ms) : Duration.zero;
+      final start = kept ? Duration(milliseconds: ms) : null;
       if (queue.current != null) _load(play: false, start: start);
-      _before = start; // listening before the restart still counts toward a play
+      _before = start ?? Duration.zero; // listening before the restart still counts toward a play
     } catch (e) {
       debugPrint('queue restore: $e');
     }
@@ -611,8 +898,13 @@ class Engine extends ChangeNotifier {
   Future<void> shutdown() async {
     _saveTimer?.cancel();
     _sleep?.cancel();
+    _fade?.cancel();
     _save();
     await _messages.close();
-    await player.dispose();
+    await _resumed.close();
+    for (final pl in [..._players, ?_meter]) {
+      await pl.dispose();
+    }
+    if (File(_pcm).existsSync()) File(_pcm).deleteSync();
   }
 }

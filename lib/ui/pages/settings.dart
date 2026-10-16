@@ -27,7 +27,9 @@ Future<void> addMusicFolder() async {
   } on PlatformException {
     return notify('Gleo can only read folders on the phone or an SD card. Please choose one there.');
   }
-  if (dir != null && !lib.folders.contains(dir)) lib.folders = [...lib.folders, dir];
+  if (dir == null) return;
+  // A folder added again (on Android: so Gleo may read its .lrc and .cue files) is read again.
+  lib.folders.contains(dir) ? lib.rescan() : lib.folders = [...lib.folders, dir];
 }
 
 class SettingsPage extends StatelessWidget {
@@ -251,7 +253,8 @@ class SettingsPage extends StatelessWidget {
                           ),
                         ),
                     ]),
-                  _card('Data and updates', null, [const DataAndUpdates()]),
+                  _card('Data and updates', null, [const DataAndUpdates(), const SizedBox(height: S.x5), const BackupButtons()]),
+                  _card('Online', null, [const OnlineSettings()]),
                   _card('About', null, [
                     Row(
                       children: [
@@ -263,7 +266,7 @@ class SettingsPage extends StatelessWidget {
                             'Version $shortVersion · Gleo audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/lumen-audio-engine). '
                             'Design inspired by Wora (MIT). '
                             'Font: Inter (SIL Open Font License). Icons: Lucide (ISC). No AI. Suggestions come only from what you play here, '
-                            'and nothing goes to the internet unless you turn on the update check.',
+                            'and nothing goes to the internet unless you turn on the update check or lyrics downloads.',
                             style: T.small,
                           ),
                         ),

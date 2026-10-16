@@ -30,6 +30,7 @@ class _SongsPageState extends State<SongsPage> {
     'year' => (a, b) => (a.year ?? 0).compareTo(b.year ?? 0),
     'format' => (a, b) => (a.bitDepth * a.sampleRate).compareTo(b.bitDepth * b.sampleRate),
     'time' => (a, b) => a.durationMs.compareTo(b.durationMs),
+    'rating' => (a, b) => lib.rating(a.id).compareTo(lib.rating(b.id)),
     _ => (a, b) => _cmpStr(a.title, b.title),
   };
 
@@ -109,6 +110,7 @@ class _SongsPageState extends State<SongsPage> {
                           if (cols.album) ...[const SizedBox(width: S.x4), _head('Album', 'album', flex: 3)],
                           if (cols.year) _head('Year', 'year', width: 56),
                           if (cols.badge) ...[const SizedBox(width: S.x4), _head('Format', 'format', width: 104)],
+                          if (cols.rating) _head('Rating', 'rating', width: 84),
                           const SizedBox(width: 32),
                           _head('Time', 'time', width: 48, align: TextAlign.right),
                           const SizedBox(width: 32),
