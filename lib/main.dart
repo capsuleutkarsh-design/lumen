@@ -100,7 +100,10 @@ Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error
     await initAndroid();
     useMusicFolder(lib);
     await startAndroidMedia(engine);
-    AppLifecycleListener(onResume: lib.rescan); // Android has no recursive folder watch: rescan on return
+    // Back in Gleo (from Settings, say): the music permission again, and a rescan (Android has no recursive folder watch).
+    AppLifecycleListener(onResume: () => recheckMusic(lib).then((_) => lib.rescan()));
+    // The screen stays on while Disc mode or the lock-screen view is open and music plays.
+    Listenable.merge([nav, engine, lockView]).addListener(() => keepScreenOn(engine.playing && (nav.disc || lockView.value)));
   }
   lib.watch();
   lib.rescan(); // background: picks up anything changed while the app was closed
