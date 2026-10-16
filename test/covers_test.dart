@@ -198,6 +198,32 @@ void main() {
     await loadArtPacks();
   });
 
+  test("Change cover: Gleo's pick is what Reset to automatic gives, also when a pack image moved on", () async {
+    final pack = _Bundle({
+      for (final n in ['a', 'b', 'c']) 'assets/covers/illustrated/$n.jpg': img.encodeJpg(img.Image(width: 8, height: 8)),
+      'assets/covers/illustrated/credits.json': utf8.encode('{}'),
+    });
+    await loadArtPacks(pack);
+    final music = p.join(tmp.path, 'music');
+    for (var i = 0; i < 8; i++) {
+      writeFlac(p.join(music, 'D$i', '01.flac'), {'TITLE': 'Song $i', 'ARTIST': 'Ana', 'ALBUM': 'Album D$i'});
+    }
+    scan(p.join(tmp.path, 'library.db'), p.join(tmp.path, 'covers'), [music]);
+    final lib = Library(tmp.path)..load();
+    lib.artSourcesOn = {'illustrated'};
+    var moved = 0;
+    for (final a in lib.albums) {
+      final shown = lib.artFor(a.key, a.cover);
+      if (shown != autoArt(a.key, lib.artSourcesOn)) moved++;
+      lib.setCoverChoice(a.key, 'riso@4d2');
+      expect(lib.autoArtFor(a.key), shown, reason: a.title);
+      lib.setCoverChoice(a.key, null);
+    }
+    expect(moved, greaterThan(0), reason: 'some album shows a moved-on pack image');
+    lib.db.close();
+    await loadArtPacks();
+  });
+
   test('the art cache is capped: old versions, then the least recently used files go first', () async {
     final dir = Directory(p.join(tmp.path, 'art'))..createSync();
     File f(String name) => File(p.join(dir.path, name));

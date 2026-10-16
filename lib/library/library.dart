@@ -190,24 +190,33 @@ class Library extends ChangeNotifier {
     return autoArtFor(albumKey);
   }
 
-  /// Gleo's own pick for an album (see [artFor]).
-  Art autoArtFor(String albumKey) => _autoArt[artKeyOf(albumKey)] ?? autoArt(albumKey, artSourcesOn);
+  /// Gleo's own pick for an album (see [artFor]): for an album with a chosen cover, the art
+  /// Reset to automatic would give it.
+  Art autoArtFor(String albumKey) {
+    final key = artKeyOf(albumKey);
+    return _autoArt[key] ?? (coverChoices.containsKey(key) ? _pickAuto(also: key)[key] : null) ?? autoArt(albumKey, artSourcesOn);
+  }
 
   /// The automatic art of every album that shows it, picked once per load or change: albums in
   /// the order they were added, and a pack image an earlier album already shows moves on to the
   /// pack's next free one. So a library never shows a pack image twice until the pack runs out,
   /// and a new album never changes the art of older ones.
-  Map<String, Art> get _autoArt => _auto ??= () {
+  Map<String, Art> get _autoArt => _auto ??= _pickAuto();
+
+  /// [_autoArt], counting album [also] as if its chosen cover were reset.
+  Map<String, Art> _pickAuto({String? also}) {
     final on = artSourcesOn, taken = <String>{}, out = <String, Art>{};
     int order(Album x, Album y) => x.addedAt != y.addedAt ? x.addedAt.compareTo(y.addedAt) : x.key.compareTo(y.key);
     for (final a in [...albums]..sort(order)) {
       final key = artKeyOf(a.key), cover = a.cover;
-      if (out.containsKey(key) || coverChoices.containsKey(key) || (cover != null && !lowCovers.contains(cover))) continue;
+      if (out.containsKey(key) || (coverChoices.containsKey(key) && key != also) || (cover != null && !lowCovers.contains(cover))) continue;
       final art = out[key] = freeArt(autoArt(key, on), taken);
       taken.add(art.key!);
+      if (key == also) break; // later albums can't change it
     }
     return out;
-  }();
+  }
+
   Map<String, Art>? _auto;
 
   /// Settings → Disc & covers: the art sources Gleo picks from (painterly ones by default).
