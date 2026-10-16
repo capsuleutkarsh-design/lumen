@@ -6,6 +6,7 @@ import '../../library/library.dart';
 import '../../library/models.dart';
 import '../../platform/android.dart' show saveText;
 import '../app.dart';
+import '../phone.dart';
 import '../theme.dart';
 import '../tracks.dart';
 import '../widgets.dart';
@@ -71,86 +72,118 @@ class PlaylistsPage extends StatelessWidget {
 
   static double _extra(BuildContext context) => S.x3 + textHeight(context, [T.label, T.small]) + 2;
 
+  static Future<void> _create(BuildContext context) async {
+    final name = await askText(context, 'New playlist', action: 'Create', hint: 'Playlist name');
+    if (name != null) nav.push('playlist', lib.createPlaylist(name));
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: lib,
-    builder: (context, _) => CustomScrollView(
-      key: const PageStorageKey('playlists'),
-      slivers: [
-        SliverToBoxAdapter(
-          child: PageHeader(
-            'Playlists',
-            subtitle: plural(lib.playlists.length, 'playlist'),
-            trailing: Wrap(
-              spacing: S.x3,
-              runSpacing: S.x2,
-              children: [
-                PillButton('Import M3U', icon: LucideIcons.download, onTap: () => importPlaylist(context)),
-                PillButton(
-                  'New playlist',
-                  icon: LucideIcons.plus,
-                  primary: true,
-                  onTap: () async {
-                    final name = await askText(context, 'New playlist', action: 'Create');
-                    if (name != null) nav.push('playlist', lib.createPlaylist(name));
-                  },
-                ),
-              ],
-            ),
-          ),
-        ),
-        ...smartPlaylistSlivers(context),
-        if (lib.playlists.isEmpty)
-          SliverFillRemaining(
-            hasScrollBody: false,
-            child: EmptyState(
-              icon: LucideIcons.listMusic,
-              title: 'No playlists yet',
-              body: 'Make one with New playlist, or $menuWord any song and choose Add to playlist.',
-            ),
-          )
-        else
-          sliverCards(
-            extra: _extra(context),
-            count: lib.playlists.length,
-            builder: (_, i) {
-              final pl = lib.playlists[i];
-              return DecoratedBox(
-                decoration: BoxDecoration(
-                  borderRadius: BorderRadius.circular(R.card),
-                  border: Border.all(color: C.border),
-                ),
-                child: Clickable(
-                  onTap: () => nav.push('playlist', pl.id),
-                  onSecondaryTapDown: (d) =>
-                      showCollectionMenu(context, d.globalPosition, playlistTracks(pl), extra: playlistActions(context, pl)),
-                  semanticLabel: 'Playlist ${pl.name}',
-                  radius: R.card,
-                  padding: const EdgeInsets.all(S.x2),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      PlaylistCover(pl, radius: R.card - S.x2),
-                      const SizedBox(height: S.x3),
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: S.x1),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(pl.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.label),
-                            Text(plural(pl.trackIds.length, 'song'), maxLines: 1, style: T.small),
-                          ],
+    builder: (context, _) {
+      // The phone: your own playlists first, New playlist the one main button, Import under ⋮.
+      final phone = phoneLayout(context);
+      return CustomScrollView(
+        key: const PageStorageKey('playlists'),
+        slivers: [
+          SliverToBoxAdapter(
+            child: PageHeader(
+              'Playlists',
+              subtitle: plural(lib.playlists.length, 'playlist'),
+              trailing: phone
+                  ? Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        PillButton('New playlist', icon: LucideIcons.plus, primary: true, onTap: () => _create(context)),
+                        const SizedBox(width: S.x2),
+                        IconBtn(
+                          LucideIcons.ellipsisVertical,
+                          color: C.text,
+                          tooltip: 'More',
+                          onTap: () async {
+                            final v = await phoneSheet(context, [('import', LucideIcons.download, 'Import M3U…')]);
+                            if (v == 'import' && context.mounted) await importPlaylist(context);
+                          },
                         ),
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            },
+                      ],
+                    )
+                  : Wrap(
+                      spacing: S.x3,
+                      runSpacing: S.x2,
+                      children: [
+                        PillButton('Import M3U', icon: LucideIcons.download, onTap: () => importPlaylist(context)),
+                        PillButton('New playlist', icon: LucideIcons.plus, primary: true, onTap: () => _create(context)),
+                      ],
+                    ),
+            ),
           ),
-        const SliverToBoxAdapter(child: SizedBox(height: S.x16)),
-      ],
-    ),
+          if (!phone) ...smartPlaylistSlivers(context),
+          if (phone) const SliverToBoxAdapter(child: SectionTitle('Your playlists')),
+          if (lib.playlists.isEmpty && phone)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: S.x2),
+                child: Text('None yet. Tap New playlist, or long-press a song and choose Add to playlist.', style: T.small),
+              ),
+            )
+          else if (lib.playlists.isEmpty)
+            SliverFillRemaining(
+              hasScrollBody: false,
+              child: EmptyState(
+                icon: LucideIcons.listMusic,
+                title: 'No playlists yet',
+                body: 'Make one with New playlist, or $menuWord any song and choose Add to playlist.',
+              ),
+            )
+          else
+            sliverCards(
+              extra: _extra(context),
+              count: lib.playlists.length,
+              builder: (_, i) {
+                final pl = lib.playlists[i];
+                return DecoratedBox(
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(R.card),
+                    border: Border.all(color: C.border),
+                  ),
+                  child: Clickable(
+                    onTap: () => nav.push('playlist', pl.id),
+                    onSecondaryTapDown: (d) => showCollectionMenu(
+                      context,
+                      d.globalPosition,
+                      playlistTracks(pl),
+                      extra: playlistActions(context, pl),
+                      title: pl.name,
+                    ),
+                    semanticLabel: 'Playlist ${pl.name}',
+                    radius: R.card,
+                    padding: const EdgeInsets.all(S.x2),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        PlaylistCover(pl, radius: R.card - S.x2),
+                        const SizedBox(height: S.x3),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(horizontal: S.x1),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(pl.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.label),
+                              Text(plural(pl.trackIds.length, 'song'), maxLines: 1, style: T.small),
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                );
+              },
+            ),
+          if (phone) ...smartPlaylistSlivers(context, phone: true),
+          const SliverToBoxAdapter(child: SizedBox(height: S.x16)),
+        ],
+      );
+    },
   );
 }
 
@@ -178,6 +211,7 @@ class PlaylistCover extends StatelessWidget {
         aspectRatio: 1,
         child: GridView.count(
           crossAxisCount: 2,
+          padding: EdgeInsets.zero, // not the phone's status bar inset
           physics: const NeverScrollableScrollPhysics(),
           children: [for (final t in firsts) CoverArt.track(t, radius: 0)],
         ),

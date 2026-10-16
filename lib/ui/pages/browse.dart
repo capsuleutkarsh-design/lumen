@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../library/models.dart';
+import '../../platform/window.dart' show isTouch;
 import '../app.dart';
+import '../phone.dart';
 import '../theme.dart';
 import '../tracks.dart';
 import '../widgets.dart';
@@ -49,7 +51,7 @@ class Segmented<V> extends StatelessWidget {
             hover: C.raised3,
             radius: R.pill,
             semanticLabel: label,
-            padding: const EdgeInsets.symmetric(horizontal: S.x3 + 2, vertical: S.x1 + 2),
+            padding: EdgeInsets.symmetric(horizontal: S.x3 + 2, vertical: isTouch ? 14 : S.x1 + 2), // touch: 48 dp tall
             child: Text(label, style: T.label.copyWith(color: v == value ? C.text : C.dim)),
           ),
       ],
@@ -67,18 +69,20 @@ class BrowseHeader extends StatelessWidget {
   Widget build(BuildContext context) => Column(
     crossAxisAlignment: CrossAxisAlignment.start,
     children: [
-      SingleChildScrollView(
-        scrollDirection: Axis.horizontal,
-        padding: const EdgeInsets.fromLTRB(S.x2, S.x2, S.x2, S.x4),
-        child: Segmented(
-          value: tab,
-          options: browseTabs,
-          onChanged: (t) {
-            nav.memo['browse.tab'] = t;
-            nav.go(t);
-          },
+      // The phone's Library lists every Browse page, so no tab strip there (it clipped and scrolled away).
+      if (!phoneLayout(context))
+        SingleChildScrollView(
+          scrollDirection: Axis.horizontal,
+          padding: const EdgeInsets.fromLTRB(S.x2, S.x2, S.x2, S.x4),
+          child: Segmented(
+            value: tab,
+            options: browseTabs,
+            onChanged: (t) {
+              nav.memo['browse.tab'] = t;
+              nav.go(t);
+            },
+          ),
         ),
-      ),
       PageHeader(browseTabs.firstWhere((x) => x.$1 == tab).$2, subtitle: subtitle, trailing: trailing),
     ],
   );
@@ -106,7 +110,9 @@ class CoverMosaic extends StatelessWidget {
         aspectRatio: 1,
         child: GridView.count(
           crossAxisCount: 2,
+          padding: EdgeInsets.zero, // not the phone's status bar inset: that letterboxed the covers
           physics: const NeverScrollableScrollPhysics(),
+
           children: [for (final t in firsts.values) CoverArt.track(t, radius: 0)],
         ),
       ),
@@ -141,7 +147,7 @@ class NamedCard extends StatelessWidget {
     ),
     child: Clickable(
       onTap: onTap,
-      onSecondaryTapDown: (d) => showCollectionMenu(context, d.globalPosition, tracks),
+      onSecondaryTapDown: (d) => showCollectionMenu(context, d.globalPosition, tracks, title: name),
       semanticLabel: '${label ?? ''} $name'.trim(),
       radius: R.card,
       padding: const EdgeInsets.all(S.x2),

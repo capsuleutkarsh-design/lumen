@@ -8,6 +8,7 @@ import '../../platform/licence.dart';
 import '../../platform/log.dart';
 import '../../platform/update.dart';
 import '../app.dart';
+import '../phone.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -37,6 +38,43 @@ List<Widget> markdown(String md) {
 Future<void> _showDoc(BuildContext context, String title, String file, [List<Widget> actions = const []]) async {
   final text = await asset(file) ?? creditLine;
   if (!context.mounted) return;
+  if (phoneLayout(context)) {
+    // The phone: a full-screen page (a dialog there is a narrow box), the same text.
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (ctx) => Scaffold(
+          backgroundColor: C.bg,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: 56,
+                  child: Row(
+                    children: [
+                      IconBtn(LucideIcons.arrowLeft, size: 22, color: C.text, tooltip: 'Back', onTap: () => Navigator.pop(ctx)),
+                      Expanded(child: Text(title, style: T.heading, maxLines: 1, overflow: TextOverflow.ellipsis)),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: SelectionArea(
+                    child: ListView(padding: const EdgeInsets.fromLTRB(S.x5, 0, S.x5, S.x5), children: markdown(text)),
+                  ),
+                ),
+                if (actions.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(S.x3),
+                    child: Wrap(spacing: S.x2, runSpacing: S.x2, children: actions),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    return;
+  }
   await showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
@@ -77,7 +115,13 @@ class DataAndUpdates extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        SelectableText('Your library, playlists, play counts and the log are kept in ${lib.dataDir}', style: T.small),
+        SelectableText(
+          Platform.isAndroid
+              ? 'Your library, playlists, play counts and the log are kept inside the app on this phone.'
+              : 'Your library, playlists, play counts and the log are kept in ${lib.dataDir}',
+          style: T.small,
+        ),
+
         const SizedBox(height: S.x3),
         if (!Platform.isAndroid) // the app's own folder: no file manager can open it there
           Row(

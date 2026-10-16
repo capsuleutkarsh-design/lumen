@@ -24,11 +24,12 @@ class HomePage extends StatelessWidget {
         : 'Good evening';
   }
 
+  // On a touch screen the sections keep just their names: how suggestions work is for Windows' wider page.
   List<Widget> _tracks(String title, String subtitle, List<Pick<Track>> picks, {int max = 5}) {
     if (picks.isEmpty) return [];
     final shown = picks.take(max).toList();
     return [
-      SliverToBoxAdapter(child: SectionTitle(title, subtitle: subtitle)),
+      SliverToBoxAdapter(child: SectionTitle(title, subtitle: isTouch ? null : subtitle)),
       SliverTracks([for (final p in shown) p.item], whys: [for (final p in shown) p.why]),
     ];
   }
@@ -36,7 +37,7 @@ class HomePage extends StatelessWidget {
   List<Widget> _albums(String title, String subtitle, List<Pick<Album>> picks) {
     if (picks.isEmpty) return [];
     return [
-      SliverToBoxAdapter(child: SectionTitle(title, subtitle: subtitle)),
+      SliverToBoxAdapter(child: SectionTitle(title, subtitle: isTouch ? null : subtitle)),
       SliverToBoxAdapter(child: AlbumShelf([for (final p in picks) p.item], whys: [for (final p in picks) p.why])),
     ];
   }
@@ -56,6 +57,9 @@ class HomePage extends StatelessWidget {
               subtitle: lib.tracks.isEmpty
                   ? 'Your music, played the way it was recorded.'
                   : '${plural(lib.tracks.length, 'song')} · ${plural(lib.albums.length, 'album')} · ${plural(lib.artists.length, 'artist')}',
+              trailing: isTouch && lib.tracks.isNotEmpty
+                  ? PillButton('Shuffle all', icon: LucideIcons.shuffle, primary: true, onTap: () => shufflePlay(lib.tracks))
+                  : null,
             ),
           ),
           if (lib.tracks.isEmpty)
@@ -73,8 +77,10 @@ class HomePage extends StatelessWidget {
                         const SizedBox(width: S.x4),
                         Expanded(
                           child: Text(
-                            'Play a few songs and suggestions will appear here. They come only from what you play ${isTouch ? 'on this phone' : 'on this computer'}: '
-                            'plays count after half a song (or 4 minutes), skips are songs left in the first 30 seconds.',
+                            isTouch
+                                ? 'Play a few songs and Gleo will suggest more here.'
+                                : 'Play a few songs and suggestions will appear here. They come only from what you play on this computer: '
+                                      'plays count after half a song (or 4 minutes), skips are songs left in the first 30 seconds.',
                             style: T.small,
                           ),
                         ),

@@ -184,7 +184,7 @@ final appearance = ValueNotifier<String>('dark');
 
 /// Reads the saved theme and switches the colours to it (before the window shows, so it opens in them).
 void loadAppearance() {
-  appearance.value = lib.setting('appearance') ?? 'dark';
+  appearance.value = lib.setting('appearance') ?? (Platform.isAndroid ? 'system' : 'dark'); // the phone follows its own setting
   C.use(paletteFor(appearance.value, ui.PlatformDispatcher.instance.platformBrightness));
 }
 
@@ -295,7 +295,10 @@ class _AppState extends State<App> with WidgetsBindingObserver {
     scaffoldMessengerKey: messengerKey,
     navigatorObservers: [_modals],
     // Around the navigator, so screenshots include menus, dialogs and toasts.
-    builder: (context, child) => RepaintBoundary(key: shotKey, child: child),
+    builder: (context, child) {
+      final shot = RepaintBoundary(key: shotKey, child: child);
+      return Platform.isAndroid ? AnnotatedRegion(value: phoneBars(), child: shot) : shot;
+    },
     home: const Shell(),
   );
 }
@@ -450,6 +453,8 @@ Widget pageFor(Place p) => switch (p.page) {
   'artist' => ArtistPage(p.arg as String),
   'songs' => const SongsPage(),
   'folders' => const FoldersPage(),
+  'folder' => FoldersPage(dir: p.arg as String),
+  'library' => const LibraryPage(),
   'playlists' => const PlaylistsPage(),
   'playlist' => PlaylistPage(p.arg as int),
   'smart' => SmartPlaylistPage(p.arg as int),
@@ -725,6 +730,7 @@ class Rail extends StatelessWidget {
     'album' => 'albums',
     'artist' => 'artists',
     'playlist' || 'smart' => 'playlists',
+    'folder' => 'folders',
     'genres' || 'genre' || 'years' || 'composers' || 'composer' || 'duplicates' || 'stats' => 'browse',
     _ => page,
   };

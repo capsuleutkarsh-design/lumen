@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:path/path.dart' as p;
 
 export '../../audio/sound.dart' show friendlyFormat;
 
@@ -13,9 +14,11 @@ import '../../platform/window.dart' show isTouch;
 import '../../art/art_sources.dart';
 import '../app.dart';
 import '../disc.dart';
+import '../phone.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'credits.dart';
+import 'folders.dart' show storageName;
 import 'settings_extras.dart';
 
 /// Asks for a folder and adds it to the library (Settings, the empty Home, drag and drop).
@@ -54,6 +57,24 @@ class SettingsPage extends StatelessWidget {
     listenable: Listenable.merge([lib, engine, discStyle]),
     builder: (context, _) {
       final folders = lib.folders;
+      final phone = phoneLayout(context);
+      // The phone: a label above its choices (no 140 dp column beside them).
+      Widget labelled(String label, Widget choices) => phone
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: T.label),
+                const SizedBox(height: S.x2),
+                choices,
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 140, child: Text(label, style: T.label)),
+                Expanded(child: choices),
+              ],
+            );
       return ListView(
         key: const PageStorageKey('settings'),
         padding: EdgeInsets.zero,
@@ -87,7 +108,16 @@ class SettingsPage extends StatelessWidget {
                               Icon(LucideIcons.folder, size: 16, color: C.dim),
                               const SizedBox(width: S.x3),
                               Expanded(
-                                child: Text(f, style: T.label, overflow: TextOverflow.ellipsis),
+                                child: storageName(f) == null
+                                    ? Text(f, style: T.label, overflow: TextOverflow.ellipsis)
+                                    // Android: "Music · Phone storage", the path in small text.
+                                    : Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        children: [
+                                          Text('${p.basename(f)} · ${storageName(f)}', style: T.label, overflow: TextOverflow.ellipsis),
+                                          Text(f, style: T.caption, overflow: TextOverflow.ellipsis),
+                                        ],
+                                      ),
                               ),
                               IconBtn(
                                 LucideIcons.x,
@@ -102,6 +132,9 @@ class SettingsPage extends StatelessWidget {
                                     action: 'Remove',
                                   )) {
                                     lib.folders = [...folders]..remove(f);
+                                    // Its song is no longer in the library: stop showing it as playing.
+                                    final now = engine.current?.path;
+                                    if (now != null && p.isWithin(f, now)) await engine.playTracks(const []);
                                   }
                                 },
                               ),
@@ -154,58 +187,58 @@ class SettingsPage extends StatelessWidget {
                     [PillButton('Open Sound settings', icon: LucideIcons.slidersVertical, onTap: () => nav.go('sound'))],
                   ),
                   _card('Disc & covers', 'Appearance', [
-                    Row(
-                      children: [
-                        SizedBox(width: 140, child: Text('Spinning disc', style: T.label)),
-                        Expanded(
-                          child: Wrap(
-                            spacing: S.x2,
-                            runSpacing: S.x2,
-                            children: [
-                              for (final (s, label) in const [(DiscStyle.cd, 'CD'), (DiscStyle.vinyl, 'Vinyl'), (DiscStyle.off, 'Off')])
-                                PillButton(label, dense: true, primary: discStyle.value == s, onTap: () => discStyle.value = s),
-                            ],
-                          ),
-                        ),
-                      ],
+                    labelled(
+                      'Spinning disc',
+                      Wrap(
+                        spacing: S.x2,
+                        runSpacing: S.x2,
+                        children: [
+                          for (final (s, label) in const [(DiscStyle.cd, 'CD'), (DiscStyle.vinyl, 'Vinyl'), (DiscStyle.off, 'Off')])
+                            PillButton(label, dense: true, primary: discStyle.value == s, onTap: () => discStyle.value = s),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: S.x2),
                     Text(
-                      'Shown beside the cover in Now Playing, Disc mode (D) and the mini player. It turns only while music plays.',
+                      isTouch
+                          ? 'Shown beside the cover in Now Playing and Disc mode. It turns only while music plays.'
+                          : 'Shown beside the cover in Now Playing, Disc mode (D) and the mini player. It turns only while music plays.',
                       style: T.caption,
                     ),
                     const SizedBox(height: S.x4),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(width: 140, child: Text('Cover art from', style: T.label)),
-                        Expanded(
-                          child: Wrap(
-                            spacing: S.x2,
-                            runSpacing: S.x2,
-                            children: [
-                              for (final s in artSources.where((s) => s.weight > 0))
-                                PillButton(
-                                  s.name,
-                                  dense: true,
-                                  icon: sourcesInUse(lib.artSourcesOn).contains(s) ? LucideIcons.check : null,
-                                  primary: sourcesInUse(lib.artSourcesOn).contains(s),
-                                  onTap: () => lib.artSourcesOn = lib.artSourcesOn.contains(s.id)
-                                      ? ({...lib.artSourcesOn}..remove(s.id))
-                                      : {...lib.artSourcesOn, s.id},
-                                ),
-                            ],
-                          ),
-                        ),
-                      ],
+                    labelled(
+                      'Cover art from',
+                      Wrap(
+                        spacing: S.x2,
+                        runSpacing: S.x2,
+                        children: [
+                          for (final s in artSources.where((s) => s.weight > 0))
+                            PillButton(
+                              s.name,
+                              dense: true,
+                              icon: sourcesInUse(lib.artSourcesOn).contains(s) ? LucideIcons.check : null,
+                              primary: sourcesInUse(lib.artSourcesOn).contains(s),
+                              onTap: () => lib.artSourcesOn = lib.artSourcesOn.contains(s.id)
+                                  ? ({...lib.artSourcesOn}..remove(s.id))
+                                  : {...lib.artSourcesOn, s.id},
+                            ),
+                        ],
+                      ),
                     ),
                     const SizedBox(height: S.x3),
-                    Text(
-                      'Albums without a cover, or with a small or blurry one, get artwork from the collections that are on: '
-                      'public-domain paintings (Masterpieces), styles Gleo paints itself (Painted), illustrations made for Gleo (Illustrated) and code-drawn shapes (Abstract). '
-                      '${isTouch ? 'Long-press' : 'Right-click'} an album and choose Change cover to pick another or keep the original. Your music files are never changed.',
-                      style: T.small,
-                    ),
+                    if (phone)
+                      Text(
+                        'Albums without a good cover get art from the collections that are on. '
+                        'Long-press an album and choose Change cover to pick another.',
+                        style: T.small,
+                      )
+                    else
+                      Text(
+                        'Albums without a cover, or with a small or blurry one, get artwork from the collections that are on: '
+                        'public-domain paintings (Masterpieces), styles Gleo paints itself (Painted), illustrations made for Gleo (Illustrated) and code-drawn shapes (Abstract). '
+                        '${isTouch ? 'Long-press' : 'Right-click'} an album and choose Change cover to pick another or keep the original. Your music files are never changed.',
+                        style: T.small,
+                      ),
                   ]),
                   _card('Theme', null, [const ThemeSettings()]),
                   if (!Platform.isAndroid) _card('Window', null, [const WindowSettings()]),
@@ -252,11 +285,17 @@ class SettingsPage extends StatelessWidget {
                     ]),
                   _card('Data and updates', null, [const DataAndUpdates()]),
                   _card('About', null, [
-                    Row(
+                    Flex(
+                      // The phone: the wordmark above the text, which keeps the full width.
+                      direction: phone ? Axis.vertical : Axis.horizontal,
+                      mainAxisSize: MainAxisSize.min,
+                      crossAxisAlignment: phone ? CrossAxisAlignment.start : CrossAxisAlignment.center,
                       children: [
-                        const Wordmark(height: 40),
-                        const SizedBox(width: S.x4),
-                        Expanded(
+                        Wordmark(height: phone ? 28 : 40),
+                        SizedBox(width: S.x4, height: phone ? S.x3 : 0),
+                        Flexible(
+                          flex: phone ? 0 : 1, // 0: its own height in the phone's column
+                          fit: FlexFit.tight,
                           child: Text(
                             'Gleo · © 2026 Utkarsh Tripathi · UT Community Licence 2.0\n\n'
                             'Version $shortVersion · Gleo audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/lumen-audio-engine). '
@@ -269,7 +308,25 @@ class SettingsPage extends StatelessWidget {
                       ],
                     ),
                     const SizedBox(height: S.x4),
-                    PillButton('Credits', icon: LucideIcons.award, onTap: () => showCredits(context)),
+                    if (phone)
+                      Clickable(
+                        onTap: () => showCredits(context),
+                        semanticLabel: 'Credits',
+                        radius: R.small,
+                        child: SizedBox(
+                          height: 48,
+                          child: Row(
+                            children: [
+                              Icon(LucideIcons.award, size: 18, color: C.dim),
+                              const SizedBox(width: S.x3),
+                              Expanded(child: Text('Credits', style: T.label)),
+                              Icon(LucideIcons.chevronRight, size: 16, color: C.faint),
+                            ],
+                          ),
+                        ),
+                      )
+                    else
+                      PillButton('Credits', icon: LucideIcons.award, onTap: () => showCredits(context)),
                   ]),
                 ],
               ),

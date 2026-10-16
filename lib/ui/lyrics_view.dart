@@ -6,6 +6,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../library/lyrics.dart';
 import '../library/models.dart';
 import 'app.dart';
+import 'phone.dart' show phoneLayout;
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -92,6 +93,8 @@ class _LyricsViewState extends State<LyricsView> {
     final t = engine.current;
     final l = _lyrics;
     final style = widget.embedded ? T.lyric.copyWith(fontSize: 24) : T.lyric;
+    // The phone shows them over the cover's colours in Now Playing: the other lines stay readable there.
+    final phone = widget.embedded && phoneLayout(context);
     Widget body;
     if (t == null) {
       body = const EmptyState(icon: LucideIcons.micVocal, title: 'Nothing playing', body: 'Play a song to see its lyrics here.');
@@ -143,7 +146,9 @@ class _LyricsViewState extends State<LyricsView> {
                     child: AnimatedDefaultTextStyle(
                       duration: Motion.slow,
                       curve: Motion.curve,
-                      style: style.copyWith(color: current ? C.text : C.text.withValues(alpha: i < _line ? 0.2 : 0.34)),
+                      style: style.copyWith(
+                        color: current ? C.text : C.text.withValues(alpha: phone ? 0.45 : (i < _line ? 0.2 : 0.34)),
+                      ),
                       child: text,
                     ),
                   ),

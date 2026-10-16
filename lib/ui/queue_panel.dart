@@ -23,15 +23,40 @@ class QueuePanel extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(S.x5, S.x4, S.x2, S.x2),
-              child: Row(
-                children: [
-                  Expanded(child: Text('Queue', style: T.heading)),
-                  Text([if (q.items.isNotEmpty) plural(q.items.length, 'song'), if (q.shuffle) 'shuffled'].join(' · '), style: T.caption),
-                  if (upcoming.isNotEmpty) IconBtn(LucideIcons.listX, size: 16, tooltip: 'Clear the queue', onTap: engine.clearQueue),
-                  if (cur != null) IconBtn(LucideIcons.listPlus, size: 16, tooltip: 'Save as playlist', onTap: () => _save(context)),
-                  IconBtn(LucideIcons.x, size: 16, tooltip: 'Close', onTap: nav.toggleQueue),
-                ],
-              ),
+              child: isTouch
+                  // Touch: the actions in words, 48 dp tall; the count under the title.
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Queue', style: T.heading),
+                              Text(
+                                [if (q.items.isNotEmpty) plural(q.items.length, 'song'), if (q.shuffle) 'shuffled'].join(' · '),
+                                style: T.caption,
+                              ),
+                            ],
+                          ),
+                        ),
+                        if (upcoming.isNotEmpty) _textBtn('Clear', () => _clear(context)),
+                        if (cur != null) _textBtn('Save as playlist', () => _save(context)),
+                        IconBtn(LucideIcons.x, size: 18, tooltip: 'Close', onTap: nav.toggleQueue),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(child: Text('Queue', style: T.heading)),
+                        Text(
+                          [if (q.items.isNotEmpty) plural(q.items.length, 'song'), if (q.shuffle) 'shuffled'].join(' · '),
+                          style: T.caption,
+                        ),
+                        if (upcoming.isNotEmpty)
+                          IconBtn(LucideIcons.listX, size: 16, tooltip: 'Clear the queue', onTap: () => _clear(context)),
+                        if (cur != null) IconBtn(LucideIcons.listPlus, size: 16, tooltip: 'Save as playlist', onTap: () => _save(context)),
+                        IconBtn(LucideIcons.x, size: 16, tooltip: 'Close', onTap: nav.toggleQueue),
+                      ],
+                    ),
             ),
             if (cur == null)
               Expanded(
@@ -88,6 +113,24 @@ class QueuePanel extends StatelessWidget {
       },
     ),
   );
+
+  Widget _textBtn(String label, VoidCallback onTap) => Clickable(
+    onTap: onTap,
+    semanticLabel: label,
+    radius: R.pill,
+    padding: const EdgeInsets.symmetric(horizontal: S.x3),
+    child: SizedBox(
+      height: 48,
+      child: Center(child: Text(label, style: T.label)),
+    ),
+  );
+
+  /// Everything after the playing song goes; Undo puts it back at the end of the queue.
+  void _clear(BuildContext context) {
+    final ids = [for (final e in engine.queue.upcoming) e.trackId];
+    engine.clearQueue();
+    toast(context, 'Queue cleared', action: 'Undo', onAction: () => engine.addToQueue([for (final id in ids) ?lib.byId[id]]));
+  }
 
   Widget _label(String s) => Padding(
     padding: const EdgeInsets.fromLTRB(S.x5, S.x3, S.x5, S.x2),

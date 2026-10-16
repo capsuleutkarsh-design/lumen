@@ -1,3 +1,5 @@
+import 'dart:math';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -6,6 +8,7 @@ import '../../library/models.dart';
 import '../../platform/window.dart' show isTouch;
 import '../app.dart';
 import '../cover_picker.dart';
+import '../phone.dart';
 import '../theme.dart';
 import '../tracks.dart';
 import '../widgets.dart';
@@ -19,8 +22,9 @@ class AlbumCard extends StatefulWidget {
   final String? why;
   final double? width;
 
-  /// Height of everything below the square cover, at the user's text size.
-  static double extra(BuildContext context) => S.x3 + S.x1 + 2 + textHeight(context, [T.label, T.small, T.caption]);
+  /// Height of everything below the square cover, at the user's text size (touch: title and artist only).
+  static double extra(BuildContext context) =>
+      isTouch ? S.x3 + 2 + textHeight(context, [T.label, T.small]) : S.x3 + S.x1 + 2 + textHeight(context, [T.label, T.small, T.caption]);
   // (the card's padding and the cover add up to its width)
 
   @override
@@ -35,9 +39,10 @@ class _AlbumCardState extends State<AlbumCard> {
     final a = widget.album;
     final caption = widget.why ?? [if (a.year != null) '${a.year}', a.badge].join(' · ');
     final card = DecoratedBox(
+      // Touch: no frame, just the cover and two lines.
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(R.card),
-        border: Border.all(color: C.border),
+        border: isTouch ? null : Border.all(color: C.border),
       ),
       child: Clickable(
         onTap: () => nav.push('album', a.key),
@@ -94,8 +99,10 @@ class _AlbumCardState extends State<AlbumCard> {
                   children: [
                     Text(a.title, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.label),
                     Text(a.artist, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
-                    const SizedBox(height: S.x1),
-                    Text(caption, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption),
+                    if (!isTouch) ...[
+                      const SizedBox(height: S.x1),
+                      Text(caption, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.caption),
+                    ],
                   ],
                 ),
               ),
@@ -113,6 +120,7 @@ Future<void> albumMenu(BuildContext context, Offset at, Album a) => showCollecti
   context,
   at,
   a.tracks,
+  title: a.title,
   extra: [
     ('artist', LucideIcons.micVocal, 'Go to artist', () => nav.push('artist', a.artist)),
     ('cover', LucideIcons.image, 'Change cover…', () => showCoverPicker(context, a)),
@@ -132,7 +140,7 @@ class AlbumShelf extends StatefulWidget {
 class _AlbumShelfState extends State<AlbumShelf> {
   final _c = ScrollController();
   bool _left = false, _right = false;
-  static const _card = 212.0;
+  static final _card = isTouch ? 160.0 : 212.0; // touch: a 144 dp cover
 
   @override
   void dispose() {
@@ -171,8 +179,10 @@ class _AlbumShelfState extends State<AlbumShelf> {
             ),
           ),
         ),
-        if (_left) Positioned(left: S.x2, top: _card / 2 - 18, child: _arrow(LucideIcons.chevronLeft, 'Back', () => _by(-_card * 3))),
-        if (_right) Positioned(right: S.x2, top: _card / 2 - 18, child: _arrow(LucideIcons.chevronRight, 'More', () => _by(_card * 3))),
+        if (_left && !isTouch)
+          Positioned(left: S.x2, top: _card / 2 - 18, child: _arrow(LucideIcons.chevronLeft, 'Back', () => _by(-_card * 3))),
+        if (_right && !isTouch)
+          Positioned(right: S.x2, top: _card / 2 - 18, child: _arrow(LucideIcons.chevronRight, 'More', () => _by(_card * 3))),
       ],
     ),
   );
@@ -245,6 +255,13 @@ class SortMenu extends StatelessWidget {
       'Sort: $value',
       icon: LucideIcons.arrowUpDown,
       onTap: () async {
+        if (phoneLayout(context)) {
+          final v = await phoneSheet(context, [
+            for (final o in options) (o, o == value ? LucideIcons.check : LucideIcons.arrowUpDown, o),
+          ], title: 'Sort by');
+          if (v != null) onChanged(v);
+          return;
+        }
         final v = await popMenu(context, below(context), [
           for (final o in options)
             PopupMenuItem(
@@ -408,7 +425,16 @@ class PageHero extends StatelessWidget {
   final List<(String, IconData, String, VoidCallback)> menu;
   final bool round;
 
-  void _menu(BuildContext context, Offset at) => showCollectionMenu(context, at, tracks, extra: menu);
+  void _menu(BuildContext context, Offset at) => showCollectionMenu(context, at, tracks, extra: menu, title: title);
+
+  /// Long-press the title: the whole of it, when it is cut.
+  void _fullTitle(BuildContext context) => showDialog<void>(
+    context: context,
+    builder: (ctx) => AlertDialog(
+      content: SelectableText(title, style: T.heading),
+      actions: [PillButton('Close', onTap: () => Navigator.pop(ctx))],
+    ),
+  );
 
   @override
   Widget build(BuildContext context) => GestureDetector(
@@ -439,7 +465,9 @@ class PageHero extends StatelessWidget {
             LayoutBuilder(
               builder: (context, c) {
                 final w = c.maxWidth;
-                final size = (w * 0.3).clamp(120.0, 232.0);
+                final phone = phoneLayout(context);
+                // The phone: a big centred cover, min(240, 60 % of the width).
+                final size = phone ? min(240.0, w * 0.6) : (w * 0.3).clamp(120.0, 232.0);
                 final stacked = w < 480;
                 final titleStyle = w >= 720 ? T.display : T.title;
                 final art = DecoratedBox(
@@ -458,7 +486,10 @@ class PageHero extends StatelessWidget {
                       style: T.caption.copyWith(letterSpacing: 1.2, fontWeight: FontWeight.w600, color: C.dim),
                     ),
                     const SizedBox(height: S.x2),
-                    Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: titleStyle),
+                    GestureDetector(
+                      onLongPress: phone ? () => _fullTitle(context) : null,
+                      child: Text(title, maxLines: phone ? 3 : 2, overflow: TextOverflow.ellipsis, style: titleStyle),
+                    ),
                     const SizedBox(height: S.x3),
                     Wrap(
                       crossAxisAlignment: WrapCrossAlignment.center,
@@ -516,10 +547,14 @@ class PageHero extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      if (nav.canBack) const _BackPill() else const SizedBox(height: S.x8),
-                      SizedBox(height: w >= 720 ? S.x16 : S.x8),
+                      // The phone's top bar has Back already.
+                      if (!phone) ...[
+                        if (nav.canBack) const _BackPill() else const SizedBox(height: S.x8),
+                        SizedBox(height: w >= 720 ? S.x16 : S.x8),
+                      ],
                       if (stacked) ...[
-                        art,
+                        phone ? Center(child: art) : art,
+
                         const SizedBox(height: S.x5),
                         text,
                       ] else

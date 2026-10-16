@@ -11,7 +11,10 @@ import '../library/library.dart';
 bool get isDesktop => Platform.isWindows || Platform.isLinux || Platform.isMacOS;
 
 /// A touch screen (Android): a tap plays a song, a long press opens its menu, and buttons are finger-sized.
-bool get isTouch => Platform.isAndroid || Platform.isIOS;
+bool get isTouch => touchForTests ?? (Platform.isAndroid || Platform.isIOS);
+
+/// Tests set this to check the phone layout on the desktop.
+bool? touchForTests;
 
 // The window's normal bounds are saved as [x, y, width, height, maximised] in physical pixels.
 // window_manager turns logical into physical pixels with the current devicePixelRatio, so dividing by

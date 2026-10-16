@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../audio/engine.dart';
@@ -10,6 +11,7 @@ import 'app.dart';
 import 'art_accent.dart';
 import 'cover_picker.dart';
 import 'mini_player.dart';
+import 'phone.dart' show phoneLayout;
 import 'theme.dart';
 import 'tracks.dart';
 import 'widgets.dart';
@@ -280,8 +282,17 @@ class _LinkState extends State<_Link> {
 
 /// Shuffle, previous, play/pause, next, repeat.
 class Transport extends StatelessWidget {
-  const Transport({super.key, this.big = false});
+  const Transport({super.key, this.big = false, this.onCover = false});
   final bool big;
+
+  /// Over cover art (the phone's Now Playing): "on" is white with a dot, as gold can vanish into the glow.
+  final bool onCover;
+
+  void _toggle(VoidCallback f) {
+    if (onCover) HapticFeedback.selectionClick();
+    f();
+  }
+
   @override
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: engine,
@@ -298,9 +309,10 @@ class Transport extends StatelessWidget {
             size: big ? 18 : 16,
             box: big ? 44 : 36,
             active: q.shuffle,
+            activeColor: onCover ? C.text : null,
             color: big ? C.text : C.dim,
             tooltip: q.shuffle ? 'Shuffle on' : 'Shuffle',
-            onTap: has ? () => engine.setShuffle(!q.shuffle) : null,
+            onTap: has ? () => _toggle(() => engine.setShuffle(!q.shuffle)) : null,
           ),
           gap,
           IconBtn(
@@ -329,12 +341,13 @@ class Transport extends StatelessWidget {
             box: big ? 44 : 36,
             color: big ? C.text : C.dim,
             active: q.repeat != Repeat.off,
+            activeColor: onCover ? C.text : null,
             tooltip: switch (q.repeat) {
               Repeat.off => 'Repeat off',
               Repeat.all => 'Repeat all',
               Repeat.one => 'Repeat one',
             },
-            onTap: has ? engine.cycleRepeat : null,
+            onTap: has ? () => _toggle(engine.cycleRepeat) : null,
           ),
         ],
       );
@@ -443,7 +456,13 @@ class _SeekBarState extends State<SeekBar> {
     builder: (context, pos, _) {
       final total = engine.duration.inMilliseconds.toDouble();
       final value = (_drag ?? pos.inMilliseconds.toDouble()).clamp(0.0, total <= 0 ? 0.0 : total);
-      final style = (widget.big ? T.small : T.caption).copyWith(color: C.dim, fontFeatures: T.tabular);
+      // The phone's Now Playing: over the cover's colours, so the text colour (dim can sink into a bright glow).
+      final onCover = widget.big && phoneLayout(context);
+      final style = (widget.big ? T.small : T.caption).copyWith(
+        color: onCover ? C.text.withValues(alpha: 0.75) : C.dim,
+        fontFeatures: T.tabular,
+      );
+
       final active = _hoverX != null || _drag != null;
       final slider = LayoutBuilder(
         builder: (context, c) {

@@ -39,14 +39,17 @@ class SmartCover extends StatelessWidget {
 }
 
 /// The smart playlists, as cards above the ordinary ones on the Playlists page.
-List<Widget> smartPlaylistSlivers(BuildContext context) {
+/// [phone]: they come after your own playlists, and the add button is a small icon so the line beside it fits.
+List<Widget> smartPlaylistSlivers(BuildContext context, {bool phone = false}) {
   final all = lib.smartPlaylists;
   return [
     SliverToBoxAdapter(
       child: SectionTitle(
         'Smart playlists',
         subtitle: 'Fill themselves from rules and stay up to date',
-        trailing: PillButton('New smart playlist', icon: LucideIcons.sparkles, dense: true, onTap: () => editSmart(context)),
+        trailing: phone
+            ? IconBtn(LucideIcons.plus, color: C.text, tooltip: 'New smart playlist', onTap: () => editSmart(context))
+            : PillButton('New smart playlist', icon: LucideIcons.sparkles, dense: true, onTap: () => editSmart(context)),
       ),
     ),
     sliverCards(
@@ -65,8 +68,9 @@ List<Widget> smartPlaylistSlivers(BuildContext context) {
         );
       },
     ),
-    const SliverToBoxAdapter(child: SectionTitle('Playlists')),
+    if (!phone) const SliverToBoxAdapter(child: SectionTitle('Playlists')),
   ];
+
 }
 
 class SmartPlaylistPage extends StatelessWidget {

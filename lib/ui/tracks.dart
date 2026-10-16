@@ -7,6 +7,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../library/models.dart';
 import '../platform/window.dart' show isTouch;
 import 'app.dart';
+import 'phone.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
@@ -82,10 +83,11 @@ final selection = Selection();
 
 // ------------------------------------------------------------ menus and queue actions
 
-PopupMenuItem<String> menuItem(String v, IconData icon, String label, {String? hint}) => PopupMenuItem(
-  value: v,
-  height: 36,
-  child: Row(
+PopupMenuItem<String> menuItem(String v, IconData icon, String label, {String? hint}) => _MenuItem(
+  v,
+  icon,
+  label,
+  Row(
     children: [
       Icon(icon, size: 16, color: C.dim),
       const SizedBox(width: S.x3),
@@ -95,12 +97,32 @@ PopupMenuItem<String> menuItem(String v, IconData icon, String label, {String? h
   ),
 );
 
-Future<String?> popMenu(BuildContext context, Offset at, List<PopupMenuEntry<String>> items) => showMenu<String>(
-  context: context,
-  position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx, at.dy),
-  popUpAnimationStyle: const AnimationStyle(duration: Motion.fast),
-  items: items,
-);
+/// A menu entry that remembers its icon and label, so the phone can show it as a bottom-sheet row.
+class _MenuItem extends PopupMenuItem<String> {
+  const _MenuItem(String value, this.icon, this.label, Widget child) : super(value: value, height: 36, child: child);
+  final IconData icon;
+  final String label;
+}
+
+/// A right-click menu at [at]; on the phone, a bottom sheet with 56 dp rows under [header],
+/// Delete last after a divider.
+Future<String?> popMenu(BuildContext context, Offset at, List<PopupMenuEntry<String>> items, {Widget? header}) {
+  if (phoneLayout(context)) {
+    final rows = <(String, IconData, String)?>[];
+    for (final e in items) {
+      if (e is _MenuItem && e.value == 'delete' && rows.lastOrNull != null) rows.add(null);
+      if (e is _MenuItem) rows.add((e.value!, e.icon, e.label));
+      if (e is PopupMenuDivider && rows.isNotEmpty) rows.add(null);
+    }
+    return phoneSheet(context, rows, header: header);
+  }
+  return showMenu<String>(
+    context: context,
+    position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx, at.dy),
+    popUpAnimationStyle: const AnimationStyle(duration: Motion.fast),
+    items: items,
+  );
+}
 
 /// Play next / add to queue, with a toast that can show the queue or undo it.
 Future<void> queueTracks(BuildContext context, List<Track> tracks, {required bool next}) async {
@@ -144,7 +166,10 @@ void favouriteAll(List<Track> tracks) {
 Future<void> showTrackMenu(BuildContext context, Offset at, List<Track> tracks, {Track? single}) async {
   final t = single ?? (tracks.length == 1 ? tracks.first : null);
   final allFav = tracks.every((x) => lib.isFavourite(x.id));
-  final v = await popMenu(context, at, [
+  final header = t != null
+      ? sheetHeader(CoverArt.track(t, size: 48), t.title, t.artist)
+      : sheetHeader(CoverArt.track(tracks.first, size: 48), plural(tracks.length, 'song'), 'Selected');
+  final v = await popMenu(context, at, header: header, [
     menuItem(
       'now',
       LucideIcons.play,
@@ -183,8 +208,16 @@ Future<void> showCollectionMenu(
   Offset at,
   List<Track> tracks, {
   List<(String, IconData, String, VoidCallback)> extra = const [],
+  String? title,
 }) async {
-  final v = await popMenu(context, at, [
+  final header = tracks.isEmpty
+      ? null
+      : sheetHeader(
+          CoverArt.track(tracks.first, size: 48),
+          title ?? plural(tracks.length, 'song'),
+          title == null ? '' : plural(tracks.length, 'song'),
+        );
+  final v = await popMenu(context, at, header: header, [
     menuItem('now', LucideIcons.play, 'Play'),
     menuItem('shuffle', LucideIcons.shuffle, 'Shuffle'),
     menuItem('next', LucideIcons.listStart, 'Play next'),
@@ -232,7 +265,7 @@ Future<void> addToPlaylistDialog(BuildContext context, List<Track> tracks) async
             children: [
               Clickable(
                 onTap: () async {
-                  final name = await askText(ctx, 'New playlist', action: 'Create');
+                  final name = await askText(ctx, 'New playlist', action: 'Create', hint: 'Playlist name');
                   if (name != null && ctx.mounted) Navigator.pop(ctx, lib.createPlaylist(name));
                 },
                 padding: const EdgeInsets.all(S.x3),
@@ -323,8 +356,8 @@ class TrackRow extends StatefulWidget {
 
   static const height = 56.0;
 
-  /// Row height at the user's text size.
-  static double extentOf(BuildContext context) => max(height, textHeight(context, [T.label, T.small]) + S.x4);
+  /// Row height at the user's text size (64 dp on the phone, for the artist · album line).
+  static double extentOf(BuildContext context) => max(phoneLayout(context) ? 64 : height, textHeight(context, [T.label, T.small]) + S.x4);
 
   @override
   State<TrackRow> createState() => _TrackRowState();
@@ -344,7 +377,9 @@ class _TrackRowState extends State<TrackRow> {
     final t = widget.track;
     if (!selection.has(t.id)) selection.click(widget.list, widget.index);
     final tracks = selection.length > 1 ? selection.tracks : [t];
-    showTrackMenu(context, d.globalPosition, tracks, single: tracks.length == 1 ? t : null);
+    showTrackMenu(context, d.globalPosition, tracks, single: tracks.length == 1 ? t : null).then((_) {
+      if (isTouch) selection.clear(); // a long press selected it only for its menu
+    });
   }
 
   void _play() => engine.playTracks(widget.list, widget.index);
@@ -357,7 +392,9 @@ class _TrackRowState extends State<TrackRow> {
       final isCurrent = engine.current?.id == track.id;
       final fav = lib.isFavourite(track.id);
       final selected = selection.has(track.id);
-      final quiet = !(_hover || selected || isCurrent);
+      final quiet = !(_hover || selected || isCurrent) && !isTouch; // touch has no hover: "…" always shows
+      final phone = phoneLayout(context);
+      final table = widget.table && !phone; // the phone has no room for columns: artist · album under the title
       Widget lead;
       if (widget.lead != null) {
         lead = widget.lead!;
@@ -388,10 +425,11 @@ class _TrackRowState extends State<TrackRow> {
                 ),
         );
       }
-      final sub = widget.table
+      var sub = table
           ? null
           : widget.why ??
                 (widget.albumArtist != null && track.artist.toLowerCase() == widget.albumArtist!.toLowerCase() ? null : track.artist);
+      if (phone && widget.showAlbum && sub == track.artist && track.album.isNotEmpty) sub = '${track.artist} · ${track.album}';
       final row = Listener(
         onPointerDown: _select,
         child: Clickable(
@@ -403,7 +441,7 @@ class _TrackRowState extends State<TrackRow> {
           focusOnTap: true,
           onFocusChange: (f) {
             // Arrow keys move the selection with the focus (Shift extends it).
-            if (f && !_pointer) selection.click(widget.list, widget.index, range: shift);
+            if (f && !_pointer && !isTouch) selection.click(widget.list, widget.index, range: shift); // not when a closed sheet hands focus back
           },
           selected: selected,
           selectedColor: C.raised3,
@@ -414,7 +452,9 @@ class _TrackRowState extends State<TrackRow> {
             height: TrackRow.extentOf(context),
             child: LayoutBuilder(
               builder: (context, c) {
-                final cols = TrackCols(c.maxWidth, table: widget.table, album: widget.showAlbum, badge: widget.showBadge);
+                final cols = phone
+                    ? TrackCols(0, table: false, album: false, badge: false)
+                    : TrackCols(c.maxWidth, table: table, album: widget.showAlbum, badge: widget.showBadge);
                 return Row(
                   children: [
                     lead,
@@ -461,18 +501,19 @@ class _TrackRowState extends State<TrackRow> {
                         child: Align(alignment: Alignment.centerLeft, child: FormatBadge(track.badge)),
                       ),
                     ],
-                    AnimatedOpacity(
-                      opacity: fav || !quiet ? 1 : 0,
-                      duration: Motion.fast,
-                      child: IconBtn(
-                        fav ? Icons.favorite_rounded : LucideIcons.heart,
-                        size: 16,
-                        box: 32,
-                        color: fav ? C.accent : C.faint,
-                        tooltip: fav ? 'Remove from Favourites' : 'Add to Favourites',
-                        onTap: () => lib.toggleFavourite(track.id),
+                    if (!phone) // the phone's heart is in Now Playing and the menu
+                      AnimatedOpacity(
+                        opacity: fav || !quiet ? 1 : 0,
+                        duration: Motion.fast,
+                        child: IconBtn(
+                          fav ? Icons.favorite_rounded : LucideIcons.heart,
+                          size: 16,
+                          box: 32,
+                          color: fav ? C.accent : C.faint,
+                          tooltip: fav ? 'Remove from Favourites' : 'Add to Favourites',
+                          onTap: () => lib.toggleFavourite(track.id),
+                        ),
                       ),
-                    ),
                     SizedBox(
                       width: 48,
                       child: Text(

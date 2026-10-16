@@ -4,12 +4,15 @@ import 'dart:math';
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../audio/sound.dart';
 import '../../platform/android.dart';
 import '../../platform/log.dart' show openPath;
+import '../../platform/window.dart' show isTouch;
 import '../app.dart';
+import '../phone.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -33,11 +36,13 @@ class SoundPage extends StatelessWidget {
             padding: EdgeInsets.zero,
             // Not const: the sections read [sound] and [engine], so they rebuild with this builder.
             children: [
-              if (Platform.isAndroid) ...[const SignalPathPanel(), const SizedBox(height: S.x4)], // scrolls with the page
               _Narrow(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [_Output(), _Equalizer(), _Headphones(), _Loudness()],
+                  // Android: what people change most first; how the sound is played, folded, at the end.
+                  children: Platform.isAndroid
+                      ? [_Equalizer(), _Headphones(), _Loudness(), const _HowPlayed()]
+                      : [_Output(), _Equalizer(), _Headphones(), _Loudness()],
                 ),
               ),
             ],
@@ -156,7 +161,7 @@ class Choice<V> extends StatelessWidget {
             hover: C.raised3,
             radius: R.pill,
             semanticLabel: label(v),
-            padding: const EdgeInsets.symmetric(horizontal: S.x3, vertical: S.x1 + 2),
+            padding: EdgeInsets.symmetric(horizontal: S.x3, vertical: isTouch ? 14 : S.x1 + 2), // touch: 48 dp tall
             child: Text(label(v), style: T.label.copyWith(color: v == selected ? C.text : C.dim)),
           ),
       ],
@@ -204,7 +209,8 @@ class SignalPathPanel extends StatelessWidget {
                     ),
                   )
                 else
-                  const _Tag('Not bit-perfect'),
+                  // Android always mixes: say so plainly, not as a fault.
+                  _Tag(Platform.isAndroid ? 'Android mixes the sound' : 'Not bit-perfect'),
               ],
             ),
             const SizedBox(height: S.x3),
@@ -240,6 +246,33 @@ class SignalPathPanel extends StatelessWidget {
     },
   );
 }
+
+/// Android: the signal path and the output, folded until opened.
+class _HowPlayed extends StatelessWidget {
+  const _HowPlayed();
+  @override
+  Widget build(BuildContext context) {
+    final shape = RoundedRectangleBorder(borderRadius: BorderRadius.circular(R.panel), side: BorderSide(color: C.border));
+    return Padding(
+      padding: const EdgeInsets.only(bottom: S.x4),
+      child: ExpansionTile(
+          key: const PageStorageKey('sound.how'),
+          backgroundColor: C.raised1,
+          collapsedBackgroundColor: C.raised1,
+          shape: shape,
+          collapsedShape: shape,
+          clipBehavior: Clip.antiAlias,
+          title: Text('How it’s played', style: T.heading),
+          subtitle: Text(sound.path.steps.join(' → '), style: T.small, maxLines: 1, overflow: TextOverflow.ellipsis),
+          iconColor: C.text,
+          collapsedIconColor: C.dim,
+          childrenPadding: const EdgeInsets.symmetric(horizontal: S.x3),
+          children: [const SignalPathPanel(), const SizedBox(height: S.x4), _Output()],
+      ),
+    );
+  }
+}
+
 
 // ------------------------------------------------------------ output
 
@@ -415,15 +448,33 @@ class _EqualizerState extends State<_Equalizer> {
               'Reset',
               icon: LucideIcons.rotateCcw,
               dense: true,
-              onTap: () => sound.change((s) => s.eq = Eq(on: s.eq.on, advanced: s.eq.advanced)),
+              onTap: () {
+                final before = eq.copy();
+                sound.change((s) => s.eq = Eq(on: s.eq.on, advanced: s.eq.advanced));
+                toast(context, 'EQ reset', action: 'Undo', onAction: () => sound.change((s) => s.eq = before));
+              },
             ),
           ],
         ),
         const SizedBox(height: S.x4),
+        // Touch: a swipe over the bands must never change them, nor switch the EQ on. Off, they are locked
+        // and say how to turn it on.
+        if (isTouch && !eq.on)
+          Padding(
+            padding: const EdgeInsets.only(bottom: S.x3),
+            child: Row(
+              children: [
+                Expanded(child: Text('EQ is off', style: T.small)),
+                PillButton('Turn on', dense: true, onTap: () => sound.change((s) => s.eq.on = true)),
+              ],
+            ),
+          ),
         AnimatedOpacity(
           duration: Motion.normal,
           opacity: eq.on ? 1 : 0.5,
-          child: Column(
+          child: IgnorePointer(
+            ignoring: isTouch && !eq.on,
+            child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               EqCurve(
@@ -452,6 +503,7 @@ class _EqualizerState extends State<_Equalizer> {
               eq.advanced ? _advanced(eq) : _graphic(eq),
             ],
           ),
+          ),
         ),
         const SizedBox(height: S.x4),
         if (!Platform.isAndroid) // Android has no device picker to switch with
@@ -472,10 +524,17 @@ class _EqualizerState extends State<_Equalizer> {
     Widget column(String label, double value, ValueChanged<double> onChanged, {bool strong = false}) => Expanded(
       child: Column(
         children: [
-          Text(_db(value), style: T.caption.copyWith(color: value == 0 ? C.faint : C.text, fontFeatures: T.tabular)),
+          Text(
+            // Touch: "+12", not "+12.0", so a narrow column keeps it on one line.
+            isTouch ? _db(value).replaceFirst(RegExp(r'\.0$'), '') : _db(value),
+            maxLines: 1,
+            style: T.caption.copyWith(color: value == 0 ? C.faint : C.text, fontFeatures: T.tabular),
+          ),
           SizedBox(
             height: 150,
-            child: RotatedBox(
+            child: _ThumbOnly(
+              at: (value.clamp(-12, 12) + 12) / 24,
+              child: RotatedBox(
               quarterTurns: 3,
               child: SliderTheme(
                 data: SliderTheme.of(context).copyWith(activeTrackColor: C.raised3, inactiveTrackColor: C.raised3),
@@ -484,6 +543,7 @@ class _EqualizerState extends State<_Equalizer> {
                   child: Slider(value: value.clamp(-12, 12), min: -12, max: 12, onChanged: (v) => onChanged((v * 2).round() / 2)),
                 ),
               ),
+            ),
             ),
           ),
           Text(label, style: T.caption.copyWith(color: strong ? C.text : C.faint)),
@@ -593,6 +653,24 @@ class _EqualizerState extends State<_Equalizer> {
     final at = box.localToGlobal(Offset(0, box.size.height + S.x1));
     final s = sound.s;
     final mine = s.presets.indexWhere((p) => p.name == s.eq.name);
+    // (value, icon, label); null is a divider.
+    final entries = <(String, IconData?, String)?>[
+      for (var i = 0; i < builtInPresets.length; i++) ('b$i', null, builtInPresets[i].name),
+      if (s.presets.isNotEmpty) ...[
+        null,
+        for (var i = 0; i < s.presets.length; i++) ('u$i', LucideIcons.user, s.presets[i].name),
+      ],
+      null,
+      ('save', LucideIcons.save, 'Save as preset…'),
+      if (mine >= 0) ...[
+        ('rename', LucideIcons.pencil, 'Rename “${s.eq.name}”…'),
+        ('delete', LucideIcons.trash2, 'Delete “${s.eq.name}”'),
+      ],
+      null,
+      ('autoeq', LucideIcons.headphones, 'Headphone correction (AutoEQ)…'),
+      ('import', LucideIcons.import, 'Import presets (JSON)…'),
+      if (s.presets.isNotEmpty) ('export', LucideIcons.share, 'Export my presets (JSON)…'),
+    ];
     PopupMenuItem<String> item(String v, String label, {IconData? icon}) => PopupMenuItem(
       value: v,
       height: 34,
@@ -603,27 +681,15 @@ class _EqualizerState extends State<_Equalizer> {
         ],
       ),
     );
-    final v = await showMenu<String>(
-      context: context,
-      position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx + 1, at.dy + 1),
-      items: [
-        for (var i = 0; i < builtInPresets.length; i++) item('b$i', builtInPresets[i].name),
-        if (s.presets.isNotEmpty) ...[
-          const PopupMenuDivider(height: 8),
-          for (var i = 0; i < s.presets.length; i++) item('u$i', s.presets[i].name, icon: LucideIcons.user),
-        ],
-        const PopupMenuDivider(height: 8),
-        item('save', 'Save as preset…', icon: LucideIcons.save),
-        if (mine >= 0) ...[
-          item('rename', 'Rename “${s.eq.name}”…', icon: LucideIcons.pencil),
-          item('delete', 'Delete “${s.eq.name}”', icon: LucideIcons.trash2),
-        ],
-        const PopupMenuDivider(height: 8),
-        item('autoeq', 'Headphone correction (AutoEQ)…', icon: LucideIcons.headphones),
-        item('import', 'Import presets (JSON)…', icon: LucideIcons.import),
-        if (s.presets.isNotEmpty) item('export', 'Export my presets (JSON)…', icon: LucideIcons.share),
-      ],
-    );
+    final v = phoneLayout(context)
+        ? await phoneSheet(context, [
+            for (final e in entries) e == null ? null : (e.$1, e.$2 ?? LucideIcons.slidersHorizontal, e.$3),
+          ], title: 'Presets')
+        : await showMenu<String>(
+            context: context,
+            position: RelativeRect.fromLTRB(at.dx, at.dy, at.dx + 1, at.dy + 1),
+            items: [for (final e in entries) e == null ? const PopupMenuDivider(height: 8) : item(e.$1, e.$3, icon: e.$2)],
+          );
     if (v == null || !mounted) return;
     if (v.startsWith('b') || v.startsWith('u')) {
       final p = (v[0] == 'b' ? builtInPresets : s.presets)[int.parse(v.substring(1))];
@@ -675,7 +741,32 @@ class _EqualizerState extends State<_Equalizer> {
   }
 }
 
+/// Touch: a band slider takes only touches on (or near) its thumb, so a swipe over the EQ scrolls the page.
+class _ThumbOnly extends SingleChildRenderObjectWidget {
+  const _ThumbOnly({required this.at, required super.child});
+
+  /// Where the thumb is: 0 at the bottom, 1 at the top.
+  final double at;
+  @override
+  RenderObject createRenderObject(BuildContext context) => _RenderThumbOnly(at);
+  @override
+  void updateRenderObject(BuildContext context, _RenderThumbOnly renderObject) => renderObject.at = at;
+}
+
+class _RenderThumbOnly extends RenderProxyBox {
+  _RenderThumbOnly(this.at);
+  double at;
+  @override
+  bool hitTest(BoxHitTestResult result, {required Offset position}) {
+    if (!isTouch) return super.hitTest(result, position: position);
+    const inset = 10.0; // the slider's track starts its overlay radius in
+    final y = inset + (1 - at) * (size.height - inset * 2);
+    return (position.dy - y).abs() <= 24 && super.hitTest(result, position: position); // a 48 dp thumb
+  }
+}
+
 /// A number you can type: applied on Enter or when the field loses focus, clamped to [min]..[max].
+
 class NumField extends StatefulWidget {
   const NumField(this.value, this.unit, this.min, this.max, this.onChanged, {super.key, this.digits = 1, this.enabled = true});
   final double value, min, max;

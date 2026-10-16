@@ -3,23 +3,34 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:path/path.dart' as p;
 
 import '../../library/models.dart';
+import '../../platform/window.dart' show isTouch;
 import '../app.dart';
 import '../theme.dart';
 import '../tracks.dart';
 import '../widgets.dart';
 import 'albums.dart';
 
-/// Browse the library the way it sits on disk.
-class FoldersPage extends StatefulWidget {
-  const FoldersPage({super.key});
-  @override
-  State<FoldersPage> createState() => _FoldersPageState();
-}
+/// Where a library folder is, in words: "Phone storage" or "SD card" on Android, else null.
+String? storageName(String path) => !path.startsWith('/storage/')
+    ? null
+    : path.startsWith('/storage/emulated/')
+    ? 'Phone storage'
+    : 'SD card';
 
-class _FoldersPageState extends State<FoldersPage> {
-  /// The open folder (null = the library folders themselves); kept across navigation.
-  String? get _dir => nav.memo['folders.dir'] as String?;
-  set _dir(String? v) => nav.memo['folders.dir'] = v;
+/// Browse the library the way it sits on disk. Each folder opened is a page of its own, so Back
+/// (Esc, the mouse, Android's Back) goes up one level.
+class FoldersPage extends StatelessWidget {
+  const FoldersPage({super.key, this.dir});
+
+  /// The open folder (null = the library folders themselves).
+  final String? dir;
+
+  /// Back to [target] (null: the library folders) along the folders opened on the way.
+  void _up(String? target) {
+    while (nav.top.page == 'folder' && nav.top.arg != target) {
+      nav.back();
+    }
+  }
 
   /// Every song in [dir] and below it.
   List<Track> _under(String dir) => [
@@ -31,8 +42,7 @@ class _FoldersPageState extends State<FoldersPage> {
   Widget build(BuildContext context) => ListenableBuilder(
     listenable: lib,
     builder: (context, _) {
-      final roots = lib.folders;
-      final dir = _dir;
+      final roots = lib.folders, dir = this.dir;
       final subdirs = <String, int>{}; // child folder -> songs inside
       final here = <Track>[];
       for (final t in lib.tracks) {
@@ -77,7 +87,7 @@ class _FoldersPageState extends State<FoldersPage> {
                             LucideIcons.ellipsis,
                             color: C.text,
                             tooltip: 'More',
-                            onTap: () => showCollectionMenu(b, below(b), _under(dir)),
+                            onTap: () => showCollectionMenu(b, below(b), _under(dir), title: p.basename(dir)),
                           ),
                         ),
                       ],
@@ -94,7 +104,7 @@ class _FoldersPageState extends State<FoldersPage> {
                     _crumb('Library', null),
                     for (final c in crumbs) ...[
                       Icon(LucideIcons.chevronRight, size: 14, color: C.faint),
-                      _crumb(c == crumbs.first ? c : p.basename(c), c),
+                      _crumb(c == crumbs.first && storageName(c) == null ? c : p.basename(c), c),
                     ],
                   ],
                 ),
@@ -110,13 +120,13 @@ class _FoldersPageState extends State<FoldersPage> {
           SliverList.builder(
             itemCount: names.length,
             itemBuilder: (_, i) => Clickable(
-              onTap: () => setState(() => _dir = names[i]),
-              onSecondaryTapDown: (d) => showCollectionMenu(context, d.globalPosition, _under(names[i])),
+              onTap: () => nav.push('folder', names[i]),
+              onSecondaryTapDown: (d) => showCollectionMenu(context, d.globalPosition, _under(names[i]), title: p.basename(names[i])),
               semanticLabel: 'Folder ${p.basename(names[i])}',
               radius: R.small,
               padding: const EdgeInsets.symmetric(horizontal: S.x2),
               child: SizedBox(
-                height: 52,
+                height: isTouch ? 56 : 52,
                 child: Row(
                   children: [
                     Container(
@@ -127,12 +137,27 @@ class _FoldersPageState extends State<FoldersPage> {
                     ),
                     const SizedBox(width: S.x3),
                     Expanded(
-                      child: Text(
-                        dir == null ? names[i] : p.basename(names[i]),
-                        style: T.label,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
+                      child: dir == null && storageName(names[i]) != null
+                          // Android: the folder's name and where it is; the path in small text.
+                          ? Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  '${p.basename(names[i])} · ${storageName(names[i])}',
+                                  style: T.label,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                Text(names[i], style: T.caption, maxLines: 1, overflow: TextOverflow.ellipsis),
+                              ],
+                            )
+                          : Text(
+                              dir == null ? names[i] : p.basename(names[i]),
+                              style: T.label,
+                              maxLines: 1,
+                              overflow: TextOverflow.ellipsis,
+                            ),
                     ),
                     Text(plural(subdirs[names[i]]!, 'song'), style: T.small),
                     const SizedBox(width: S.x2),
@@ -152,15 +177,19 @@ class _FoldersPageState extends State<FoldersPage> {
     },
   );
 
-  Widget _crumb(String label, String? target) => target == _dir
-      ? Padding(
-          padding: const EdgeInsets.symmetric(horizontal: S.x2, vertical: S.x1),
-          child: Text(label, style: T.small.copyWith(color: C.text)),
-        )
-      : Clickable(
-          onTap: () => setState(() => _dir = target),
-          radius: R.tiny + 2,
-          padding: const EdgeInsets.symmetric(horizontal: S.x2, vertical: S.x1),
-          child: Text(label, style: T.small),
-        );
+  Widget _crumb(String label, String? target) {
+    // A finger needs 48 dp: 14 dp above and below the line of text.
+    final pad = EdgeInsets.symmetric(horizontal: S.x2, vertical: isTouch ? 14 : S.x1);
+    return target == dir
+        ? Padding(
+            padding: pad,
+            child: Text(label, style: T.small.copyWith(color: C.text)),
+          )
+        : Clickable(
+            onTap: () => _up(target),
+            radius: R.tiny + 2,
+            padding: pad,
+            child: Text(label, style: T.small),
+          );
+  }
 }
