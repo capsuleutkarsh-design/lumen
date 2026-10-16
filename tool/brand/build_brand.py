@@ -74,6 +74,27 @@ def windows_ico():
         print("wrote", os.path.relpath(path, ROOT))
 
 
+# The taskbar thumbnail buttons (windows/runner/media_controls.cpp): Lucide icons (ISC), white, like the app's
+# own transport (and android/app/src/main/res/drawable/widget_*.xml).
+THUMB = {
+    "prev": '<path d="M17.971 4.285A2 2 0 0 1 21 6v12a2 2 0 0 1-3.029 1.715l-9.997-5.998a2 2 0 0 1-.003-3.432z"/><path d="M3 20V4"/>',
+    "play": '<path d="M5 5a2 2 0 0 1 3.008-1.728l11.997 6.998a2 2 0 0 1 .003 3.458l-12 7A2 2 0 0 1 5 19z"/>',
+    "pause": '<rect x="14" y="3" width="5" height="18" rx="1"/><rect x="5" y="3" width="5" height="18" rx="1"/>',
+    "next": '<path d="M21 4v16"/><path d="M6.029 4.285A2 2 0 0 0 3 6v12a2 2 0 0 0 3.029 1.715l9.997-5.998a2 2 0 0 0 .003-3.432z"/>',
+}
+
+
+def thumb_icons():
+    sizes = [16, 20, 24, 32, 40]
+    for name, body in THUMB.items():
+        svg = ('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" '
+               f'stroke-linecap="round" stroke-linejoin="round">{body}</svg>')
+        imgs = [to_pil(svg_image(s, svg)) for s in sizes]
+        path = os.path.join(ROOT, "windows", "runner", "resources", f"thumb_{name}.ico")
+        imgs[-1].save(path, format="ICO", sizes=[(s, s) for s in sizes], append_images=imgs[:-1])
+        print("wrote", os.path.relpath(path, ROOT))
+
+
 def svg_path(svg):
     """(a, tx, ty, d) of the single <path transform="matrix(a 0 0 -a tx ty)" d="..."> in svg."""
     m = re.search(r'matrix\(([-\d.]+) 0 0 -[\d.]+ ([-\d.]+) ([-\d.]+)\)" d="([^"]+)"', svg)
@@ -170,6 +191,7 @@ def main():
     save(word_image(480), "assets", "brand", "gleo_wordmark.png")
     save(word_image(480, WORD_LIGHT), "assets", "brand", "gleo_wordmark_light.png")
     windows_ico()
+    thumb_icons()
     android_icons()
     installer_images()
     poster(1280, 400, "banner.png")

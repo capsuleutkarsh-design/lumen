@@ -5,6 +5,7 @@
 #include <flutter/encodable_value.h>
 #include <flutter/method_channel.h>
 #include <windows.h>
+#include <shobjidl.h>
 
 #include <memory>
 #include <mutex>
@@ -18,6 +19,7 @@
 // hardware media keys), driven from Dart over the "gleo/media_controls"
 // channel. Button presses arrive on a background thread and are posted back to
 // the window so Dart is always called on the platform thread.
+// It also puts previous / play-pause / next under the taskbar thumbnail.
 class MediaControls {
  public:
   static constexpr UINT kButtonMessage = WM_APP + 0x51;
@@ -29,9 +31,13 @@ class MediaControls {
   void OnButton(int button);
   void OnThumbnail();
   void OnSeek(int64_t ms);
+  void OnTaskbarCreated();      // "TaskbarButtonCreated": add the thumbnail buttons
+  bool OnThumbButton(WORD id);  // WM_COMMAND with THBN_CLICKED
 
  private:
   void Update(const flutter::EncodableMap& args);
+  void UpdateThumbBar(bool add);
+  void Send(const char* button);
 
   // A cover opened in the background. Shared with the async callback, so it
   // outlives this object if the window closes while the file is opening.
@@ -47,6 +53,8 @@ class MediaControls {
   winrt::event_token button_token_{}, seek_token_{};
   std::shared_ptr<Pending> pending_ = std::make_shared<Pending>();
   winrt::Windows::Foundation::IAsyncOperation<winrt::Windows::Storage::StorageFile> open_op_{nullptr};
+  winrt::com_ptr<ITaskbarList3> taskbar_;
+  bool has_track_ = false, playing_ = false;
   std::string art_path_;
   winrt::Windows::Storage::StorageFile art_file_{nullptr};
 };
