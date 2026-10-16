@@ -9,6 +9,7 @@ import '../../platform/licence.dart';
 import '../../platform/log.dart';
 import '../../platform/update.dart';
 import '../app.dart';
+import '../phone.dart';
 import '../theme.dart';
 import '../widgets.dart';
 
@@ -17,8 +18,7 @@ import '../widgets.dart';
 List<Widget> markdown(String md) {
   // Links keep their text, HTML tags go, and * (bold, italics) goes except inside `code`.
   String plain(String s) => [
-    for (final (i, part)
-        in s.replaceAllMapped(RegExp(r'\[([^\]]*)\]\([^)]*\)'), (m) => m[1]!).replaceAll(RegExp('<[^>]+>'), '').split('`').indexed)
+    for (final (i, part) in s.replaceAllMapped(RegExp(r'\[([^\]]*)\]\([^)]*\)'), (m) => m[1]!).replaceAll(RegExp('<[^>]+>'), '').split('`').indexed)
       i.isOdd ? part : part.replaceAll('*', ''),
   ].join().trim();
   // A table row on two lines: the component, then what it is · its licence.
@@ -46,6 +46,45 @@ List<Widget> markdown(String md) {
 Future<void> _showDoc(BuildContext context, String title, String file, [List<Widget> actions = const []]) async {
   final text = await asset(file) ?? creditLine;
   if (!context.mounted) return;
+  if (phoneLayout(context)) {
+    // The phone: a full-screen page (a dialog there is a narrow box), the same text.
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (ctx) => Scaffold(
+          backgroundColor: C.bg,
+          body: SafeArea(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                SizedBox(
+                  height: 56,
+                  child: Row(
+                    children: [
+                      IconBtn(LucideIcons.arrowLeft, size: 22, color: C.text, tooltip: 'Back', onTap: () => Navigator.pop(ctx)),
+                      Expanded(
+                        child: Text(title, style: T.heading, maxLines: 1, overflow: TextOverflow.ellipsis),
+                      ),
+                    ],
+                  ),
+                ),
+                Expanded(
+                  child: SelectionArea(
+                    child: ListView(padding: const EdgeInsets.fromLTRB(S.x5, 0, S.x5, S.x5), children: markdown(text)),
+                  ),
+                ),
+                if (actions.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.all(S.x3),
+                    child: Wrap(spacing: S.x2, runSpacing: S.x2, children: actions),
+                  ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+    return;
+  }
   await showDialog<void>(
     context: context,
     builder: (ctx) => AlertDialog(
@@ -86,33 +125,37 @@ class DataAndUpdates extends StatelessWidget {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text('Your library, playlists, play counts and the log are kept in', style: T.small),
-        // The folder on one line, its middle cut when long, with Copy.
-        Row(
-          children: [
-            Flexible(
-              child: Tooltip(
-                message: lib.dataDir,
-                child: Text(
-                  lib.dataDir.length > 64 ? '${lib.dataDir.substring(0, 28)}…${lib.dataDir.substring(lib.dataDir.length - 32)}' : lib.dataDir,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: T.small.copyWith(color: C.text, fontFeatures: T.tabular),
+        if (Platform.isAndroid)
+          Text('Your library, playlists, play counts and the log are kept inside the app on this phone.', style: T.small)
+        else ...[
+          Text('Your library, playlists, play counts and the log are kept in', style: T.small),
+          // The folder on one line, its middle cut when long, with Copy.
+          Row(
+            children: [
+              Flexible(
+                child: Tooltip(
+                  message: lib.dataDir,
+                  child: Text(
+                    lib.dataDir.length > 64 ? '${lib.dataDir.substring(0, 28)}…${lib.dataDir.substring(lib.dataDir.length - 32)}' : lib.dataDir,
+                    maxLines: 1,
+                    overflow: TextOverflow.ellipsis,
+                    style: T.small.copyWith(color: C.text, fontFeatures: T.tabular),
+                  ),
                 ),
               ),
-            ),
-            IconBtn(
-              LucideIcons.copy,
-              size: 14,
-              box: 32,
-              tooltip: 'Copy the folder path',
-              onTap: () {
-                Clipboard.setData(ClipboardData(text: lib.dataDir));
-                toast(context, 'Copied the folder path');
-              },
-            ),
-          ],
-        ),
+              IconBtn(
+                LucideIcons.copy,
+                size: 14,
+                box: 32,
+                tooltip: 'Copy the folder path',
+                onTap: () {
+                  Clipboard.setData(ClipboardData(text: lib.dataDir));
+                  toast(context, 'Copied the folder path');
+                },
+              ),
+            ],
+          ),
+        ],
         const SizedBox(height: S.x3),
         if (!Platform.isAndroid) // the app's own folder: no file manager can open it there
           Row(
@@ -140,10 +183,8 @@ class DataAndUpdates extends StatelessWidget {
             ),
             const SizedBox(width: S.x4),
             StatefulBuilder(
-              builder: (context, setState) => Switch(
-                value: lib.setting('updateCheck') == '1',
-                onChanged: (v) => setState(() => lib.setSetting('updateCheck', v ? '1' : '0')),
-              ),
+              builder: (context, setState) =>
+                  Switch(value: lib.setting('updateCheck') == '1', onChanged: (v) => setState(() => lib.setSetting('updateCheck', v ? '1' : '0'))),
             ),
           ],
         ),

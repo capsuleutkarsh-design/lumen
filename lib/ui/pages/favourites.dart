@@ -21,9 +21,7 @@ class FavouritesPage extends StatelessWidget {
             child: PageHeader(
               'Favourites',
               subtitle: plural(tracks.length, 'song'),
-              trailing: tracks.isEmpty
-                  ? null
-                  : PillButton('Play all', icon: LucideIcons.play, primary: true, onTap: () => engine.playTracks(tracks)),
+              trailing: tracks.isEmpty ? null : PillButton('Play all', icon: LucideIcons.play, primary: true, onTap: () => engine.playTracks(tracks)),
             ),
           ),
           if (tracks.isEmpty)
@@ -32,7 +30,9 @@ class FavouritesPage extends StatelessWidget {
               child: EmptyState(
                 icon: LucideIcons.heart,
                 title: 'No favourites yet',
-                body: '${isTouch ? 'Tap' : 'Click'} the heart on any song, or in the player bar, to keep it here.',
+                body: isTouch
+                    ? 'Tap the heart in Now Playing, or long-press a song, to keep it here.'
+                    : 'Click the heart on any song, or in the player bar, to keep it here.',
               ),
             )
           else

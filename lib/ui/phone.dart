@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../platform/android.dart';
@@ -8,7 +9,6 @@ import '../platform/window.dart' show isTouch;
 import 'app.dart';
 import 'lyrics_view.dart';
 import 'now_playing.dart';
-import 'pages/browse.dart' show browseTab;
 import 'queue_panel.dart';
 import 'search.dart';
 import 'theme.dart';
@@ -17,6 +17,23 @@ import 'widgets.dart';
 /// A phone (a touch screen under 600 dp on its short side, in either orientation) gets the phone layout;
 /// tablets and every desktop window keep the desktop one.
 bool phoneLayout(BuildContext context) => isTouch && MediaQuery.sizeOf(context).shortestSide < 600;
+
+/// Android's status and navigation bars in the theme's colours, with icons that read on them (dark on
+/// light), so there is no black strip under the light theme's navigation. (Android 15+ draws the app
+/// behind both bars anyway and ignores the colours.) Given as an AnnotatedRegion around the app: a plain
+/// SystemChrome call loses to MaterialApp, which sets a black navigation bar on every build.
+SystemUiOverlayStyle phoneBars() {
+  final icons = C.isLight ? Brightness.dark : Brightness.light;
+  return SystemUiOverlayStyle(
+    statusBarColor: C.bg,
+    statusBarIconBrightness: icons,
+    statusBarBrightness: C.palette.brightness,
+    systemNavigationBarColor: C.raised1, // the bottom navigation's colour
+    systemNavigationBarDividerColor: C.border,
+    systemNavigationBarIconBrightness: icons,
+    systemNavigationBarContrastEnforced: false,
+  );
+}
 
 /// The phone layout: the page, a mini player above the bottom navigation, and Now Playing, the queue,
 /// search and Disc mode over everything. Android's Back closes the top-most of those first.
@@ -129,7 +146,13 @@ class _PhoneShellState extends State<PhoneShell> {
                     )
                   : const SizedBox.shrink(),
             ),
-            if (nav.search) Positioned.fill(child: _Sheet(child: const SearchConsole())),
+            if (nav.search)
+              Positioned.fill(
+                child: ColoredBox(
+                  color: C.bg,
+                  child: const SafeArea(child: SearchConsole()),
+                ),
+              ),
             if (nav.disc) const Positioned.fill(child: DiscMode()),
           ],
         ),
@@ -151,7 +174,7 @@ class _Sheet extends StatelessWidget {
   );
 }
 
-/// Back (on inner pages), the logo, the scan progress and Search.
+/// Back (on inner pages), the logo, the scan progress, Search and Settings.
 class _TopBar extends StatelessWidget {
   const _TopBar();
   @override
@@ -170,6 +193,15 @@ class _TopBar extends StatelessWidget {
         const Spacer(),
         const ScanPill(),
         IconBtn(LucideIcons.search, size: 20, color: C.text, tooltip: 'Search', onTap: () => nav.setSearch(true)),
+        IconBtn(
+          LucideIcons.settings,
+          key: const ValueKey('nav.settings'),
+          size: 20,
+          color: C.text,
+          active: nav.top.page == 'settings',
+          tooltip: 'Settings',
+          onTap: () => nav.go('settings'),
+        ),
         const SizedBox(width: S.x1),
       ],
     ),
@@ -179,38 +211,25 @@ class _TopBar extends StatelessWidget {
 class _BottomNav extends StatelessWidget {
   const _BottomNav({this.side = false});
 
-  /// Landscape: a column of icons on the left (with Back and Search), no labels.
+  /// Landscape: a column of icons on the left (with Back, Search and Settings), no labels.
   final bool side;
 
   static const items = [
     ('home', LucideIcons.house, 'Home'),
-    ('albums', LucideIcons.disc3, 'Albums'),
-    ('artists', LucideIcons.micVocal, 'Artists'),
     ('songs', LucideIcons.music, 'Songs'),
-    ('browse', LucideIcons.compass, 'Browse'),
-    ('more', LucideIcons.ellipsis, 'More'),
+    ('albums', LucideIcons.disc3, 'Albums'),
+    ('artists', LucideIcons.users, 'Artists'),
+    ('library', LucideIcons.libraryBig, 'Library'),
   ];
 
-  static const more = [
-    ('playlists', LucideIcons.listMusic, 'Playlists'),
-    ('folders', LucideIcons.folder, 'Folders'),
-    ('favourites', LucideIcons.heart, 'Favourites'),
-    ('sound', LucideIcons.slidersVertical, 'Sound'),
-    ('settings', LucideIcons.settings, 'Settings'),
-  ];
-
+  /// The tab a page belongs to. Settings and Sound (from the top bar and Now Playing) light none.
   static String _section(String page) => switch (page) {
     'album' => 'albums',
     'artist' => 'artists',
-    'genres' || 'genre' || 'years' || 'composers' || 'composer' || 'duplicates' || 'stats' => 'browse',
     'home' || 'albums' || 'artists' || 'songs' => page,
-    _ => 'more',
+    'settings' || 'sound' => '',
+    _ => 'library',
   };
-
-  Future<void> _more(BuildContext context) async {
-    final page = await phoneSheet(context, more);
-    if (page != null) nav.go(page);
-  }
 
   @override
   Widget build(BuildContext context) => ListenableBuilder(listenable: nav, builder: (context, _) => _build(context));
@@ -245,14 +264,10 @@ class _BottomNav extends StatelessWidget {
                 for (final (page, icon, label) in items)
                   KeyedSubtree(
                     key: ValueKey('nav.$page'),
-                    child: pill(
-                      icon,
-                      label,
-                      () => page == 'more' ? _more(context) : nav.go(page == 'browse' ? browseTab : page),
-                      on: current == page,
-                    ),
+                    child: pill(icon, label, () => nav.go(page), on: current == page),
                   ),
                 pill(LucideIcons.search, 'Search', () => nav.setSearch(true)),
+                pill(LucideIcons.settings, 'Settings', () => nav.go('settings'), on: nav.top.page == 'settings'),
               ],
             ),
           ),
@@ -274,7 +289,7 @@ class _BottomNav extends StatelessWidget {
                 Expanded(
                   child: Clickable(
                     key: ValueKey('nav.$page'),
-                    onTap: () => page == 'more' ? _more(context) : nav.go(page == 'browse' ? browseTab : page),
+                    onTap: () => nav.go(page),
                     semanticLabel: label,
                     selected: current == page,
                     selectedColor: Colors.transparent,
@@ -309,39 +324,139 @@ class _BottomNav extends StatelessWidget {
   }
 }
 
-/// A touch menu from the bottom of the screen (More, the sleep timer): the chosen value, null when dismissed.
-/// It scrolls when the phone is on its side.
-Future<V?> phoneSheet<V>(BuildContext context, List<(V, IconData, String)> items, {String? title}) => showModalBottomSheet<V>(
+/// The Library tab: your playlists, favourites and folders, then the Browse pages, as 56 dp rows.
+class LibraryPage extends StatelessWidget {
+  const LibraryPage({super.key});
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: lib,
+    builder: (context, _) {
+      Widget row(String page, IconData icon, String label, [String? meta]) => Clickable(
+        key: ValueKey('library.$page'),
+        onTap: () => nav.push(page, ''),
+        semanticLabel: label,
+        radius: R.small,
+        padding: const EdgeInsets.symmetric(horizontal: S.x2),
+        child: SizedBox(
+          height: 56,
+          child: Row(
+            children: [
+              Icon(icon, size: 20, color: C.dim),
+              const SizedBox(width: S.x4),
+              Expanded(child: Text(label, style: T.label)),
+              if (meta != null) Text(meta, style: T.small),
+              const SizedBox(width: S.x2),
+              Icon(LucideIcons.chevronRight, size: 16, color: C.faint),
+            ],
+          ),
+        ),
+      );
+      return ListView(
+        key: const PageStorageKey('library'),
+        padding: EdgeInsets.zero,
+        children: [
+          const PageHeader('Library'),
+          row('playlists', LucideIcons.listMusic, 'Playlists', plural(lib.playlists.length, 'playlist')),
+          row('favourites', LucideIcons.heart, 'Favourites', plural(lib.favouriteTracks.length, 'song')),
+          row('folders', LucideIcons.folder, 'Folders', plural(lib.folders.length, 'folder')),
+          const SectionTitle('Browse'),
+          row('genres', LucideIcons.tags, 'Genres', fmtInt(lib.genres.length)),
+          row('years', LucideIcons.calendar, 'Years', fmtInt(lib.years.length)),
+          row('composers', LucideIcons.feather, 'Composers', fmtInt(lib.composers.length)),
+          row('duplicates', LucideIcons.copy, 'Duplicates'),
+          row('stats', LucideIcons.chartColumn, 'Statistics'),
+          const SizedBox(height: S.x16),
+        ],
+      );
+    },
+  );
+}
+
+/// The look of every phone bottom sheet: raised, rounded, a handle on top, the page dimmed behind.
+/// It is as tall as its content, up to the whole screen (a long menu, Change cover).
+Future<V?> showPhoneSheet<V>(BuildContext context, WidgetBuilder builder) => showModalBottomSheet<V>(
   context: context,
-  backgroundColor: C.raised1,
+  isScrollControlled: true,
+  useSafeArea: true,
+  backgroundColor: C.raised2,
+  barrierColor: Colors.black.withValues(alpha: 0.6),
   shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(R.panel))),
-  builder: (context) => SafeArea(
+  builder: (context) => Column(
+    mainAxisSize: MainAxisSize.min,
+    children: [
+      Padding(
+        padding: const EdgeInsets.only(top: S.x2),
+        child: Container(
+          width: 32,
+          height: 4,
+          decoration: BoxDecoration(color: C.borderStrong, borderRadius: BorderRadius.circular(R.pill)),
+        ),
+      ),
+      Flexible(child: builder(context)),
+    ],
+  ),
+);
+
+/// The top of a song's or album's sheet: its cover, name and a second line.
+Widget sheetHeader(Widget cover, String title, String subtitle) => Padding(
+  padding: const EdgeInsets.fromLTRB(S.x6, S.x2, S.x6, S.x3),
+  child: Row(
+    children: [
+      cover,
+      const SizedBox(width: S.x3),
+      Expanded(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(title, maxLines: 2, overflow: TextOverflow.ellipsis, style: T.label),
+            if (subtitle.isNotEmpty) Text(subtitle, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
+          ],
+        ),
+      ),
+    ],
+  ),
+);
+
+/// A touch menu from the bottom of the screen (menus, the sleep timer): the chosen value, null when dismissed.
+/// A null item is a divider. It scrolls when the phone is on its side.
+Future<V?> phoneSheet<V>(BuildContext context, List<(V, IconData, String)?> items, {String? title, Widget? header}) => showPhoneSheet<V>(
+  context,
+  (context) => SafeArea(
+    top: false,
     child: ListView(
       shrinkWrap: true,
-      padding: const EdgeInsets.symmetric(vertical: S.x3),
+      padding: const EdgeInsets.symmetric(vertical: S.x2),
       children: [
+        ?header,
+        if (header != null) Divider(height: 1, color: C.border),
         if (title != null)
           Padding(
             padding: const EdgeInsets.fromLTRB(S.x6, S.x2, S.x6, S.x2),
             child: Text(title, style: T.small),
           ),
-        for (final (value, icon, label) in items)
-          Clickable(
-            onTap: () => Navigator.pop(context, value),
-            semanticLabel: label,
-            radius: 0,
-            child: SizedBox(
-              height: 56,
-              child: Row(
-                children: [
-                  const SizedBox(width: S.x6),
-                  Icon(icon, size: 20, color: C.text),
-                  const SizedBox(width: S.x4),
-                  Text(label, style: T.body),
-                ],
+        for (final item in items)
+          if (item == null)
+            Divider(height: S.x2 + 1, color: C.border)
+          else
+            Clickable(
+              onTap: () => Navigator.pop(context, item.$1),
+              semanticLabel: item.$3,
+              radius: 0,
+              child: SizedBox(
+                height: 56,
+                child: Row(
+                  children: [
+                    const SizedBox(width: S.x6),
+                    Icon(item.$2, size: 20, color: C.text),
+                    const SizedBox(width: S.x4),
+                    Expanded(
+                      child: Text(item.$3, style: T.body, maxLines: 1, overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(width: S.x4),
+                  ],
+                ),
               ),
             ),
-          ),
       ],
     ),
   ),

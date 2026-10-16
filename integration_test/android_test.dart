@@ -1,13 +1,16 @@
 // Gleo on Android, end to end on an emulator: scan a real folder, play, next / previous, the queue, the sleep timer,
-// the output Android reports, and screenshots of every phone screen in dark and light.
+// the output Android reports, the phone's search, tabs, sheets, EQ and folders, text contrast over bright covers,
+// and screenshots of every phone screen in dark and light.
 // Run (the music permission is granted first, as the app's own button would after "Allow"):
 //   adb push <testlib> /sdcard/Music/GleoTest/testlib
+//   adb push <contrast> /sdcard/Music/GleoTest/contrast   (optional: White, Cyan and Yellow albums with plain covers)
 //   adb shell pm grant com.capsuleutkarsh.gleo android.permission.READ_EXTERNAL_STORAGE   (READ_MEDIA_AUDIO on 13+)
-//   flutter test integration_test/android_test.dart -d emulator-5554 --dart-define=MP_DATA=/data/user/0/com.capsuleutkarsh.gleo/files/itest
+//   flutter test integration_test/android_test.dart -d emulator-5554 --no-uninstall --dart-define=MP_DATA=/data/user/0/com.capsuleutkarsh.gleo/files/itest
 // Screenshots and the report go to the app's external files folder:
 //   adb pull /sdcard/Android/data/com.capsuleutkarsh.gleo/files/shots
 import 'dart:async';
 import 'dart:io';
+import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
@@ -15,7 +18,6 @@ import 'package:flutter/rendering.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
-import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:media_kit/media_kit.dart' hide Track;
 import 'package:gleo/audio/engine.dart' show StopAfter;
 import 'package:gleo/audio/sound.dart';
@@ -23,6 +25,9 @@ import 'package:gleo/main.dart';
 import 'package:gleo/platform/android.dart';
 import 'package:gleo/ui/app.dart';
 import 'package:gleo/ui/lyrics_view.dart';
+import 'package:gleo/ui/theme.dart';
+import 'package:gleo/ui/tracks.dart' show selection;
+import 'package:gleo/ui/widgets.dart' show fmtTime;
 import 'package:path_provider/path_provider.dart';
 
 const music = '$androidMusic/GleoTest';
@@ -85,7 +90,7 @@ void main() {
     final names = {for (final t in lib.tracks) t.path.split('/').last};
     say('Not in the library: ${[for (final f in Directory(music).listSync(recursive: true).whereType<File>()) if (!names.contains(f.path.split('/').last)) f.path.split('/').last]}');
     expect(deep.tracks.length, 8);
-    expect(lib.tracks.length, greaterThanOrEqualTo(35));
+    expect(lib.tracks.length, greaterThanOrEqualTo(29)); // testlib alone; more with real_music
     expect(etude.cover, isNotNull, reason: 'embedded cover');
 
     runApp(const App());
@@ -200,7 +205,7 @@ void main() {
     // pauses), stops after this song, turns it off; a short timer fades out and pauses.
     nav.setNowPlaying(true);
     await settle();
-    final moon = find.byIcon(LucideIcons.moon).first;
+    final moon = find.text('Sleep'); // the button under the controls
     await tester.tap(moon);
     await shot('dark_sleep_sheet');
     await tester.tap(find.text('15 minutes'));
@@ -222,7 +227,7 @@ void main() {
     expect(find.textContaining('Stops after'), findsNothing);
     nav.setNowPlaying(false);
     engine.sleepIn(const Duration(seconds: 3));
-    await waitFor(() => !engine.playing, timeout: const Duration(seconds: 10), what: 'sleep timer pause');
+    await waitFor(() => !engine.playing && engine.sleepAt == null, timeout: const Duration(seconds: 10), what: 'sleep timer pause');
     expect(engine.sleepAt, isNull);
     say('Sleep timer: the sheet sets 15 minutes, End of this song and Turn off; a 3 s timer paused the music');
     await engine.play();
@@ -230,18 +235,14 @@ void main() {
     for (final theme in ['dark', 'light']) {
       setAppearance(theme);
       await settle();
-      for (final page in ['home', 'albums', 'artists', 'songs', 'genres', 'playlists', 'folders', 'favourites', 'sound', 'settings']) {
+      for (final page in ['home', 'albums', 'artists', 'songs', 'library', 'genres', 'playlists', 'folders', 'favourites', 'sound', 'settings']) {
         nav.go(page);
         await shot('${theme}_$page');
       }
       nav.push('album', deep.key);
       await shot('${theme}_album');
-      nav.go('home');
-      await tester.tap(find.byKey(const ValueKey('nav.more')));
-      await shot('${theme}_more');
-      Navigator.of(tester.element(find.text('Playlists').last)).pop();
-      await settle();
       nav.setNowPlaying(true);
+
       await shot('${theme}_now_playing');
       nav.setNowPlaying(false);
       nav.toggleQueue();
@@ -251,6 +252,155 @@ void main() {
       await shot('${theme}_disc');
       nav.setDisc(false);
     }
+
+    // ---- The phone UI round (0.4): search, tabs, sheets, the EQ under a swipe, Back in folders.
+    final pop = tester.binding.handlePopRoute; // Android's Back
+    setAppearance('dark');
+    nav.go('home');
+    await settle();
+
+    // Search opens as a full screen (it was a grey error screen), finds a song, and a tap plays it.
+    nav.setSearch(true);
+    await settle();
+    await tester.enterText(find.byType(TextField), 'Etude');
+    await shot('dark_search');
+    await tester.tap(find.textContaining('Etude in Glass  Song')); // the result row: title and kind
+    await settle();
+    expect(nav.search, isFalse);
+    await waitFor(() => engine.current?.id == etude.id, what: 'search plays the song');
+    nav.setSearch(true);
+    await settle();
+    expect(await pop(), isTrue);
+    expect(nav.search, isFalse, reason: 'Back closes search');
+    say('Search: opens, finds "Etude in Glass", a tap plays it, Back closes it');
+
+    // Five tabs, Library's rows, the Settings gear; Back from a Library page returns to Library.
+    for (final (key, page) in [('home', 'home'), ('songs', 'songs'), ('albums', 'albums'), ('artists', 'artists'), ('library', 'library')]) {
+      await tester.tap(find.byKey(ValueKey('nav.$key')));
+      await settle(400);
+      expect(nav.top.page, page);
+    }
+    await tester.tap(find.byKey(const ValueKey('library.playlists')));
+    await settle(400);
+    expect((nav.top.page, nav.canBack), ('playlists', true));
+    expect(await pop(), isTrue);
+    expect(nav.top.page, 'library');
+    await tester.tap(find.byKey(const ValueKey('nav.settings')));
+    await settle(400);
+    expect(nav.top.page, 'settings');
+    say('Tabs: Home, Songs, Albums, Artists, Library; Library → Playlists → Back; Settings from the top bar');
+
+    // A long press on a song opens a bottom sheet (not the desktop pop-up), with the song on top.
+    nav.go('songs');
+    await settle();
+    await tester.longPress(find.text(lib.tracks.reduce((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()) <= 0 ? a : b).title).first);
+    await settle();
+    expect(find.text('Play next'), findsOneWidget);
+    expect(find.byType(BottomSheet), findsOneWidget);
+    await shot('dark_song_sheet');
+    expect(await pop(), isTrue);
+    await settle();
+    expect(selection.length, 0, reason: 'the row is not left selected after its menu');
+
+    // Now Playing's ⋮: everything for the song in one sheet.
+    nav.setNowPlaying(true);
+    await settle();
+    await tester.tap(find.byKey(const ValueKey('np.more')));
+    await settle();
+    for (final s in ['Add to playlist…', 'Go to album', 'Go to artist', 'Change cover…', 'Sound', 'Disc mode']) {
+      expect(find.text(s), findsOneWidget, reason: s);
+    }
+    await shot('dark_np_more');
+    await pop();
+    await settle();
+    nav.setNowPlaying(false);
+
+    // A swipe that starts on the EQ (off the thumbs) scrolls the page and changes nothing.
+    nav.go('home');
+    nav.push('sound', '');
+    await settle();
+    final eqBefore = (sound.s.eq.on, [...sound.s.eq.graphic]);
+    await tester.ensureVisible(find.byType(RotatedBox).at(5));
+    await settle();
+    final band = tester.getRect(find.byType(RotatedBox).at(5)); // a band's slider, its thumb in the middle at 0 dB
+    final list = find.ancestor(of: find.byType(RotatedBox).at(5), matching: find.byType(Scrollable)).first;
+    final before = tester.state<ScrollableState>(list).position.pixels;
+    await tester.dragFrom(band.center + Offset(0, band.height * 0.35), const Offset(0, -300));
+    await settle();
+    expect(sound.s.eq.on, eqBefore.$1, reason: 'the EQ must not switch on');
+    expect(sound.s.eq.graphic, eqBefore.$2, reason: 'the bands must not change');
+    expect(tester.state<ScrollableState>(list).position.pixels, greaterThan(before), reason: 'the page scrolls');
+    await shot('dark_sound_after_swipe');
+    say('EQ: a swipe over the bands scrolled the page; the EQ stayed ${eqBefore.$1 ? 'on' : 'off'} and flat');
+
+    // Folders: each level is a page, so Back goes up one level, then back to Library (the app stays open).
+    nav.go('library');
+    nav.push('folders', '');
+    await settle();
+    await tester.tap(find.textContaining('GleoTest').first);
+    await settle(400);
+    await tester.tap(find.text('testlib'));
+    await settle(400);
+    await tester.tap(find.text('The Tidal Set'));
+    await settle(400);
+    expect(nav.top.page, 'folder');
+    await shot('dark_folder_deep');
+    expect(await pop(), isTrue);
+    expect(nav.top.arg, endsWith('testlib'));
+    expect(await pop(), isTrue);
+    expect(nav.top.arg, music);
+    expect(await pop(), isTrue);
+    expect(nav.top.page, 'folders');
+    expect(await pop(), isTrue);
+    expect(nav.top.page, 'library');
+    say('Folders: Back went The Tidal Set → testlib → GleoTest → Folders → Library');
+
+    // Text over bright covers: the artist line, the times and the title at 4.5:1 or more, in dark and light.
+    final contrastAlbums = lib.albums.where((a) => ['White Cover', 'Cyan Cover', 'Yellow Cover'].contains(a.title)).toList();
+    Future<double> contrastOf(Finder f) async {
+      final ratio = tester.view.devicePixelRatio;
+      final boundary = shotKey.currentContext!.findRenderObject()! as RenderRepaintBoundary;
+      final image = await boundary.toImage(pixelRatio: ratio);
+      final px = (await image.toByteData(format: ui.ImageByteFormat.rawRgba))!;
+      final r = tester.getRect(f);
+      final lum = <double>[];
+      for (var y = (r.top * ratio).ceil(); y < (r.bottom * ratio).floor(); y++) {
+        for (var x = (r.left * ratio).ceil(); x < (r.right * ratio).floor(); x++) {
+          final i = (y * image.width + x) * 4;
+          lum.add(Color.fromARGB(255, px.getUint8(i), px.getUint8(i + 1), px.getUint8(i + 2)).computeLuminance());
+        }
+      }
+      image.dispose();
+      lum.sort();
+      // The background is most of the box; the text is the pixel furthest from it.
+      final bg = lum[lum.length ~/ 2];
+      final fg = (lum.last - bg).abs() > (bg - lum.first).abs() ? lum.last : lum.first;
+      return (max(fg, bg) + 0.05) / (min(fg, bg) + 0.05);
+    }
+
+    for (final theme in ['dark', 'light']) {
+      setAppearance(theme);
+      for (final a in contrastAlbums) {
+        await engine.playTracks(a.tracks);
+        nav.setNowPlaying(true);
+        await settle(2500); // the glow is drawn after the cover is read
+        final name = '${theme}_np_${a.title.split(' ').first.toLowerCase()}';
+        final artist = await contrastOf(find.byKey(const ValueKey('np.artist')));
+        final title = await contrastOf(find.text(a.tracks.first.title).last); // (the mini player under it has it too)
+        final time = await contrastOf(find.text(fmtTime(engine.duration)).last);
+        await shot(name);
+        say('Contrast $name (${C.isLight ? 'light' : 'dark'}): artist line ${artist.toStringAsFixed(2)}, '
+            'title ${title.toStringAsFixed(2)}, time ${time.toStringAsFixed(2)}');
+        for (final (what, c) in [('artist', artist), ('title', title), ('time', time)]) {
+          expect(c, greaterThanOrEqualTo(4.5), reason: '$name $what');
+        }
+        nav.setNowPlaying(false);
+      }
+    }
+    if (contrastAlbums.isEmpty) say('Contrast: no White / Cyan / Yellow albums pushed, skipped');
+    setAppearance('dark');
+    await engine.playTracks(deep.tracks);
+    await settle();
 
     // Disc mode, Now Playing and a page in landscape.
     setAppearance('dark');

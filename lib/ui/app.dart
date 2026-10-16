@@ -185,7 +185,7 @@ final appearance = ValueNotifier<String>('dark');
 
 /// Reads the saved theme and switches the colours to it (before the window shows, so it opens in them).
 void loadAppearance() {
-  appearance.value = lib.setting('appearance') ?? 'dark';
+  appearance.value = lib.setting('appearance') ?? (Platform.isAndroid ? 'system' : 'dark'); // the phone follows its own setting
   C.use(paletteFor(appearance.value, ui.PlatformDispatcher.instance.platformBrightness));
 }
 
@@ -309,7 +309,10 @@ class _AppState extends State<App> with WidgetsBindingObserver {
     scaffoldMessengerKey: messengerKey,
     navigatorObservers: [_modals],
     // Around the navigator, so screenshots include menus, dialogs and toasts.
-    builder: (context, child) => RepaintBoundary(key: shotKey, child: child),
+    builder: (context, child) {
+      final shot = RepaintBoundary(key: shotKey, child: child);
+      return Platform.isAndroid ? AnnotatedRegion(value: phoneBars(), child: shot) : shot;
+    },
     home: const Shell(),
   );
 }
@@ -482,6 +485,7 @@ Widget pageFor(Place p) => switch (p.page) {
   'songs' => const SongsPage(),
   'folders' => const FoldersPage(),
   'folder' => FoldersPage(dir: p.arg as String),
+  'library' => const LibraryPage(),
   'playlists' => const PlaylistsPage(),
   'playlist' => PlaylistPage(p.arg as int),
   'smart' => SmartPlaylistPage(p.arg as int),
@@ -632,13 +636,7 @@ class _TitleBarState extends State<TitleBar> with WindowListener {
         ),
         if (isDesktop) ...[
           _WinButton(LucideIcons.minus, 'Minimize', minimizeWindow),
-          _WinButton(
-            _max ? LucideIcons.copy : LucideIcons.square,
-            _max ? 'Restore' : 'Maximize',
-            toggleMaximize,
-            iconSize: 12,
-            hover: _maxHover,
-          ),
+          _WinButton(_max ? LucideIcons.copy : LucideIcons.square, _max ? 'Restore' : 'Maximize', toggleMaximize, iconSize: 12, hover: _maxHover),
           _WinButton(LucideIcons.x, 'Close', closeWindow, danger: true),
         ],
       ],
@@ -790,7 +788,12 @@ class Rail extends StatelessWidget {
                 SizedBox(width: 44, child: Icon(icon, size: 20, color: active ? C.text : C.faint)),
                 if (wide)
                   Expanded(
-                    child: Text(name, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.label.copyWith(color: active ? C.text : C.dim)),
+                    child: Text(
+                      name,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: T.label.copyWith(color: active ? C.text : C.dim),
+                    ),
                   ),
               ],
             ),
@@ -823,13 +826,7 @@ class Rail extends StatelessWidget {
                       const SizedBox(height: S.x6),
                       item('search', LucideIcons.search, 'Search  (Ctrl+K)', () => nav.setSearch(true)),
                       item('sound', LucideIcons.slidersVertical, 'Sound', () => nav.go('sound'), active: !nav.lyrics && current == 'sound'),
-                      item(
-                        'settings',
-                        LucideIcons.settings,
-                        'Settings',
-                        () => nav.go('settings'),
-                        active: !nav.lyrics && current == 'settings',
-                      ),
+                      item('settings', LucideIcons.settings, 'Settings', () => nav.go('settings'), active: !nav.lyrics && current == 'settings'),
                     ],
                   ),
                 ),

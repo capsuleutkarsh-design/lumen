@@ -11,6 +11,7 @@ import '../art/art_sources.dart';
 import '../library/models.dart';
 import '../platform/window.dart' show isTouch;
 import 'app.dart';
+import 'phone.dart' show phoneLayout;
 import 'theme.dart';
 import 'tracks.dart' show selection;
 
@@ -23,6 +24,7 @@ String fmtTime(Duration d) {
 
 String fmtLong(Duration d) {
   final m = d.inMinutes;
+  if (m == 0 && d > Duration.zero) return 'under 1 min';
   return m >= 60 ? '${m ~/ 60} h ${m % 60} min' : '$m min';
 }
 
@@ -182,7 +184,10 @@ class _ClickableState extends State<Clickable> {
           onDoubleTap: isTouch ? null : widget.onDoubleTap,
           onSecondaryTapDown: widget.onSecondaryTapDown,
           onLongPressStart: isTouch && widget.onSecondaryTapDown != null
-              ? (d) => widget.onSecondaryTapDown!(TapDownDetails(globalPosition: d.globalPosition))
+              ? (d) {
+                  HapticFeedback.selectionClick();
+                  widget.onSecondaryTapDown!(TapDownDetails(globalPosition: d.globalPosition));
+                }
               : null,
           onTapDown: _enabled ? (_) => setState(() => _down = true) : null,
           onTapUp: (_) => setState(() => _down = false),
@@ -206,7 +211,9 @@ class _ClickableState extends State<Clickable> {
       ),
     );
     w = Semantics(container: true, button: _enabled, enabled: _enabled, selected: widget.selected, label: widget.semanticLabel, child: w);
-    if (widget.tooltip != null) w = Tooltip(message: widget.tooltip!, excludeFromSemantics: widget.semanticLabel != null, child: w);
+    // Touch: no keyboard, so no "(Space)" hints (TalkBack reads tooltips).
+    final tip = isTouch ? widget.tooltip?.split('  ').first : widget.tooltip;
+    if (tip != null) w = Tooltip(message: tip, excludeFromSemantics: widget.semanticLabel != null, child: w);
     return w;
   }
 }
@@ -241,12 +248,8 @@ class _StarsState extends State<Stars> {
               child: GestureDetector(
                 onTap: rate == null ? null : () => rate(i == widget.rating ? 0 : i),
                 child: Padding(
-                  padding: EdgeInsets.all(isTouch && rate != null ? 6 : 1),
-                  child: Icon(
-                    i <= shown ? Icons.star_rounded : LucideIcons.star,
-                    size: widget.size,
-                    color: i <= shown ? C.accent : C.faint,
-                  ),
+                  padding: EdgeInsets.all(isTouch && rate != null ? (48 - widget.size) / 2 : 1), // touch: 48 dp targets
+                  child: Icon(i <= shown ? Icons.star_rounded : LucideIcons.star, size: widget.size, color: i <= shown ? C.accent : C.faint),
                 ),
               ),
             ),
@@ -257,13 +260,16 @@ class _StarsState extends State<Stars> {
 }
 
 class IconBtn extends StatelessWidget {
-  const IconBtn(this.icon, {super.key, this.onTap, this.tooltip, this.size = 18, this.box = 36, this.color, this.active = false});
+  const IconBtn(this.icon, {super.key, this.onTap, this.tooltip, this.size = 18, this.box = 36, this.color, this.active = false, this.activeColor});
   final IconData icon;
   final VoidCallback? onTap;
   final String? tooltip;
   final double size, box;
   final Color? color; // C.dim
   final bool active;
+
+  /// The icon and dot while [active] (C.accent; white over cover art, where gold can vanish).
+  final Color? activeColor;
   @override
   Widget build(BuildContext context) => Clickable(
     onTap: onTap,
@@ -278,14 +284,14 @@ class IconBtn extends StatelessWidget {
         child: Stack(
           alignment: Alignment.center,
           children: [
-            Icon(icon, size: size, color: active ? C.accent : color ?? C.dim),
+            Icon(icon, size: size, color: active ? activeColor ?? C.accent : color ?? C.dim),
             if (active)
               Positioned(
                 bottom: S.x1 - 1,
                 child: Container(
                   width: 4,
                   height: 4,
-                  decoration: BoxDecoration(color: C.accent, shape: BoxShape.circle),
+                  decoration: BoxDecoration(color: activeColor ?? C.accent, shape: BoxShape.circle),
                 ),
               ),
           ],
@@ -323,12 +329,16 @@ class PillButton extends StatelessWidget {
           hover: primary ? C.veil(0.1) : C.raised2,
           pressed: primary ? C.veil(0.2) : C.raised3,
           padding: EdgeInsets.symmetric(horizontal: dense ? S.x3 : S.x5, vertical: dense ? S.x1 + 2 : S.x2 + 2),
-          child: Row(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              if (icon != null) ...[Icon(icon, size: 16, color: fg), const SizedBox(width: S.x2)],
-              Text(label, style: T.label.copyWith(color: fg)),
-            ],
+          child: ConstrainedBox(
+            // A finger needs 48 dp (the border adds 2).
+            constraints: BoxConstraints(minHeight: isTouch ? 46 - (dense ? 12 : 20) : 0),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (icon != null) ...[Icon(icon, size: 16, color: fg), const SizedBox(width: S.x2)],
+                Text(label, style: T.label.copyWith(color: fg)),
+              ],
+            ),
           ),
         ),
       ),
@@ -352,8 +362,7 @@ Future<String?> coverFile(Track t, {double px = 384}) => ArtCache.ensure(lib.art
 /// An album's cover, or the art Gleo draws for it when it has none or only a low-quality one
 /// (and whatever the user picked with Change cover).
 class CoverArt extends StatelessWidget {
-  CoverArt(String? path, {super.key, this.size, this.radius = R.cover, this.round = false, String? seed})
-    : art = resolveArt(path, seed: seed);
+  CoverArt(String? path, {super.key, this.size, this.radius = R.cover, this.round = false, String? seed}) : art = resolveArt(path, seed: seed);
   CoverArt.track(Track t, {super.key, this.size, this.radius = R.cover, this.round = false}) : art = lib.artFor(t.albumKey, t.cover);
   CoverArt.album(Album a, {super.key, this.size, this.radius = R.cover, this.round = false}) : art = lib.artFor(a.key, a.cover);
   const CoverArt.art(this.art, {super.key, this.size, this.radius = R.cover, this.round = false});
@@ -380,14 +389,25 @@ class CoverArt extends StatelessWidget {
           )
         : ClipRRect(
             borderRadius: r,
-            child: LayoutBuilder(
-              builder: (context, c) => ArtImage(art!, px: (size ?? c.maxWidth) * MediaQuery.devicePixelRatioOf(context)),
-            ),
+            child: LayoutBuilder(builder: (context, c) => ArtImage(art!, px: (size ?? c.maxWidth) * MediaQuery.devicePixelRatioOf(context))),
           );
     return SizedBox(
       width: size,
       height: size,
-      child: AspectRatio(aspectRatio: 1, child: child),
+      child: AspectRatio(
+        aspectRatio: 1,
+        // On the phone's light theme a white cover keeps its edge.
+        child: isTouch && C.isLight
+            ? DecoratedBox(
+                position: DecorationPosition.foreground,
+                decoration: BoxDecoration(
+                  borderRadius: r,
+                  border: Border.all(color: C.border),
+                ),
+                child: child,
+              )
+            : child,
+      ),
     );
   }
 }
@@ -534,12 +554,7 @@ class _GlowState extends State<_Glow> {
           ..imageFilter = ui.ImageFilter.blur(sigmaX: widget.blur * k, sigmaY: widget.blur * k, tileMode: TileMode.decal)
           ..color = Color.fromRGBO(0, 0, 0, widget.opacity),
       );
-      c.drawImageRect(
-        art,
-        const Offset(0, 0) & const Size(64, 64),
-        Rect.fromCenter(center: out.center(Offset.zero), width: s, height: s),
-        Paint(),
-      );
+      c.drawImageRect(art, const Offset(0, 0) & const Size(64, 64), Rect.fromCenter(center: out.center(Offset.zero), width: s, height: s), Paint());
       c.restore();
       final pic = rec.endRecording();
       final image = await pic.toImage(out.width.toInt(), out.height.toInt());
@@ -574,12 +589,7 @@ class FormatBadge extends StatelessWidget {
         text,
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
-        style: T.caption.copyWith(
-          fontWeight: FontWeight.w600,
-          color: hiRes ? C.text : C.faint,
-          letterSpacing: 0.2,
-          fontFeatures: T.tabular,
-        ),
+        style: T.caption.copyWith(fontWeight: FontWeight.w600, color: hiRes ? C.text : C.faint, letterSpacing: 0.2, fontFeatures: T.tabular),
       ),
     );
   }
@@ -633,43 +643,64 @@ class PageHeader extends StatelessWidget {
   final String? subtitle;
   final Widget? trailing;
   @override
-  Widget build(BuildContext context) => Padding(
-    padding: const EdgeInsets.fromLTRB(S.x2, S.x2, S.x2, S.x5),
-    child: LayoutBuilder(
-      builder: (context, c) {
-        final subtitle = shownSubtitle(this.subtitle);
-        final head = Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
+  Widget build(BuildContext context) {
+    final subtitle = shownSubtitle(this.subtitle);
+    // A phone on its side has little height: the title as a top bar, its count beside it.
+    if (phoneLayout(context) && MediaQuery.orientationOf(context) == Orientation.landscape) {
+      return SizedBox(
+        height: 56,
+        child: Row(
           children: [
-            Text(title, style: T.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+            const SizedBox(width: S.x2),
+            Flexible(
+              child: Text(title, style: T.heading, maxLines: 1, overflow: TextOverflow.ellipsis),
+            ),
             if (subtitle != null) ...[
-              const SizedBox(height: S.x1),
-              Text(subtitle, style: T.small, maxLines: 1, overflow: TextOverflow.ellipsis),
+              const SizedBox(width: S.x3),
+              Flexible(
+                child: Text(subtitle, style: T.small, maxLines: 1, overflow: TextOverflow.ellipsis),
+              ),
             ],
+            const Spacer(),
+            ?trailing,
           ],
-        );
-        if (trailing == null) return head;
-        if (c.maxWidth < 560) {
-          return Column(
+        ),
+      );
+    }
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(S.x2, S.x2, S.x2, S.x5),
+      child: LayoutBuilder(
+        builder: (context, c) {
+          final head = Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              head,
-              const SizedBox(height: S.x3),
+              Text(title, style: T.title, maxLines: 1, overflow: TextOverflow.ellipsis),
+              if (subtitle != null) ...[const SizedBox(height: S.x1), Text(subtitle, style: T.small, maxLines: 1, overflow: TextOverflow.ellipsis)],
+            ],
+          );
+          if (trailing == null) return head;
+          if (c.maxWidth < 560) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                head,
+                const SizedBox(height: S.x3),
+                trailing!,
+              ],
+            );
+          }
+          return Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Expanded(child: head),
+              const SizedBox(width: S.x4),
               trailing!,
             ],
           );
-        }
-        return Row(
-          crossAxisAlignment: CrossAxisAlignment.end,
-          children: [
-            Expanded(child: head),
-            const SizedBox(width: S.x4),
-            trailing!,
-          ],
-        );
-      },
-    ),
-  );
+        },
+      ),
+    );
+  }
 }
 
 class SectionTitle extends StatelessWidget {
@@ -754,7 +785,7 @@ class _PlayingBarsState extends State<PlayingBars> with SingleTickerProviderStat
 }
 
 /// A simple confirm/prompt dialog for names.
-Future<String?> askText(BuildContext context, String title, {String initial = '', String action = 'Save'}) {
+Future<String?> askText(BuildContext context, String title, {String initial = '', String action = 'Save', String? hint}) {
   final c = TextEditingController(text: initial);
   return showDialog<String>(
     context: context,
@@ -766,6 +797,7 @@ Future<String?> askText(BuildContext context, String title, {String initial = ''
           controller: c,
           autofocus: true,
           style: T.body,
+          decoration: InputDecoration(hintText: hint),
           onSubmitted: (v) => Navigator.pop(ctx, v.trim().isEmpty ? null : v.trim()),
         ),
       ),
@@ -857,21 +889,20 @@ bool get ctrl => HardwareKeyboard.instance.isControlPressed;
 bool get shift => HardwareKeyboard.instance.isShiftPressed;
 
 /// A grid of cards that are as tall as they are wide plus [extra] (square cover + text).
-Widget sliverCards({required int count, required IndexedWidgetBuilder builder, double maxWidth = 220, double extra = 82}) =>
-    SliverLayoutBuilder(
-      builder: (context, c) {
-        final w = c.crossAxisExtent;
-        final cols = ((w + S.x4) / (maxWidth + S.x4)).ceil().clamp(1, 99);
-        final itemW = (w - S.x4 * (cols - 1)) / cols;
-        return SliverGrid.builder(
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: cols,
-            mainAxisExtent: itemW + extra,
-            crossAxisSpacing: S.x4,
-            mainAxisSpacing: S.x4,
-          ),
-          itemCount: count,
-          itemBuilder: builder,
-        );
-      },
+Widget sliverCards({required int count, required IndexedWidgetBuilder builder, double maxWidth = 220, double extra = 82}) => SliverLayoutBuilder(
+  builder: (context, c) {
+    final w = c.crossAxisExtent;
+    final cols = ((w + S.x4) / (maxWidth + S.x4)).ceil().clamp(1, 99);
+    final itemW = (w - S.x4 * (cols - 1)) / cols;
+    return SliverGrid.builder(
+      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+        crossAxisCount: cols,
+        mainAxisExtent: itemW + extra,
+        crossAxisSpacing: S.x4,
+        mainAxisSpacing: S.x4,
+      ),
+      itemCount: count,
+      itemBuilder: builder,
     );
+  },
+);

@@ -4,6 +4,7 @@ import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
+import 'package:path/path.dart' as p;
 
 export '../../audio/sound.dart' show friendlyFormat;
 
@@ -13,10 +14,12 @@ import '../../platform/window.dart' show isTouch;
 import '../../art/art_sources.dart';
 import '../app.dart';
 import '../disc.dart';
+import '../phone.dart';
 import '../theme.dart';
 import '../widgets.dart';
 import 'browse.dart' show Segmented;
 import 'credits.dart';
+import 'folders.dart' show storageName;
 import 'settings_extras.dart';
 import 'sound.dart' show Narrow;
 
@@ -58,250 +61,316 @@ class SettingsPage extends StatelessWidget {
     listenable: Listenable.merge([lib, engine, discStyle]),
     builder: (context, _) {
       final folders = lib.folders;
+      final phone = phoneLayout(context);
+      // The phone: a label above its choices (no 140 dp column beside them).
+      Widget labelled(String label, Widget choices) => phone
+          ? Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(label, style: T.label),
+                const SizedBox(height: S.x2),
+                choices,
+              ],
+            )
+          : Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                SizedBox(width: 140, child: Text(label, style: T.label)),
+                Expanded(child: choices),
+              ],
+            );
       return ListView(
         key: const PageStorageKey('settings'),
         padding: EdgeInsets.zero,
         children: [
           Narrow(
             child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const PageHeader('Settings'),
-                  _card(
-                    'Library folders',
-                    Platform.isAndroid
-                        ? 'Gleo reads these folders, and looks again each time you come back to it (or pull down on a list). Your files are never changed.'
-                        : 'The player reads these folders and watches them for changes. Your files are never changed.',
-                    [
-                      if (folders.isEmpty) Text('No folders yet.', style: T.small.copyWith(color: C.faint)),
-                      for (final f in folders)
-                        Container(
-                          margin: const EdgeInsets.only(bottom: S.x2),
-                          padding: const EdgeInsets.fromLTRB(S.x3, S.x1, S.x1, S.x1),
-                          decoration: BoxDecoration(
-                            color: C.raised2,
-                            borderRadius: BorderRadius.circular(R.small + 2),
-                            border: Border.all(color: C.border),
-                          ),
-                          child: Row(
-                            children: [
-                              Icon(LucideIcons.folder, size: 16, color: C.dim),
-                              const SizedBox(width: S.x3),
-                              Expanded(
-                                child: Text(f, style: T.label, overflow: TextOverflow.ellipsis),
-                              ),
-                              IconBtn(
-                                LucideIcons.x,
-                                size: 14,
-                                box: 32,
-                                tooltip: 'Remove folder',
-                                onTap: () async {
-                                  if (await confirm(
-                                    context,
-                                    'Remove this folder?',
-                                    '$f\n\nIts songs leave the library (the files stay on disk). Their play counts are kept for 6 months in case you add it back.',
-                                    action: 'Remove',
-                                  )) {
-                                    lib.folders = [...folders]..remove(f);
-                                  }
-                                },
-                              ),
-                            ],
-                          ),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                const PageHeader('Settings'),
+                _card(
+                  'Library folders',
+                  Platform.isAndroid
+                      ? 'Gleo reads these folders, and looks again each time you come back to it (or pull down on a list). Your files are never changed.'
+                      : 'The player reads these folders and watches them for changes. Your files are never changed.',
+                  [
+                    if (folders.isEmpty) Text('No folders yet.', style: T.small.copyWith(color: C.faint)),
+                    for (final f in folders)
+                      Container(
+                        margin: const EdgeInsets.only(bottom: S.x2),
+                        padding: const EdgeInsets.fromLTRB(S.x3, S.x1, S.x1, S.x1),
+                        decoration: BoxDecoration(
+                          color: C.raised2,
+                          borderRadius: BorderRadius.circular(R.small + 2),
+                          border: Border.all(color: C.border),
                         ),
-                      const SizedBox(height: S.x2),
-                      Wrap(
-                        spacing: S.x3,
-                        runSpacing: S.x2,
-                        crossAxisAlignment: WrapCrossAlignment.center,
-                        children: [
-                          PillButton('Add folder', icon: LucideIcons.folderPlus, primary: true, onTap: addMusicFolder),
-                          PillButton('Rescan now', icon: LucideIcons.refreshCw, onTap: folders.isEmpty ? null : lib.rescan),
-                          Padding(
-                            padding: const EdgeInsets.only(left: S.x1),
-                            child: ValueListenableBuilder(
-                              valueListenable: lib.scan,
-                              builder: (_, s, _) => Text(
-                                s != null
-                                    ? (s.$2 == 0 ? 'Checking for new music…' : 'Reading ${fmtInt(s.$1)} of ${fmtInt(s.$2)} songs…')
-                                    : '${plural(lib.tracks.length, 'song')} · ${plural(lib.albums.length, 'album')}${lib.lastScan == null ? '' : ' · up to date'}',
-                                style: T.caption,
-                              ),
+                        child: Row(
+                          children: [
+                            Icon(LucideIcons.folder, size: 16, color: C.dim),
+                            const SizedBox(width: S.x3),
+                            Expanded(
+                              child: storageName(f) == null
+                                  ? Text(f, style: T.label, overflow: TextOverflow.ellipsis)
+                                  // Android: "Music · Phone storage", the path in small text.
+                                  : Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text('${p.basename(f)} · ${storageName(f)}', style: T.label, overflow: TextOverflow.ellipsis),
+                                        Text(f, style: T.caption, overflow: TextOverflow.ellipsis),
+                                      ],
+                                    ),
+                            ),
+                            IconBtn(
+                              LucideIcons.x,
+                              size: 14,
+                              box: 32,
+                              tooltip: 'Remove folder',
+                              onTap: () async {
+                                if (await confirm(
+                                  context,
+                                  'Remove this folder?',
+                                  '$f\n\nIts songs leave the library (the files stay on disk). Their play counts are kept for 6 months in case you add it back.',
+                                  action: 'Remove',
+                                )) {
+                                  lib.folders = [...folders]..remove(f);
+                                  // Its song is no longer in the library: stop showing it as playing.
+                                  final now = engine.current?.path;
+                                  if (now != null && p.isWithin(f, now)) await engine.playTracks(const []);
+                                }
+                              },
+                            ),
+                          ],
+                        ),
+                      ),
+                    const SizedBox(height: S.x2),
+                    Wrap(
+                      spacing: S.x3,
+                      runSpacing: S.x2,
+                      crossAxisAlignment: WrapCrossAlignment.center,
+                      children: [
+                        PillButton('Add folder', icon: LucideIcons.folderPlus, primary: true, onTap: addMusicFolder),
+                        PillButton('Rescan now', icon: LucideIcons.refreshCw, onTap: folders.isEmpty ? null : lib.rescan),
+                        Padding(
+                          padding: const EdgeInsets.only(left: S.x1),
+                          child: ValueListenableBuilder(
+                            valueListenable: lib.scan,
+                            builder: (_, s, _) => Text(
+                              s != null
+                                  ? (s.$2 == 0 ? 'Checking for new music…' : 'Reading ${fmtInt(s.$1)} of ${fmtInt(s.$2)} songs…')
+                                  : '${plural(lib.tracks.length, 'song')} · ${plural(lib.albums.length, 'album')}${lib.lastScan == null ? '' : ' · up to date'}',
+                              style: T.caption,
                             ),
                           ),
-                        ],
+                        ),
+                      ],
+                    ),
+                    if (lib.corruptBackup != null) ...[
+                      const SizedBox(height: S.x3),
+                      Text(
+                        'The library file could not be read, so a fresh library was started. The old file is kept at ${lib.corruptBackup}',
+                        style: T.caption.copyWith(color: C.accent),
                       ),
-                      if (lib.corruptBackup != null) ...[
-                        const SizedBox(height: S.x3),
-                        Text(
-                          'The library file could not be read, so a fresh library was started. The old file is kept at ${lib.corruptBackup}',
-                          style: T.caption.copyWith(color: C.accent),
-                        ),
-                      ],
-                      if (lib.skippedFolders.isNotEmpty) ...[
-                        const SizedBox(height: S.x3),
-                        Text(
-                          'Could not read ${plural(lib.skippedFolders.length, 'folder')} (songs already in them are kept):\n${lib.skippedFolders.join('\n')}',
-                          style: T.caption,
-                        ),
-                      ],
                     ],
+                    if (lib.skippedFolders.isNotEmpty) ...[
+                      const SizedBox(height: S.x3),
+                      Text(
+                        'Could not read ${plural(lib.skippedFolders.length, 'folder')} (songs already in them are kept):\n${lib.skippedFolders.join('\n')}',
+                        style: T.caption,
+                      ),
+                    ],
+                  ],
+                ),
+                _card(
+                  'Sound',
+                  Platform.isAndroid
+                      ? 'The equalizer, headphone correction, crossfeed and ReplayGain.'
+                      : 'Output device, exclusive mode, the equalizer, headphone correction and ReplayGain.',
+                  [PillButton('Open Sound settings', icon: LucideIcons.slidersVertical, onTap: () => nav.go('sound'))],
+                ),
+                _card('Disc & covers', 'Appearance', [
+                  labelled(
+                    'Spinning disc',
+                    Align(
+                      alignment: Alignment.centerLeft,
+                      child: Segmented(
+                        value: discStyle.value,
+                        options: const [(DiscStyle.cd, 'CD'), (DiscStyle.vinyl, 'Vinyl'), (DiscStyle.off, 'Off')],
+                        onChanged: (s) => discStyle.value = s,
+                      ),
+                    ),
                   ),
-                  _card(
-                    'Sound',
-                    Platform.isAndroid
-                        ? 'The equalizer, headphone correction, crossfeed and ReplayGain.'
-                        : 'Output device, exclusive mode, the equalizer, headphone correction and ReplayGain.',
-                    [PillButton('Open Sound settings', icon: LucideIcons.slidersVertical, onTap: () => nav.go('sound'))],
+                  const SizedBox(height: S.x2),
+                  Text(
+                    isTouch
+                        ? 'Shown beside the cover in Now Playing and Disc mode. It turns only while music plays.'
+                        : 'Shown beside the cover in Now Playing, Disc mode (D) and the mini player. It turns only while music plays.',
+                    style: T.caption,
                   ),
-                  _card('Disc & covers', 'Appearance', [
-                    Row(
+                  const SizedBox(height: S.x4),
+                  labelled(
+                    'Cover art from',
+                    Wrap(
+                      spacing: S.x2,
+                      runSpacing: S.x2,
                       children: [
-                        SizedBox(width: 140, child: Text('Spinning disc', style: T.label)),
-                        Segmented(
-                          value: discStyle.value,
-                          options: const [(DiscStyle.cd, 'CD'), (DiscStyle.vinyl, 'Vinyl'), (DiscStyle.off, 'Off')],
-                          onChanged: (s) => discStyle.value = s,
-                        ),
+                        // Check chips: any number can be on.
+                        for (final s in artSources.where((s) => s.weight > 0))
+                          if (sourcesInUse(lib.artSourcesOn).contains(s) case final on)
+                            DecoratedBox(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(R.pill),
+                                border: Border.all(color: on ? C.borderStrong : C.border),
+                              ),
+                              child: Clickable(
+                                onTap: () => lib.artSourcesOn = lib.artSourcesOn.contains(s.id)
+                                    ? ({...lib.artSourcesOn}..remove(s.id))
+                                    : {...lib.artSourcesOn, s.id},
+                                selected: on,
+                                selectedColor: C.raised3,
+                                semanticLabel: s.name,
+                                radius: R.pill,
+                                padding: EdgeInsets.symmetric(horizontal: S.x3, vertical: isTouch ? 14 : S.x1 + 2), // touch: 48 dp tall
+                                child: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Icon(on ? LucideIcons.check : LucideIcons.plus, size: 14, color: on ? C.text : C.faint),
+                                    const SizedBox(width: S.x1 + 2),
+                                    Text(s.name, style: T.label.copyWith(color: on ? C.text : C.dim)),
+                                  ],
+                                ),
+                              ),
+                            ),
                       ],
                     ),
-                    const SizedBox(height: S.x2),
+                  ),
+                  const SizedBox(height: S.x3),
+                  if (phone)
                     Text(
-                      'Shown beside the cover in Now Playing, Disc mode (D) and the mini player. It turns only while music plays.',
-                      style: T.caption,
-                    ),
-                    const SizedBox(height: S.x4),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SizedBox(width: 140, child: Text('Cover art from', style: T.label)),
-                        Expanded(
-                          child: Wrap(
-                            spacing: S.x2,
-                            runSpacing: S.x2,
-                            children: [
-                              // Check chips: any number can be on.
-                              for (final s in artSources.where((s) => s.weight > 0))
-                                if (sourcesInUse(lib.artSourcesOn).contains(s) case final on)
-                                  DecoratedBox(
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(R.pill),
-                                      border: Border.all(color: on ? C.borderStrong : C.border),
-                                    ),
-                                    child: Clickable(
-                                      onTap: () => lib.artSourcesOn = lib.artSourcesOn.contains(s.id)
-                                          ? ({...lib.artSourcesOn}..remove(s.id))
-                                          : {...lib.artSourcesOn, s.id},
-                                      selected: on,
-                                      selectedColor: C.raised3,
-                                      semanticLabel: s.name,
-                                      radius: R.pill,
-                                      padding: const EdgeInsets.symmetric(horizontal: S.x3, vertical: S.x1 + 2),
-                                      child: Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(on ? LucideIcons.check : LucideIcons.plus, size: 14, color: on ? C.text : C.faint),
-                                          const SizedBox(width: S.x1 + 2),
-                                          Text(s.name, style: T.label.copyWith(color: on ? C.text : C.dim)),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: S.x3),
+                      'Albums without a good cover get art from the collections that are on. '
+                      'Long-press an album and choose Change cover to pick another.',
+                      style: T.small,
+                    )
+                  else
                     Text(
                       'Albums without a cover, or with a small or blurry one, get artwork from the collections that are on: '
                       'public-domain paintings (Masterpieces), styles Gleo paints itself (Painted), illustrations made for Gleo (Illustrated) and code-drawn shapes (Abstract). '
                       '${isTouch ? 'Long-press' : 'Right-click'} an album and choose Change cover to pick another or keep the original. Your music files are never changed.',
                       style: T.small,
                     ),
-                  ]),
-                  _card('Theme', null, [const ThemeSettings()]),
-                  if (!Platform.isAndroid) _card('Window', null, [const WindowSettings()]),
-                  if (Platform.isAndroid) _card('Lock screen', null, [const LockScreenSettings()]),
-                  if (!Platform.isAndroid)
-                    _card('Keyboard', null, [
-                      for (final (k, v) in const [
-                        ('Space', 'Play / pause'),
-                        ('Ctrl + ← / →', 'Previous / next song'),
-                        ('← / →', 'Back / forward 5 seconds'),
-                        ('Ctrl + K', 'Search (Shift + Enter plays next)'),
-                        ('Ctrl + L', 'Lyrics'),
-                        ('↑ / ↓, Enter', 'Move through songs, play'),
-                        ('Ctrl + A', 'Select all songs'),
-                        ('Menu key', 'Right-click menu (or Shift + F10)'),
-                        ('Esc', 'Back, close Now Playing, clear selection'),
-                        ('D', 'Disc mode (F11: full screen)'),
-                      ])
-                        Padding(
-                          padding: const EdgeInsets.only(bottom: S.x2),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 140,
-                                child: Align(
-                                  alignment: Alignment.centerLeft,
-                                  child: Container(
-                                    padding: const EdgeInsets.symmetric(horizontal: S.x2, vertical: 2),
-                                    decoration: BoxDecoration(
-                                      color: C.raised2,
-                                      borderRadius: BorderRadius.circular(R.small - 2),
-                                      border: Border.all(color: C.borderStrong),
-                                    ),
-                                    child: Text(
-                                      k,
-                                      style: T.caption.copyWith(color: C.text, fontWeight: FontWeight.w600),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              Text(v, style: T.small),
-                            ],
-                          ),
-                        ),
-                    ]),
-                  _card('Data and updates', null, [const DataAndUpdates(), const SizedBox(height: S.x5), const BackupButtons()]),
-                  _card('Online', null, [const OnlineSettings()]),
-                  _card('About', null, [
-                    Row(
-                      children: [
-                        const Wordmark(height: 40),
-                        const SizedBox(width: S.x4),
-                        Expanded(child: Text('Gleo · © 2026 Utkarsh Tripathi · UT Community Licence 2.0', style: T.label)),
-                      ],
-                    ),
-                    const SizedBox(height: S.x4),
-                    for (final (k, v) in [
-                      ('Version', shortVersion),
-                      ('Audio engine', 'Gleo audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/lumen-audio-engine)'),
-                      ('Design', 'Inspired by Wora (MIT)'),
-                      ('Font', 'Inter (SIL Open Font License)'),
-                      ('Icons', 'Lucide (ISC)'),
+                ]),
+                _card('Theme', null, [const ThemeSettings()]),
+                if (!Platform.isAndroid) _card('Window', null, [const WindowSettings()]),
+                if (Platform.isAndroid) _card('Lock screen', null, [const LockScreenSettings()]),
+                if (!Platform.isAndroid)
+                  _card('Keyboard', null, [
+                    for (final (k, v) in const [
+                      ('Space', 'Play / pause'),
+                      ('Ctrl + ← / →', 'Previous / next song'),
+                      ('← / →', 'Back / forward 5 seconds'),
+                      ('Ctrl + K', 'Search (Shift + Enter plays next)'),
+                      ('Ctrl + L', 'Lyrics'),
+                      ('↑ / ↓, Enter', 'Move through songs, play'),
+                      ('Ctrl + A', 'Select all songs'),
+                      ('Menu key', 'Right-click menu (or Shift + F10)'),
+                      ('Esc', 'Back, close Now Playing, clear selection'),
+                      ('D', 'Disc mode (F11: full screen)'),
                     ])
                       Padding(
                         padding: const EdgeInsets.only(bottom: S.x2),
                         child: Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            SizedBox(width: 140, child: Text(k, style: T.small.copyWith(color: C.faint))),
-                            Expanded(child: SelectableText(v, style: T.small.copyWith(color: C.text))),
+                            SizedBox(
+                              width: 140,
+                              child: Align(
+                                alignment: Alignment.centerLeft,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: S.x2, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: C.raised2,
+                                    borderRadius: BorderRadius.circular(R.small - 2),
+                                    border: Border.all(color: C.borderStrong),
+                                  ),
+                                  child: Text(
+                                    k,
+                                    style: T.caption.copyWith(color: C.text, fontWeight: FontWeight.w600),
+                                  ),
+                                ),
+                              ),
+                            ),
+                            Text(v, style: T.small),
                           ],
                         ),
                       ),
-                    const SizedBox(height: S.x2),
-                    Text(
-                      'No AI. Suggestions come only from what you play here, and nothing goes to the internet unless you turn on the update check or lyrics downloads.',
-                      style: T.small,
-                    ),
-                    const SizedBox(height: S.x4),
-                    PillButton('Credits', icon: LucideIcons.award, onTap: () => showCredits(context)),
                   ]),
-                ],
-              ),
+                _card('Data and updates', null, [const DataAndUpdates(), const SizedBox(height: S.x5), const BackupButtons()]),
+                _card('Online', null, [const OnlineSettings()]),
+                _card('About', null, [
+                  Flex(
+                    // The phone: the wordmark above the text, which keeps the full width.
+                    direction: phone ? Axis.vertical : Axis.horizontal,
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: phone ? CrossAxisAlignment.start : CrossAxisAlignment.center,
+                    children: [
+                      Wordmark(height: phone ? 28 : 40),
+                      SizedBox(width: S.x4, height: phone ? S.x3 : 0),
+                      Flexible(
+                        flex: phone ? 0 : 1, // 0: its own height in the phone's column
+                        fit: FlexFit.tight,
+                        child: Text('Gleo · © 2026 Utkarsh Tripathi · UT Community Licence 2.0', style: T.label),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: S.x4),
+                  for (final (k, v) in [
+                    ('Version', shortVersion),
+                    ('Audio engine', 'Gleo audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/lumen-audio-engine)'),
+                    ('Design', 'Inspired by Wora (MIT)'),
+                    ('Font', 'Inter (SIL Open Font License)'),
+                    ('Icons', 'Lucide (ISC)'),
+                  ])
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: S.x2),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SizedBox(
+                            width: phone ? 104 : 140,
+                            child: Text(k, style: T.small.copyWith(color: C.faint)),
+                          ),
+                          Expanded(
+                            child: SelectableText(v, style: T.small.copyWith(color: C.text)),
+                          ),
+                        ],
+                      ),
+                    ),
+                  const SizedBox(height: S.x2),
+                  Text(
+                    'No AI. Suggestions come only from what you play here, and nothing goes to the internet unless you turn on the update check or lyrics downloads.',
+                    style: T.small,
+                  ),
+                  const SizedBox(height: S.x4),
+                  if (phone)
+                    Clickable(
+                      onTap: () => showCredits(context),
+                      semanticLabel: 'Credits',
+                      radius: R.small,
+                      child: SizedBox(
+                        height: 48,
+                        child: Row(
+                          children: [
+                            Icon(LucideIcons.award, size: 18, color: C.dim),
+                            const SizedBox(width: S.x3),
+                            Expanded(child: Text('Credits', style: T.label)),
+                            Icon(LucideIcons.chevronRight, size: 16, color: C.faint),
+                          ],
+                        ),
+                      ),
+                    )
+                  else
+                    PillButton('Credits', icon: LucideIcons.award, onTap: () => showCredits(context)),
+                ]),
+              ],
+            ),
           ),
         ],
       );

@@ -10,6 +10,7 @@ import '../library/models.dart';
 import 'app.dart';
 import 'pages/artists.dart';
 import 'pages/songs.dart' show songMatches, songsFilter;
+import 'phone.dart' show phoneLayout;
 import 'theme.dart';
 import 'tracks.dart';
 import 'widgets.dart';
@@ -171,7 +172,7 @@ class _SearchConsoleState extends State<SearchConsole> {
     if (h.song != null) {
       showTrackMenu(context, at, h.tracks);
     } else {
-      showCollectionMenu(context, at, h.tracks);
+      showCollectionMenu(context, at, h.tracks, title: h.title);
     }
   }
 
@@ -200,9 +201,80 @@ class _SearchConsoleState extends State<SearchConsole> {
     super.dispose();
   }
 
+  Widget _field({TextStyle? style}) => TextField(
+    controller: _text,
+    focusNode: _focus,
+    autofocus: true,
+    onChanged: _search,
+    style: style ?? T.heading.copyWith(fontWeight: FontWeight.w400),
+    decoration: const InputDecoration(
+      hintText: 'Search songs, albums and artists',
+      filled: false,
+      border: InputBorder.none,
+      enabledBorder: InputBorder.none,
+      focusedBorder: InputBorder.none,
+    ),
+  );
+
+  Widget _results({required double row}) {
+    var i = 0;
+    return ListView(
+      controller: _scroll,
+      shrinkWrap: row == 56,
+      padding: const EdgeInsets.all(S.x2),
+      children: [
+        for (final g in _groups) ...[
+          SizedBox(
+            height: 32,
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(S.x3, S.x3, 0, 0),
+              child: Text(g.$1, style: T.caption),
+            ),
+          ),
+          for (final h in g.$2) _row(h, row == 56 && i++ == _sel, height: row),
+        ],
+      ],
+    );
+  }
+
+  /// The phone: a full screen with the box in a 56 dp top bar (Back closes it), results in 64 dp rows.
+  Widget _phone() => Column(
+    crossAxisAlignment: CrossAxisAlignment.stretch,
+    children: [
+      SizedBox(
+        height: 56,
+        child: Row(
+          children: [
+            IconBtn(LucideIcons.arrowLeft, size: 22, color: C.text, tooltip: 'Back', onTap: () => nav.setSearch(false)),
+            Expanded(child: _field(style: T.body.copyWith(fontSize: 16))),
+            if (_text.text.isNotEmpty)
+              IconBtn(
+                LucideIcons.x,
+                size: 18,
+                tooltip: 'Clear',
+                onTap: () {
+                  _text.clear();
+                  _search('');
+                  _focus.requestFocus();
+                },
+              ),
+          ],
+        ),
+      ),
+      Container(height: 1, color: C.border),
+      Expanded(
+        child: _text.text.trim().isEmpty
+            ? _hint('Find songs, albums and artists in your library.')
+            : _groups.isEmpty
+            ? _hint('Nothing matches “${_text.text.trim()}”.')
+            : _results(row: 64),
+      ),
+    ],
+  );
+
   @override
   Widget build(BuildContext context) {
-    var i = 0;
+    if (phoneLayout(context)) return _phone();
     return Positioned.fill(
       top: TitleBar.height, // the title bar stays usable
       child: FocusScope(
@@ -252,22 +324,7 @@ class _SearchConsoleState extends State<SearchConsole> {
                               children: [
                                 Icon(LucideIcons.search, size: 18, color: C.dim),
                                 const SizedBox(width: S.x3),
-                                Expanded(
-                                  child: TextField(
-                                    controller: _text,
-                                    focusNode: _focus,
-                                    autofocus: true,
-                                    onChanged: _search,
-                                    style: T.heading.copyWith(fontWeight: FontWeight.w400),
-                                    decoration: const InputDecoration(
-                                      hintText: 'Search songs, albums and artists',
-                                      filled: false,
-                                      border: InputBorder.none,
-                                      enabledBorder: InputBorder.none,
-                                      focusedBorder: InputBorder.none,
-                                    ),
-                                  ),
-                                ),
+                                Expanded(child: _field()),
                                 IconBtn(LucideIcons.x, size: 16, tooltip: 'Close  (Esc)', onTap: () => nav.setSearch(false)),
                               ],
                             ),
@@ -295,25 +352,7 @@ class _SearchConsoleState extends State<SearchConsole> {
                               ),
                             )
                           else
-                            Flexible(
-                              child: ListView(
-                                controller: _scroll,
-                                shrinkWrap: true,
-                                padding: const EdgeInsets.all(S.x2),
-                                children: [
-                                  for (final g in _groups) ...[
-                                    SizedBox(
-                                      height: 32,
-                                      child: Padding(
-                                        padding: const EdgeInsets.fromLTRB(S.x3, S.x3, 0, 0),
-                                        child: Text(g.$1, style: T.caption),
-                                      ),
-                                    ),
-                                    for (final h in g.$2) _row(h, i++ == _sel),
-                                  ],
-                                ],
-                              ),
-                            ),
+                            Flexible(child: _results(row: 56)),
                         ],
                       ),
                     ),
@@ -332,7 +371,7 @@ class _SearchConsoleState extends State<SearchConsole> {
     child: Text(s, style: T.small),
   );
 
-  Widget _row(_Hit h, bool selected) => Clickable(
+  Widget _row(_Hit h, bool selected, {double height = 56}) => Clickable(
     onTap: h.open,
     onSecondaryTapDown: (d) => _menu(h, d.globalPosition),
     selected: selected,
@@ -340,10 +379,10 @@ class _SearchConsoleState extends State<SearchConsole> {
     radius: R.card - S.x1,
     padding: const EdgeInsets.symmetric(horizontal: S.x2),
     child: SizedBox(
-      height: 56,
+      height: height,
       child: Row(
         children: [
-          CoverArt.art(h.art, size: 40, radius: R.tiny + 2, round: h.round),
+          CoverArt.art(h.art, size: height == 64 ? 48 : 40, radius: R.tiny + 2, round: h.round),
           const SizedBox(width: S.x3),
           Expanded(
             child: Column(

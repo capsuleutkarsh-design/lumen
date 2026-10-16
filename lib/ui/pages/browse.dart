@@ -4,7 +4,9 @@ import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../library/models.dart';
+import '../../platform/window.dart' show isTouch;
 import '../app.dart';
+import '../phone.dart';
 import '../theme.dart';
 import '../tracks.dart';
 import '../widgets.dart';
@@ -13,13 +15,7 @@ import 'albums.dart';
 // The Browse group: Genres, Years, Composers, Duplicates and Statistics share one
 // rail entry and a tab strip, so the rail stays calm.
 
-const browseTabs = [
-  ('genres', 'Genres'),
-  ('years', 'Years'),
-  ('composers', 'Composers'),
-  ('duplicates', 'Duplicates'),
-  ('stats', 'Statistics'),
-];
+const browseTabs = [('genres', 'Genres'), ('years', 'Years'), ('composers', 'Composers'), ('duplicates', 'Duplicates'), ('stats', 'Statistics')];
 
 /// The Browse tab the rail opens: the last one used.
 String get browseTab => nav.memo['browse.tab'] as String? ?? 'genres';
@@ -49,7 +45,7 @@ class Segmented<V> extends StatelessWidget {
             hover: C.raised3,
             radius: R.pill,
             semanticLabel: label,
-            padding: const EdgeInsets.symmetric(horizontal: S.x3 + 2, vertical: S.x1 + 2),
+            padding: EdgeInsets.symmetric(horizontal: S.x3 + 2, vertical: isTouch ? 14 : S.x1 + 2), // touch: 48 dp tall
             child: Text(label, style: T.label.copyWith(color: v == value ? C.text : C.dim)),
           ),
       ],
@@ -65,6 +61,11 @@ class BrowseHeader extends StatelessWidget {
   final Widget? trailing;
   @override
   Widget build(BuildContext context) {
+    // The phone's Library lists every Browse page, so no tab strip there (it clipped and scrolled away):
+    // a plain page title instead.
+    if (phoneLayout(context)) {
+      return PageHeader(browseTabs.firstWhere((x) => x.$1 == tab).$2, subtitle: subtitle, trailing: trailing);
+    }
     final sub = shownSubtitle(subtitle);
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -90,7 +91,10 @@ class BrowseHeader extends StatelessWidget {
               crossAxisAlignment: WrapCrossAlignment.center,
               spacing: S.x4,
               runSpacing: S.x3,
-              children: [if (sub != null) Text(sub, style: T.small), ?trailing],
+              children: [
+                if (sub != null) Text(sub, style: T.small),
+                ?trailing,
+              ],
             ),
           ),
         ),
@@ -121,7 +125,9 @@ class CoverMosaic extends StatelessWidget {
         aspectRatio: 1,
         child: GridView.count(
           crossAxisCount: 2,
+          padding: EdgeInsets.zero, // not the phone's status bar inset: that letterboxed the covers
           physics: const NeverScrollableScrollPhysics(),
+
           children: [for (final t in firsts.values) CoverArt.track(t, radius: 0)],
         ),
       ),
@@ -131,15 +137,7 @@ class CoverMosaic extends StatelessWidget {
 
 /// A card with a cover, a name and a count line (genres, composers, smart playlists).
 class NamedCard extends StatelessWidget {
-  const NamedCard({
-    super.key,
-    required this.cover,
-    required this.name,
-    required this.meta,
-    required this.onTap,
-    required this.tracks,
-    this.label,
-  });
+  const NamedCard({super.key, required this.cover, required this.name, required this.meta, required this.onTap, required this.tracks, this.label});
   final Widget cover;
   final String name, meta;
   final String? label;
@@ -156,7 +154,7 @@ class NamedCard extends StatelessWidget {
     ),
     child: Clickable(
       onTap: onTap,
-      onSecondaryTapDown: (d) => showCollectionMenu(context, d.globalPosition, tracks),
+      onSecondaryTapDown: (d) => showCollectionMenu(context, d.globalPosition, tracks, title: name),
       semanticLabel: '${label ?? ''} $name'.trim(),
       radius: R.card,
       padding: const EdgeInsets.all(S.x2),
@@ -213,11 +211,7 @@ class GenresPage extends StatelessWidget {
           if (genres.isEmpty)
             const SliverFillRemaining(
               hasScrollBody: false,
-              child: EmptyState(
-                icon: LucideIcons.tags,
-                title: 'No genres yet',
-                body: 'Songs with a genre tag show up here, grouped by genre.',
-              ),
+              child: EmptyState(icon: LucideIcons.tags, title: 'No genres yet', body: 'Songs with a genre tag show up here, grouped by genre.'),
             )
           else
             sliverCards(
@@ -310,11 +304,7 @@ class _YearsPageState extends State<YearsPage> {
           if (decades.isEmpty)
             const SliverFillRemaining(
               hasScrollBody: false,
-              child: EmptyState(
-                icon: LucideIcons.calendar,
-                title: 'No years yet',
-                body: 'Albums with a year in their tags show up here, by decade.',
-              ),
+              child: EmptyState(icon: LucideIcons.calendar, title: 'No years yet', body: 'Albums with a year in their tags show up here, by decade.'),
             )
           else ...[
             SliverToBoxAdapter(
@@ -580,7 +570,13 @@ class DuplicatesPage extends StatelessWidget {
         children: [
           SizedBox(
             width: 72,
-            child: t == best ? Text('Best copy', textAlign: TextAlign.center, style: T.caption.copyWith(color: C.text)) : null,
+            child: t == best
+                ? Text(
+                    'Best copy',
+                    textAlign: TextAlign.center,
+                    style: T.caption.copyWith(color: C.text),
+                  )
+                : null,
           ),
           IconBtn(LucideIcons.play, size: 14, box: 32, tooltip: 'Play this copy', onTap: () => engine.playTracks([t])),
           Tooltip(
@@ -589,15 +585,15 @@ class DuplicatesPage extends StatelessWidget {
               'Hide',
               dense: true,
               onTap: () {
-              lib.setHidden([t.id], true);
-              toast(
-                context,
-                'Hid “${t.title}” from your library. The file is not touched.',
-                actions: [
-                  ('Undo', () => lib.setHidden([t.id], false)),
-                ],
-              );
-            },
+                lib.setHidden([t.id], true);
+                toast(
+                  context,
+                  'Hid “${t.title}” from your library. The file is not touched.',
+                  actions: [
+                    ('Undo', () => lib.setHidden([t.id], false)),
+                  ],
+                );
+              },
             ),
           ),
           IconBtn(LucideIcons.folderOpen, size: 14, box: 32, tooltip: 'Show in Explorer\n${t.path}', onTap: () => showInExplorer(t.path)),

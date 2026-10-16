@@ -1,17 +1,19 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../library/models.dart';
 import '../../platform/window.dart' show isTouch;
 import '../app.dart';
+import '../phone.dart';
 import '../theme.dart';
 import '../tracks.dart';
 import '../widgets.dart';
 import 'albums.dart';
 
 /// Whether [t] matches the Songs filter [q] (lower case): in the title, artist or album.
-bool songMatches(Track t, String q) =>
-    t.title.toLowerCase().contains(q) || t.artist.toLowerCase().contains(q) || t.album.toLowerCase().contains(q);
+bool songMatches(Track t, String q) => t.title.toLowerCase().contains(q) || t.artist.toLowerCase().contains(q) || t.album.toLowerCase().contains(q);
 
 /// Ctrl+F on the Songs page focuses its filter.
 final songsFilterFocus = FocusNode();
@@ -29,13 +31,53 @@ class SongsPage extends StatefulWidget {
 class _SongsPageState extends State<SongsPage> {
   late final _filter = TextEditingController(text: songsFilter.value);
 
+  void _setFilter(String v) => songsFilter.value = v;
+
+  final _scroll = ScrollController();
+
+  /// The phone's fast scroll: the letter under the thumb while it moves.
+  final _letter = ValueNotifier<String?>(null);
+  Timer? _hide;
+
   @override
   void dispose() {
     _filter.dispose();
+    _scroll.dispose();
+    _letter.dispose();
+    _hide?.cancel();
     super.dispose();
   }
 
-  void _setFilter(String v) => songsFilter.value = v;
+  static const _sorts = [('title', 'Title'), ('artist', 'Artist'), ('album', 'Album'), ('year', 'Year'), ('format', 'Format'), ('time', 'Time')];
+
+  /// Not a finger on the list (the scrollbar thumb, a fling): show the letter there.
+  bool _scrolled(ScrollNotification n, List<Track> tracks) {
+    String? key(Track t) => switch (_by) {
+      'title' => t.title,
+      'artist' => t.artist,
+      'album' => t.album,
+      'year' => '${t.year ?? ''}',
+      _ => null,
+    };
+    if (n.depth != 0 || tracks.isEmpty) return false;
+    if (n is ScrollUpdateNotification && n.dragDetails == null && n.metrics.maxScrollExtent > 0) {
+      // ponytail: the row under the thumb by proportion, close enough for a letter.
+      final i = (n.metrics.pixels / n.metrics.maxScrollExtent * (tracks.length - 1)).round().clamp(0, tracks.length - 1);
+      final k = key(tracks[i])?.trim();
+      _letter.value = k == null || k.isEmpty ? null : (_by == 'year' ? k : k.characters.first.toUpperCase());
+      _hide?.cancel();
+    } else if (n is ScrollEndNotification) {
+      _hide = Timer(const Duration(milliseconds: 600), () => _letter.value = null);
+    }
+    return false;
+  }
+
+  Future<void> _sortSheet() async {
+    final v = await phoneSheet(context, [
+      for (final (k, label) in _sorts) (k, k == _by ? (_desc ? LucideIcons.arrowUp : LucideIcons.arrowDown) : LucideIcons.arrowUpDown, label),
+    ], title: 'Sort songs by (again to reverse)');
+    if (v != null) _sort(v);
+  }
 
   // Kept across navigation.
   String get _by => nav.memo['songs.by'] as String? ?? 'title';
@@ -105,8 +147,10 @@ class _SongsPageState extends State<SongsPage> {
       }
       selection.primary = tracks;
       final length = fmtLong(Duration(milliseconds: tracks.fold(0, (s, t) => s + t.durationMs)));
-      return CustomScrollView(
+      final phone = phoneLayout(context);
+      final list = CustomScrollView(
         key: const PageStorageKey('songs'),
+        controller: _scroll,
         slivers: [
           SliverToBoxAdapter(
             child: PageHeader(
@@ -116,6 +160,22 @@ class _SongsPageState extends State<SongsPage> {
                   : '${fmtInt(tracks.length)} of ${plural(lib.tracks.length, 'song')} · $length',
               trailing: lib.tracks.isEmpty
                   ? null
+                  : phone
+                  // Shuffle first (what a phone mostly does), Play, and the sort as a chip: no table header.
+                  ? Wrap(
+                      spacing: S.x2,
+                      runSpacing: S.x2,
+                      children: [
+                        PillButton('Shuffle', icon: LucideIcons.shuffle, primary: true, onTap: () => shufflePlay(tracks)),
+                        PillButton('Play', icon: LucideIcons.play, onTap: () => engine.playTracks(tracks)),
+                        PillButton(
+                          'Sort: ${_sorts.firstWhere((s) => s.$1 == _by).$2}',
+                          key: const ValueKey('songs.sort'),
+                          icon: _desc ? LucideIcons.arrowUp : LucideIcons.arrowDown,
+                          onTap: _sortSheet,
+                        ),
+                      ],
+                    )
                   : Wrap(
                       spacing: S.x3,
                       runSpacing: S.x2,
@@ -159,12 +219,7 @@ class _SongsPageState extends State<SongsPage> {
                             ),
                           ),
                         ),
-                        PillButton(
-                          'Play all',
-                          icon: LucideIcons.play,
-                          primary: true,
-                          onTap: tracks.isEmpty ? null : () => engine.playTracks(tracks),
-                        ),
+                        PillButton('Play all', icon: LucideIcons.play, primary: true, onTap: tracks.isEmpty ? null : () => engine.playTracks(tracks)),
                       ],
                     ),
             ),
@@ -188,46 +243,41 @@ class _SongsPageState extends State<SongsPage> {
               ),
             )
           else ...[
-            SliverPersistentHeader(
-              pinned: true,
-              delegate: _HeaderDelegate(
-                Container(
-                  color: C.bg,
-                  padding: const EdgeInsets.symmetric(horizontal: S.x2),
-                  alignment: Alignment.centerLeft,
-                  constraints: const BoxConstraints.tightFor(width: double.infinity),
-                  // The same columns the rows show at this width (they drop out in a small window).
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: TrackRow.maxWidth - S.x2 * 2),
-                    child: LayoutBuilder(
-                      builder: (context, c) {
-                        final cols = TrackCols(
-                          c.maxWidth,
-                          table: true,
-                          album: true,
-                          badge: true,
-                          k: MediaQuery.textScalerOf(context).scale(1),
-                        );
-                        return Row(
-                          children: [
-                            const SizedBox(width: 40 + S.x3),
-                            _head('Title', 'title', flex: 5),
-                            if (cols.artist) ...[const SizedBox(width: S.x4), _head('Artist', 'artist', flex: 3)],
-                            if (cols.album) ...[const SizedBox(width: S.x4), _head('Album', 'album', flex: 3)],
-                            if (cols.year) ...[const SizedBox(width: S.x4), _head('Year', 'year', width: cols.yearW)],
-                            if (cols.badge) ...[const SizedBox(width: S.x4), _head('Format', 'format', width: cols.badgeW)],
-                            if (cols.rating) _head('Rating', 'rating', width: cols.ratingW),
-                            const SizedBox(width: 32),
-                            _head('Time', 'time', width: cols.timeW, align: TextAlign.right),
-                            const SizedBox(width: 32),
-                          ],
-                        );
-                      },
+            if (!phone)
+              SliverPersistentHeader(
+                pinned: true,
+                delegate: _HeaderDelegate(
+                  Container(
+                    color: C.bg,
+                    padding: const EdgeInsets.symmetric(horizontal: S.x2),
+                    alignment: Alignment.centerLeft,
+                    constraints: const BoxConstraints.tightFor(width: double.infinity),
+                    // The same columns the rows show at this width (they drop out in a small window).
+                    child: ConstrainedBox(
+                      constraints: const BoxConstraints(maxWidth: TrackRow.maxWidth - S.x2 * 2),
+                      child: LayoutBuilder(
+                        builder: (context, c) {
+                          final cols = TrackCols(c.maxWidth, table: true, album: true, badge: true, k: MediaQuery.textScalerOf(context).scale(1));
+                          return Row(
+                            children: [
+                              const SizedBox(width: 40 + S.x3),
+                              _head('Title', 'title', flex: 5),
+                              if (cols.artist) ...[const SizedBox(width: S.x4), _head('Artist', 'artist', flex: 3)],
+                              if (cols.album) ...[const SizedBox(width: S.x4), _head('Album', 'album', flex: 3)],
+                              if (cols.year) ...[const SizedBox(width: S.x4), _head('Year', 'year', width: cols.yearW)],
+                              if (cols.badge) ...[const SizedBox(width: S.x4), _head('Format', 'format', width: cols.badgeW)],
+                              if (cols.rating) _head('Rating', 'rating', width: cols.ratingW),
+                              const SizedBox(width: 32),
+                              _head('Time', 'time', width: cols.timeW, align: TextAlign.right),
+                              const SizedBox(width: 32),
+                            ],
+                          );
+                        },
+                      ),
                     ),
                   ),
                 ),
               ),
-            ),
             SliverFixedExtentList(
               itemExtent: TrackRow.extentOf(context),
               delegate: SliverChildBuilderDelegate(
@@ -237,6 +287,37 @@ class _SongsPageState extends State<SongsPage> {
             ),
           ],
           const SliverToBoxAdapter(child: SizedBox(height: S.x16)),
+        ],
+      );
+      if (!phone) return list;
+      // The phone: drag the scrollbar to fly through the list, with the letter you are at.
+      return Stack(
+        children: [
+          NotificationListener<ScrollNotification>(
+            onNotification: (n) => _scrolled(n, tracks),
+            child: Scrollbar(controller: _scroll, interactive: true, thickness: 6, radius: const Radius.circular(R.pill), child: list),
+          ),
+          ValueListenableBuilder(
+            valueListenable: _letter,
+            builder: (_, l, _) => l == null
+                ? const SizedBox.shrink()
+                : Align(
+                    alignment: const Alignment(0.8, 0),
+                    child: IgnorePointer(
+                      child: Container(
+                        width: 64,
+                        height: 64,
+                        alignment: Alignment.center,
+                        decoration: BoxDecoration(
+                          color: C.raised3,
+                          borderRadius: BorderRadius.circular(R.card),
+                          border: Border.all(color: C.borderStrong),
+                        ),
+                        child: Text(l, style: T.title),
+                      ),
+                    ),
+                  ),
+          ),
         ],
       );
     },

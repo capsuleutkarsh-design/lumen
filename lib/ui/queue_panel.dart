@@ -24,18 +24,36 @@ class QueuePanel extends StatelessWidget {
           children: [
             Padding(
               padding: const EdgeInsets.fromLTRB(S.x5, S.x4, S.x2, S.x2),
-              child: Row(
-                children: [
-                  Expanded(child: Text('Queue', style: T.heading)),
-                  Text([if (q.items.isNotEmpty) plural(q.items.length, 'song'), if (q.shuffle) 'shuffled'].join(' · '), style: T.caption),
-                  if (upcoming.isNotEmpty) ...[
-                    const SizedBox(width: S.x2),
-                    PillButton('Clear', dense: true, onTap: () => _clear(context, upcoming.length)),
-                  ],
-                  if (cur != null) IconBtn(LucideIcons.listPlus, size: 16, tooltip: 'Save as playlist', onTap: () => _save(context)),
-                  IconBtn(LucideIcons.x, size: 16, tooltip: 'Close', onTap: nav.toggleQueue),
-                ],
-              ),
+              child: isTouch
+                  // Touch: the actions in words, 48 dp tall; the count under the title.
+                  ? Row(
+                      children: [
+                        Expanded(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text('Queue', style: T.heading),
+                              Text([if (q.items.isNotEmpty) plural(q.items.length, 'song'), if (q.shuffle) 'shuffled'].join(' · '), style: T.caption),
+                            ],
+                          ),
+                        ),
+                        if (upcoming.isNotEmpty) _textBtn('Clear', () => _clear(context, upcoming.length)),
+                        if (cur != null) _textBtn('Save as playlist', () => _save(context)),
+                        IconBtn(LucideIcons.x, size: 18, tooltip: 'Close', onTap: nav.toggleQueue),
+                      ],
+                    )
+                  : Row(
+                      children: [
+                        Expanded(child: Text('Queue', style: T.heading)),
+                        Text([if (q.items.isNotEmpty) plural(q.items.length, 'song'), if (q.shuffle) 'shuffled'].join(' · '), style: T.caption),
+                        if (upcoming.isNotEmpty) ...[
+                          const SizedBox(width: S.x2),
+                          PillButton('Clear', dense: true, onTap: () => _clear(context, upcoming.length)),
+                        ],
+                        if (cur != null) IconBtn(LucideIcons.listPlus, size: 16, tooltip: 'Save as playlist', onTap: () => _save(context)),
+                        IconBtn(LucideIcons.x, size: 16, tooltip: 'Close', onTap: nav.toggleQueue),
+                      ],
+                    ),
             ),
             if (cur == null)
               Expanded(
@@ -91,6 +109,17 @@ class QueuePanel extends StatelessWidget {
           ],
         );
       },
+    ),
+  );
+
+  Widget _textBtn(String label, VoidCallback onTap) => Clickable(
+    onTap: onTap,
+    semanticLabel: label,
+    radius: R.pill,
+    padding: const EdgeInsets.symmetric(horizontal: S.x3),
+    child: SizedBox(
+      height: 48,
+      child: Center(child: Text(label, style: T.label)),
     ),
   );
 

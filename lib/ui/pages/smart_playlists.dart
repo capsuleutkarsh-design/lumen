@@ -39,14 +39,17 @@ class SmartCover extends StatelessWidget {
 }
 
 /// The smart playlists, as cards above the ordinary ones on the Playlists page.
-List<Widget> smartPlaylistSlivers(BuildContext context) {
+/// [phone]: they come after your own playlists, and the add button is a small icon so the line beside it fits.
+List<Widget> smartPlaylistSlivers(BuildContext context, {bool phone = false}) {
   final all = lib.smartPlaylists;
   return [
     SliverToBoxAdapter(
       child: SectionTitle(
         'Smart playlists',
         subtitle: 'Fill themselves from rules and stay up to date',
-        trailing: PillButton('New smart playlist', icon: LucideIcons.listFilter, dense: true, onTap: () => editSmart(context)),
+        trailing: phone
+            ? IconBtn(LucideIcons.plus, color: C.text, tooltip: 'New smart playlist', onTap: () => editSmart(context))
+            : PillButton('New smart playlist', icon: LucideIcons.listFilter, dense: true, onTap: () => editSmart(context)),
       ),
     ),
     sliverCards(
@@ -65,7 +68,7 @@ List<Widget> smartPlaylistSlivers(BuildContext context) {
         );
       },
     ),
-    const SliverToBoxAdapter(child: SectionTitle('Playlists')),
+    if (!phone) const SliverToBoxAdapter(child: SectionTitle('Playlists')),
   ];
 }
 
@@ -174,9 +177,7 @@ class _Chip extends StatelessWidget {
 
 /// One rule while it is being edited.
 class _Edit {
-  _Edit(this.f, [Object? a, Object? b])
-    : a = TextEditingController(text: a?.toString() ?? ''),
-      b = TextEditingController(text: b?.toString() ?? '');
+  _Edit(this.f, [Object? a, Object? b]) : a = TextEditingController(text: a?.toString() ?? ''), b = TextEditingController(text: b?.toString() ?? '');
   String f;
   final TextEditingController a, b;
 
@@ -233,11 +234,7 @@ Future<void> editSmart(BuildContext context, [SmartPlaylist? s]) async {
                     children: [
                       Text('Songs that match', style: T.label),
                       const SizedBox(width: S.x3),
-                      Segmented(
-                        value: any,
-                        options: const [(false, 'all rules'), (true, 'any rule')],
-                        onChanged: (v) => set(() => any = v),
-                      ),
+                      Segmented(value: any, options: const [(false, 'all rules'), (true, 'any rule')], onChanged: (v) => set(() => any = v)),
                     ],
                   ),
                   const SizedBox(height: S.x3),

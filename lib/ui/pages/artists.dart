@@ -4,6 +4,7 @@ import 'package:lucide_icons_flutter/lucide_icons.dart';
 import '../../library/library.dart';
 import '../../library/models.dart';
 import '../app.dart';
+import '../phone.dart';
 import '../theme.dart';
 import '../tracks.dart';
 import '../widgets.dart';
@@ -23,42 +24,107 @@ class ArtistsPage extends StatelessWidget {
 
   static double _extra(BuildContext context) => S.x3 * 2 + S.x3 + textHeight(context, [T.label, T.small]) + 2;
 
-  @override
-  Widget build(BuildContext context) => ListenableBuilder(
-    listenable: lib,
-    builder: (context, _) => CustomScrollView(
+  /// The phone: 64 dp rows, sorted by name or by plays.
+  Widget _phone(BuildContext context, StateSetter setState) {
+    final byPlays = nav.memo['artists.sort'] == 'Most played';
+    var artists = lib.artists;
+    if (byPlays) {
+      final stats = lib.playStats();
+      int plays(Artist a) => artistTracks(a).fold(0, (n, t) => n + (stats[t.id]?.plays ?? 0));
+      final n = {for (final a in artists) a.name: plays(a)};
+      artists = List.of(artists)..sort((a, b) => n[b.name]!.compareTo(n[a.name]!));
+    }
+    return CustomScrollView(
       key: const PageStorageKey('artists'),
       slivers: [
-        SliverToBoxAdapter(child: PageHeader('Artists', subtitle: plural(lib.artists.length, 'artist'))),
-        if (lib.artists.isEmpty)
+        SliverToBoxAdapter(
+          child: PageHeader(
+            'Artists',
+            subtitle: plural(artists.length, 'artist'),
+            trailing: artists.isEmpty
+                ? null
+                : SortMenu(
+                    value: byPlays ? 'Most played' : 'Name',
+                    options: const ['Name', 'Most played'],
+                    onChanged: (v) => setState(() => nav.memo['artists.sort'] = v),
+                  ),
+          ),
+        ),
+        if (artists.isEmpty)
           const SliverFillRemaining(hasScrollBody: false, child: NoMusic())
         else
-          sliverCards(
-            maxWidth: 200,
-            extra: _extra(context) - S.x3 * 2,
-            count: lib.artists.length,
-            builder: (_, i) {
-              final a = lib.artists[i];
+          SliverFixedExtentList(
+            itemExtent: 64,
+            delegate: SliverChildBuilderDelegate((_, i) {
+              final a = artists[i];
               return Clickable(
                 onTap: () => nav.push('artist', a.name),
-                onSecondaryTapDown: (d) => showCollectionMenu(context, d.globalPosition, artistTracks(a)),
+                onSecondaryTapDown: (d) => showCollectionMenu(context, d.globalPosition, artistTracks(a), title: a.name),
                 semanticLabel: 'Artist ${a.name}',
-                radius: R.card,
-                padding: const EdgeInsets.all(S.x3),
-                child: Column(
+                radius: R.small,
+                padding: const EdgeInsets.symmetric(horizontal: S.x2),
+                child: Row(
                   children: [
-                    CoverArt(a.cover, round: true, seed: a.name),
-                    const SizedBox(height: S.x3),
-                    Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.label, textAlign: TextAlign.center),
-                    Text(artistMeta(a), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
+                    CoverArt(a.cover, size: 48, round: true, seed: a.name),
+                    const SizedBox(width: S.x3),
+                    Expanded(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.label),
+                          Text(artistMeta(a), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
+                        ],
+                      ),
+                    ),
                   ],
                 ),
               );
-            },
+            }, childCount: artists.length),
           ),
         const SliverToBoxAdapter(child: SizedBox(height: S.x16)),
       ],
-    ),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: lib,
+    builder: (context, _) => phoneLayout(context)
+        ? StatefulBuilder(builder: _phone)
+        : CustomScrollView(
+            key: const PageStorageKey('artists'),
+            slivers: [
+              SliverToBoxAdapter(child: PageHeader('Artists', subtitle: plural(lib.artists.length, 'artist'))),
+              if (lib.artists.isEmpty)
+                const SliverFillRemaining(hasScrollBody: false, child: NoMusic())
+              else
+                sliverCards(
+                  maxWidth: 200,
+                  extra: _extra(context) - S.x3 * 2,
+                  count: lib.artists.length,
+                  builder: (_, i) {
+                    final a = lib.artists[i];
+                    return Clickable(
+                      onTap: () => nav.push('artist', a.name),
+                      onSecondaryTapDown: (d) => showCollectionMenu(context, d.globalPosition, artistTracks(a)),
+                      semanticLabel: 'Artist ${a.name}',
+                      radius: R.card,
+                      padding: const EdgeInsets.all(S.x3),
+                      child: Column(
+                        children: [
+                          CoverArt(a.cover, round: true, seed: a.name),
+                          const SizedBox(height: S.x3),
+                          Text(a.name, maxLines: 1, overflow: TextOverflow.ellipsis, style: T.label, textAlign: TextAlign.center),
+                          Text(artistMeta(a), maxLines: 1, overflow: TextOverflow.ellipsis, style: T.small),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              const SliverToBoxAdapter(child: SizedBox(height: S.x16)),
+            ],
+          ),
   );
 }
 
