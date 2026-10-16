@@ -33,7 +33,7 @@ class ThemeSettings extends StatelessWidget {
         const SizedBox(height: S.x4),
         _Toggle(
           'Accent from album art',
-          'Now Playing glows, and the seek bar fills, in a colour from the cover. Grey, very dark or very light covers keep coral.',
+          'Now Playing glows, and the seek bar fills, in a colour from the cover. Grey, very dark or very light covers keep gold.',
           accentFromArt,
           (v) {
             lib.setSetting('artAccent', v ? '1' : '0');

@@ -196,7 +196,7 @@ void main() {
       expect(HSLColor.fromColor(c).hue, inInclusiveRange(200, 225));
     });
 
-    test('grey, too dark or too light falls back to coral (null)', () {
+    test('grey, too dark or too light falls back to gold (null)', () {
       expect(pickAccent(fill(const Color(0xFF808080)), Palette.dark.bg), isNull); // grey
       expect(pickAccent(fill(const Color(0xFF1A0505)), Palette.dark.bg), isNull); // too dark on black
       expect(pickAccent(fill(const Color(0xFFFFF4F0)), Palette.dark.bg), isNull); // too light (like the bar)

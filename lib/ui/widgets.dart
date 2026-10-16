@@ -511,7 +511,7 @@ class _GlowState extends State<_Glow> {
       RawImage(image: _image, width: widget.size.width, height: widget.size.height, fit: BoxFit.fill, filterQuality: FilterQuality.medium);
 }
 
-/// "FLAC 24/96". Neutral: the coral is kept for what is playing now.
+/// "FLAC 24/96". Neutral: the gold is kept for what is playing now.
 class FormatBadge extends StatelessWidget {
   const FormatBadge(this.text, {super.key});
   final String text;

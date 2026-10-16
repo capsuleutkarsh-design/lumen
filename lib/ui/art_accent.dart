@@ -9,15 +9,15 @@ import 'app.dart';
 import 'theme.dart';
 import 'widgets.dart';
 
-/// The colour taken from the playing song's cover, or null for coral. Only Now
-/// Playing's glow and the active seek bar use it; everything else stays coral.
+/// The colour taken from the playing song's cover, or null for gold. Only Now
+/// Playing's glow and the active seek bar use it; everything else stays gold.
 final artAccent = ValueNotifier<Color?>(null);
 
 /// Settings → Theme: on by default.
 bool get accentFromArt => lib.setting('artAccent') != '0';
 
 /// The colour a cover should lend the UI, from its RGBA pixels: the most
-/// colourful hue family (not a muddy average). Null (coral) when the cover is
+/// colourful hue family (not a muddy average). Null (gold) when the cover is
 /// grey, too dark or too light, or would show less than 3:1 against [bg].
 Color? pickAccent(List<int> rgba, Color bg) {
   const n = 12; // 30° hue families
@@ -102,7 +102,7 @@ void watchArtAccent() {
   update();
 }
 
-/// Builds with the art accent (coral when there is none), blending changes over 300 ms.
+/// Builds with the art accent (gold when there is none), blending changes over 300 ms.
 class ArtAccentBuilder extends StatelessWidget {
   const ArtAccentBuilder({super.key, required this.builder});
   final Widget Function(BuildContext context, Color accent) builder;

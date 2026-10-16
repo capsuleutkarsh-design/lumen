@@ -455,7 +455,7 @@ class _SeekBarState extends State<SeekBar> {
             child: Stack(
               clipBehavior: Clip.none,
               children: [
-                // Active, the bar takes the colour of the cover (coral without one).
+                // Active, the bar takes the colour of the cover (gold without one).
                 ArtAccentBuilder(
                   builder: (context, accent) => SliderTheme(
                     data: SliderTheme.of(context).copyWith(

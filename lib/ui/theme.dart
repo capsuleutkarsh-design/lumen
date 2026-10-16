@@ -29,24 +29,24 @@ class Palette {
 
   static const dark = Palette(
     brightness: Brightness.dark,
-    bg: Color(0xFF000000),
-    raised1: Color(0xFF0A0A0B),
-    raised2: Color(0xFF131315),
-    raised3: Color(0xFF1B1B1E),
-    border: Color(0xFF1E1E21),
-    borderStrong: Color(0xFF2C2C30),
+    bg: Color(0xFF0D0F14), // midnight
+    raised1: Color(0xFF151922),
+    raised2: Color(0xFF1C212C),
+    raised3: Color(0xFF232A37),
+    border: Color(0xFF2A303C),
+    borderStrong: Color(0xFF363D4B),
     text: Color(0xFFF4F4F5),
-    dim: Color(0xFFA1A1AA),
-    faint: Color(0xFF8A8A93),
-    accent: Color(0xFFFF6B4A),
+    dim: Color(0xFFA3A9B6),
+    faint: Color(0xFF8B919D), // 4.55:1 on raised3
+    accent: Color(0xFFE8B04B), // gold
     onLight: Color(0xFF000000),
-    scrim: Color(0xB3000000),
+    scrim: Color(0xB30D0F14),
     shadow: Color(0x99000000),
-    glass: Color(0x59000000),
+    glass: Color(0x590D0F14),
     glassBorder: Color(0x14FFFFFF),
   );
 
-  /// The coral is a deeper shade here so it stays readable as text on white.
+  /// The gold is a deeper shade here, so it stays readable as text on paper (4.67:1 on raised3), and white text on it (5.8:1).
   static const light = Palette(
     brightness: Brightness.light,
     bg: Color(0xFFF3F3F4),
@@ -58,7 +58,7 @@ class Palette {
     text: Color(0xFF18181B),
     dim: Color(0xFF3F3F46),
     faint: Color(0xFF5F5F68),
-    accent: Color(0xFFB83214),
+    accent: Color(0xFF8C5C00),
     onLight: Color(0xFFFFFFFF),
     scrim: Color(0xB3F3F3F4),
     shadow: Color(0x24000000),
@@ -92,16 +92,16 @@ abstract final class C {
   static Color get text => _p.text;
   static Color get dim => _p.dim;
   static Color get faint => _p.faint; // >= 4.5:1 on every surface
-  static Color get accent => _p.accent; // the one accent: coral (now playing, focus, active toggles)
+  static Color get accent => _p.accent; // the one accent: gold (now playing, focus, active toggles)
   static Color get accentSoft => _p.accent.withValues(alpha: 0.15);
-  static Color get onLight => _p.onLight; // text on the primary button (which is C.text)
+  static Color get onLight => _p.onLight; // text on the primary button (which is C.text), and on the accent
   static Color get scrim => _p.scrim; // behind overlays
   static Color get shadow => _p.shadow;
   static Color get glass => _p.glass; // buttons floating on cover art
   static Color get glassBorder => _p.glassBorder;
   static const closeHover = Color(0xFFC42B1C); // the Windows close-button red
 
-  /// The page background at [a] opacity: fades over cover glows (black in dark, paper in light).
+  /// The page background at [a] opacity: fades over cover glows (midnight in dark, paper in light).
   static Color veil(double a) => _p.bg.withValues(alpha: a);
 }
 
@@ -244,7 +244,7 @@ ThemeData buildTheme() {
       ),
     ),
     switchTheme: SwitchThemeData(
-      thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? C.text : C.dim),
+      thumbColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? C.onLight : C.dim), // white on gold is only 1.8:1
       trackColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? C.accent : C.raised3),
       trackOutlineColor: WidgetStateProperty.resolveWith((s) => s.contains(WidgetState.selected) ? C.accent : C.borderStrong),
     ),
