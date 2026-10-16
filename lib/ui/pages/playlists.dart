@@ -1,11 +1,10 @@
-import 'dart:io';
-
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 import '../../library/library.dart';
 import '../../library/models.dart';
+import '../../platform/android.dart' show saveText;
 import '../app.dart';
 import '../theme.dart';
 import '../tracks.dart';
@@ -45,18 +44,15 @@ List<(String, IconData, String, VoidCallback)> playlistActions(BuildContext cont
       if (name != null) lib.renamePlaylist(pl.id, name);
     },
   ),
-  if (!Platform.isAndroid) // file_selector can't save files on Android
-    (
-      'export',
-      LucideIcons.upload,
-      'Export as M3U8…',
-      () async {
-        final loc = await getSaveLocation(suggestedName: '${pl.name}.m3u8', acceptedTypeGroups: [_m3u]);
-        if (loc == null) return;
-        lib.exportM3u(pl.id, loc.path);
-        if (context.mounted) toast(context, 'Saved ${loc.path}');
-      },
-    ),
+  (
+    'export',
+    LucideIcons.upload,
+    'Export as M3U8…',
+    () async {
+      final to = await saveText('${pl.name}.m3u8', lib.exportM3u(pl.id), _m3u);
+      if (to != null && context.mounted) toast(context, 'Saved $to');
+    },
+  ),
   (
     'delete',
     LucideIcons.trash2,

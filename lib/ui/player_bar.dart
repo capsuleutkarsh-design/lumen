@@ -14,6 +14,38 @@ import 'theme.dart';
 import 'tracks.dart';
 import 'widgets.dart';
 
+/// The sleep timer is set: a time, or stop after this song or the queue.
+bool get sleepOn => engine.sleepAt != null || engine.stopAfter != StopAfter.none;
+
+/// What the sleep timer does now, e.g. "Sleep timer: pauses at 23:15".
+String sleepTip(BuildContext context) {
+  final at = engine.sleepAt;
+  if (at != null) return 'Sleep timer: pauses at ${TimeOfDay.fromDateTime(at).format(context)}';
+  return switch (engine.stopAfter) {
+    StopAfter.song => 'Stops after this song',
+    StopAfter.queue => 'Stops at the end of the queue',
+    StopAfter.none => 'Sleep timer',
+  };
+}
+
+/// The sleep timer's choices (the player bar's menu, the phone's sheet): minutes,
+/// -1 the end of this song, -2 the end of the queue, 0 off (only while it is on).
+List<(int, IconData, String)> sleepChoices() => [
+  for (final m in [15, 30, 45, 60]) (m, LucideIcons.timer, '$m minutes'),
+  (-1, LucideIcons.music, 'End of this song'),
+  (-2, LucideIcons.listMusic, 'End of the queue'),
+  if (sleepOn) (0, LucideIcons.x, 'Turn off'),
+];
+
+void setSleep(int v) {
+  engine.sleepIn(v > 0 ? Duration(minutes: v) : null);
+  engine.setStopAfter(switch (v) {
+    -1 => StopAfter.song,
+    -2 => StopAfter.queue,
+    _ => StopAfter.none,
+  });
+}
+
 class PlayerBar extends StatefulWidget {
   const PlayerBar({super.key});
   @override
@@ -38,20 +70,9 @@ class _PlayerBarState extends State<PlayerBar> {
     super.dispose();
   }
 
-  String _sleepTip() {
-    final at = engine.sleepAt;
-    if (at != null) return 'Sleep timer: pauses at ${TimeOfDay.fromDateTime(at).format(context)}';
-    return switch (engine.stopAfter) {
-      StopAfter.song => 'Stops after this song',
-      StopAfter.queue => 'Stops at the end of the queue',
-      StopAfter.none => 'Sleep timer',
-    };
-  }
-
   Future<void> _sleepMenu(BuildContext b) async {
     final box = b.findRenderObject()! as RenderBox;
     final at = box.localToGlobal(Offset.zero);
-    final on = engine.sleepAt != null || engine.stopAfter != StopAfter.none;
     PopupMenuItem<int> item(int v, String label) => PopupMenuItem(
       value: v,
       height: 36,
@@ -61,19 +82,10 @@ class _PlayerBarState extends State<PlayerBar> {
       context: context,
       position: RelativeRect.fromLTRB(at.dx, at.dy - 8, at.dx + box.size.width, at.dy),
       items: [
-        for (final m in [15, 30, 45, 60]) item(m, '$m minutes'),
-        item(-1, 'End of this song'),
-        item(-2, 'End of the queue'),
-        if (on) ...[const PopupMenuDivider(height: 8), item(0, 'Turn off')],
+        for (final (v, _, label) in sleepChoices()) ...[if (v == 0) const PopupMenuDivider(height: 8), item(v, label)],
       ],
     );
-    if (v == null) return;
-    engine.sleepIn(v > 0 ? Duration(minutes: v) : null);
-    engine.setStopAfter(switch (v) {
-      -1 => StopAfter.song,
-      -2 => StopAfter.queue,
-      _ => StopAfter.none,
-    });
+    if (v != null) setSleep(v);
   }
 
   /// •••: Disc mode, the mini player, and Change cover for the song playing.
@@ -136,8 +148,8 @@ class _PlayerBarState extends State<PlayerBar> {
                         builder: (b) => IconBtn(
                           LucideIcons.moon,
                           size: 18,
-                          active: engine.sleepAt != null || engine.stopAfter != StopAfter.none,
-                          tooltip: _sleepTip(),
+                          active: sleepOn,
+                          tooltip: sleepTip(context),
                           onTap: () => _sleepMenu(b),
                         ),
                       ),

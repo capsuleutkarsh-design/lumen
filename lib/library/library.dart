@@ -586,8 +586,5 @@ class Library extends ChangeNotifier {
     return (createPlaylist(p.basenameWithoutExtension(file), ids), paths.length - ids.length);
   }
 
-  void exportM3u(int playlistId, String file) {
-    final pl = playlists.firstWhere((x) => x.id == playlistId);
-    File(file).writeAsStringSync(toM3u8([for (final id in pl.trackIds) ?byId[id]]));
-  }
+  String exportM3u(int playlistId) => toM3u8([for (final id in playlists.firstWhere((x) => x.id == playlistId).trackIds) ?byId[id]]);
 }

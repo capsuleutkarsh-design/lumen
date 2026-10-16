@@ -1,4 +1,4 @@
-// Lumen on Android, end to end on an emulator: scan a real folder, play, next / previous, the queue,
+// Lumen on Android, end to end on an emulator: scan a real folder, play, next / previous, the queue, the sleep timer,
 // the output Android reports, and screenshots of every phone screen in dark and light.
 // Run (the music permission is granted first, as the app's own button would after "Allow"):
 //   adb push <testlib> /sdcard/Music/LumenTest/testlib
@@ -14,7 +14,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/rendering.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:integration_test/integration_test.dart';
+import 'package:lucide_icons_flutter/lucide_icons.dart';
 import 'package:media_kit/media_kit.dart' hide Track;
+import 'package:music_player/audio/engine.dart' show StopAfter;
 import 'package:music_player/audio/sound.dart';
 import 'package:music_player/main.dart';
 import 'package:music_player/platform/android.dart';
@@ -184,6 +186,37 @@ void main() {
       final png = await image.toByteData(format: ui.ImageByteFormat.png);
       File('$shots/$name.png').writeAsBytesSync(png!.buffer.asUint8List());
     }
+
+    // The sleep timer on the phone's Now Playing: the moon's sheet sets it (highlighted, with the time it
+    // pauses), stops after this song, turns it off; a short timer fades out and pauses.
+    nav.setNowPlaying(true);
+    await settle();
+    final moon = find.byIcon(LucideIcons.moon).first;
+    await tester.tap(moon);
+    await shot('dark_sleep_sheet');
+    await tester.tap(find.text('15 minutes'));
+    await settle();
+    expect(engine.sleepAt, isNotNull);
+    expect(find.textContaining('pauses at'), findsWidgets);
+    await shot('dark_sleep_on');
+    await tester.tap(moon);
+    await settle();
+    await tester.tap(find.text('End of this song'));
+    await settle();
+    expect((engine.sleepAt, engine.stopAfter), (null, StopAfter.song));
+    expect(find.text('Stops after this song'), findsOneWidget);
+    await tester.tap(moon);
+    await settle();
+    await tester.tap(find.text('Turn off'));
+    await settle();
+    expect((engine.sleepAt, engine.stopAfter), (null, StopAfter.none));
+    expect(find.textContaining('Stops after'), findsNothing);
+    nav.setNowPlaying(false);
+    engine.sleepIn(const Duration(seconds: 3));
+    await waitFor(() => !engine.playing, timeout: const Duration(seconds: 10), what: 'sleep timer pause');
+    expect(engine.sleepAt, isNull);
+    say('Sleep timer: the sheet sets 15 minutes, End of this song and Turn off; a 3 s timer paused the music');
+    await engine.play();
 
     for (final theme in ['dark', 'light']) {
       setAppearance(theme);

@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
 import 'package:audio_session/audio_session.dart';
+import 'package:file_selector/file_selector.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
@@ -66,7 +67,21 @@ Future<void> initAndroid() async {
   audioRoute.value = AudioRoute.from(await _channel.invokeMethod<Map>('route') ?? const {});
 }
 
-/// Asks Android for the music files (and, on Android 13+, the notification).
+/// Android's folder picker, on the phone's storage or an SD card / USB stick: the folder's plain path,
+/// null when cancelled. Throws a PlatformException for places with no path (cloud apps, Downloads shortcuts).
+Future<String?> pickAndroidFolder() => _channel.invokeMethod<String>('pickFolder');
+
+/// Saves [text] as a file the user places and names (Windows' Save dialog, Android's "Save to" screen).
+/// Returns where it went (the path; on Android the file name), or null when cancelled.
+Future<String?> saveText(String name, String text, XTypeGroup type) async {
+  if (Platform.isAndroid) return _channel.invokeMethod<String>('save', {'name': name, 'text': text});
+  final loc = await getSaveLocation(suggestedName: name, acceptedTypeGroups: [type]);
+  if (loc == null) return null;
+  File(loc.path).writeAsStringSync(text);
+  return loc.path;
+}
+
+/// Asks Android for the music files (and, on Android 13+, images for folder covers, and the notification).
 Future<bool> askMusicAccess(Library lib) async {
   final ok = await _channel.invokeMethod<bool>('askMusic') ?? false;
   musicAccess.value = ok;

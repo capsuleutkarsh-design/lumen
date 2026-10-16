@@ -12,6 +12,7 @@ import 'art_accent.dart';
 import 'cover_picker.dart';
 import 'disc.dart';
 import 'lyrics_view.dart';
+import 'phone.dart' show phoneLayout, phoneSheet;
 import 'player_bar.dart';
 import 'theme.dart';
 import 'tracks.dart';
@@ -78,6 +79,7 @@ class _NowPlayingState extends State<NowPlaying> {
     listenable: Listenable.merge([engine, lib, discStyle]),
     builder: (context, _) {
       final t = engine.current;
+      final phone = phoneLayout(context); // the phone has no player bar: the sleep timer lives here
       return Material(
         color: C.bg,
         child: Stack(
@@ -109,6 +111,13 @@ class _NowPlayingState extends State<NowPlaying> {
                                 : setState(() => nav.memo['np.lyrics'] = !_showLyrics),
                             active: _showLyrics,
                           ),
+                        if (phone) ...[
+                          const SizedBox(width: S.x2),
+                          _GlassBtn(LucideIcons.moon, sleepTip(context), () async {
+                            final v = await phoneSheet(context, sleepChoices(), title: sleepTip(context));
+                            if (v != null) setSleep(v);
+                          }, active: sleepOn),
+                        ],
                         const SizedBox(width: S.x2),
                         _GlassBtn(LucideIcons.disc3, 'Disc mode  (D)', () => nav.setDisc(true)),
                         const SizedBox(width: S.x2),
@@ -118,6 +127,18 @@ class _NowPlayingState extends State<NowPlaying> {
                         }),
                       ],
                     ),
+                    if (phone && sleepOn)
+                      Padding(
+                        padding: const EdgeInsets.only(top: S.x2),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(LucideIcons.moon, size: 14, color: C.accent),
+                            const SizedBox(width: S.x1),
+                            Text(sleepTip(context), style: T.caption.copyWith(color: C.text)),
+                          ],
+                        ),
+                      ),
                     Expanded(
                       child: t == null
                           ? EmptyState(icon: LucideIcons.music, title: 'Nothing playing', body: '$tapWord any song to play it.')

@@ -2,10 +2,12 @@ import 'dart:io';
 
 import 'package:file_selector/file_selector.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
 export '../../audio/sound.dart' show friendlyFormat;
 
+import '../../platform/android.dart' show pickAndroidFolder;
 import '../../platform/update.dart';
 import '../../platform/window.dart' show isTouch;
 import '../../art/art_sources.dart';
@@ -17,8 +19,14 @@ import 'credits.dart';
 import 'settings_extras.dart';
 
 /// Asks for a folder and adds it to the library (Settings, the empty Home, drag and drop).
+/// On Android the folder may be on the phone or on an SD card / USB stick.
 Future<void> addMusicFolder() async {
-  final dir = await getDirectoryPath(confirmButtonText: 'Use this folder');
+  final String? dir;
+  try {
+    dir = Platform.isAndroid ? await pickAndroidFolder() : await getDirectoryPath(confirmButtonText: 'Use this folder');
+  } on PlatformException {
+    return notify('Lumen can only read folders on the phone or an SD card. Please choose one there.');
+  }
   if (dir != null && !lib.folders.contains(dir)) lib.folders = [...lib.folders, dir];
 }
 

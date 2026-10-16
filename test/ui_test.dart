@@ -173,6 +173,23 @@ void main() {
     expect(tester.takeException(), isNull);
   });
 
+  uiTest('The player bar moon sets the sleep timer and turns it off', (tester) async {
+    addTracks();
+    engine.queue.playNow([lib.tracks.first.id]);
+    await pumpOne(tester, const Align(alignment: Alignment.bottomCenter, child: PlayerBar()));
+    await tester.tap(find.byIcon(LucideIcons.moon));
+    await tester.pumpAndSettle();
+    expect(find.text('Turn off'), findsNothing);
+    await tester.tap(find.text('30 minutes'));
+    await tester.pumpAndSettle();
+    expect(engine.sleepAt, isNotNull);
+    await tester.tap(find.byIcon(LucideIcons.moon));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Turn off'));
+    await tester.pumpAndSettle();
+    expect((engine.sleepAt, engine.stopAfter), (null, StopAfter.none));
+  });
+
   uiTest('B2: album and playlist headers wrap instead of overflowing when narrow', (tester) async {
     addTracks(title: long);
     final a = lib.albums.first;

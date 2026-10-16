@@ -1,6 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-    <!-- Music files: Android 13+ asks for audio only; Android 8-12 for storage (read only). -->
+    <!-- Music files: Android 13+ asks for audio (and images, for folder.jpg covers); Android 8-12 for storage (read only). -->
     <uses-permission android:name="android.permission.READ_MEDIA_AUDIO"/>
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32"/>
     <!-- The media notification (asked on Android 13+), and playing on with the screen off. -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>

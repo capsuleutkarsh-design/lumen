@@ -210,38 +210,7 @@ class _BottomNav extends StatelessWidget {
   };
 
   Future<void> _more(BuildContext context) async {
-    final page = await showModalBottomSheet<String>(
-      context: context,
-      backgroundColor: C.raised1,
-      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(R.panel))),
-      builder: (context) => SafeArea(
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: S.x3),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              for (final (page, icon, label) in more)
-                Clickable(
-                  onTap: () => Navigator.pop(context, page),
-                  semanticLabel: label,
-                  radius: 0,
-                  child: SizedBox(
-                    height: 56,
-                    child: Row(
-                      children: [
-                        const SizedBox(width: S.x6),
-                        Icon(icon, size: 20, color: C.text),
-                        const SizedBox(width: S.x4),
-                        Text(label, style: T.body),
-                      ],
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ),
-      ),
-    );
+    final page = await phoneSheet(context, more);
     if (page != null) nav.go(page);
   }
 
@@ -341,6 +310,44 @@ class _BottomNav extends StatelessWidget {
     );
   }
 }
+
+/// A touch menu from the bottom of the screen (More, the sleep timer): the chosen value, null when dismissed.
+/// It scrolls when the phone is on its side.
+Future<V?> phoneSheet<V>(BuildContext context, List<(V, IconData, String)> items, {String? title}) => showModalBottomSheet<V>(
+  context: context,
+  backgroundColor: C.raised1,
+  shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(R.panel))),
+  builder: (context) => SafeArea(
+    child: ListView(
+      shrinkWrap: true,
+      padding: const EdgeInsets.symmetric(vertical: S.x3),
+      children: [
+        if (title != null)
+          Padding(
+            padding: const EdgeInsets.fromLTRB(S.x6, S.x2, S.x6, S.x2),
+            child: Text(title, style: T.small),
+          ),
+        for (final (value, icon, label) in items)
+          Clickable(
+            onTap: () => Navigator.pop(context, value),
+            semanticLabel: label,
+            radius: 0,
+            child: SizedBox(
+              height: 56,
+              child: Row(
+                children: [
+                  const SizedBox(width: S.x6),
+                  Icon(icon, size: 20, color: C.text),
+                  const SizedBox(width: S.x4),
+                  Text(label, style: T.body),
+                ],
+              ),
+            ),
+          ),
+      ],
+    ),
+  ),
+);
 
 /// The phone's mini player: the song, play/pause and next, with a thin progress line.
 /// Tap it, or swipe it up, for Now Playing.

@@ -621,7 +621,7 @@ class _EqualizerState extends State<_Equalizer> {
         const PopupMenuDivider(height: 8),
         item('autoeq', 'Headphone correction (AutoEQ)…', icon: LucideIcons.headphones),
         item('import', 'Import presets (JSON)…', icon: LucideIcons.import),
-        if (s.presets.isNotEmpty && !Platform.isAndroid) item('export', 'Export my presets (JSON)…', icon: LucideIcons.share),
+        if (s.presets.isNotEmpty) item('export', 'Export my presets (JSON)…', icon: LucideIcons.share),
       ],
     );
     if (v == null || !mounted) return;
@@ -669,13 +669,8 @@ class _EqualizerState extends State<_Equalizer> {
           notify('That file has no Lumen EQ presets');
         }
       case 'export':
-        final to = await getSaveLocation(
-          suggestedName: 'Lumen EQ presets.json',
-          acceptedTypeGroups: const [XTypeGroup(label: 'JSON', extensions: ['json'])],
-        );
-        if (to == null) return;
-        File(to.path).writeAsStringSync(exportPresets(s.presets));
-        notify('Saved ${plural(s.presets.length, 'preset')}');
+        final to = await saveText('Lumen EQ presets.json', exportPresets(s.presets), const XTypeGroup(label: 'JSON', extensions: ['json']));
+        if (to != null) notify('Saved ${plural(s.presets.length, 'preset')}');
     }
   }
 }
