@@ -488,15 +488,8 @@ class PlayButton extends StatelessWidget {
       child: SizedBox(
         width: size,
         height: size,
-        child: AnimatedSwitcher(
-          duration: Motion.fast,
-          child: Icon(
-            playing ? LucideIcons.pause : LucideIcons.play,
-            key: ValueKey(playing),
-            size: size * 0.45,
-            color: onTap == null ? C.faint : C.onLight,
-          ),
-        ),
+        // No AnimatedSwitcher: play / pause flipping back within its fade gave two children the same key.
+        child: Icon(playing ? LucideIcons.pause : LucideIcons.play, size: size * 0.45, color: onTap == null ? C.faint : C.onLight),
       ),
     ),
   );
