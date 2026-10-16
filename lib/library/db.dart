@@ -110,6 +110,13 @@ const migrations = [
     CREATE TABLE album_covers(album_key TEXT PRIMARY KEY, choice TEXT NOT NULL);
     UPDATE tracks SET mtime = 0 WHERE embedded_cover = 1;
   ''',
+  // 5: 0.4.0. Star ratings (0 = none, 1-5; only in the database, never in the files) and CUE
+  // tracks: a row per track of a big file with a .cue, its path "<file>#<track no>", starting
+  // cue_start_ms into the file and lasting duration_ms.
+  '''
+    ALTER TABLE tracks ADD COLUMN rating INTEGER NOT NULL DEFAULT 0;
+    ALTER TABLE tracks ADD COLUMN cue_start_ms INTEGER;
+  ''',
 ];
 
 /// Opens (and creates or upgrades) the library database. Both the UI isolate and

@@ -14,6 +14,7 @@ import 'suggestions.dart' show PlayStat;
 /// - `rate` sample rate at least [a] Hz
 /// - `bits` bit depth at least [a]
 /// - `artist` contains [a] (text, ignoring case)
+/// - `rating` at least [a] stars
 class SmartRule {
   const SmartRule(this.f, [this.a, this.b]);
   final String f;
@@ -30,6 +31,7 @@ class SmartRule {
     'rate': 'Sample rate at least (Hz)',
     'bits': 'Bit depth at least',
     'artist': 'Artist contains',
+    'rating': 'Rating at least (stars)',
   };
 
   /// Fields that take no value, and those that take two numbers.
@@ -55,6 +57,7 @@ class SmartRule {
     'rate' => t.sampleRate >= _a,
     'bits' => t.bitDepth >= _a,
     'artist' => t.artist.toLowerCase().contains(_text),
+    'rating' => (c.ratings[t.id] ?? 0) >= _a,
     _ => false,
   };
 
@@ -67,16 +70,18 @@ class SmartRule {
     'fav' => 'Favourite',
     'rate' => 'Sample rate at least ${(_a / 1000).toStringAsFixed(_a % 1000 == 0 ? 0 : 1)} kHz',
     'bits' => 'Bit depth at least $a',
+    'rating' => 'Rated $a ${_a == 1 ? 'star' : 'stars'} or more',
     _ => '${fields[f] ?? f} $a',
   };
 }
 
-/// What rules need besides the track: plays, favourites, today.
+/// What rules need besides the track: plays, favourites, today, star ratings.
 class SmartContext {
-  const SmartContext(this.stats, this.favourites, this.now);
+  const SmartContext(this.stats, this.favourites, this.now, [this.ratings = const {}]);
   final Map<int, PlayStat> stats;
   final Set<int> favourites;
   final DateTime now;
+  final Map<int, int> ratings;
 }
 
 class SmartPlaylist {

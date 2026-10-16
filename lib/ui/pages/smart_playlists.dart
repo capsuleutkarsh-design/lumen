@@ -336,6 +336,7 @@ Widget _values(_Edit e, VoidCallback changed) {
     'added' => '30',
     'rate' => '96000',
     'bits' => '24',
+    'rating' => '4',
     _ => '5',
   }, changed);
 }

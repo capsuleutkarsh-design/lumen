@@ -1,5 +1,6 @@
 import 'dart:ffi';
 import 'dart:io';
+import 'dart:math' show max;
 import 'dart:isolate';
 import 'dart:typed_data';
 
@@ -9,7 +10,9 @@ import 'package:path/path.dart' as p;
 import 'package:sqlite3/sqlite3.dart';
 
 import '../art/cover_quality.dart';
+import 'cue.dart';
 import 'db.dart';
+import 'lyrics.dart' show readText;
 import 'models.dart';
 import 'tags.dart';
 
@@ -34,15 +37,17 @@ class ScanError implements Exception {
 /// Scans in a background isolate so the UI never waits. [onProgress] gets
 /// (done, total) for files that need reading, after each short commit.
 /// Throws [ScanError] if the scan fails or the isolate dies.
+/// [mirror]: Android 13+ copies of .cue files Gleo may not read in place (see MainActivity.kt).
 Future<ScanResult> scanInBackground(
   String dbPath,
   String coverDir,
   List<String> roots,
-  void Function(int done, int total) onProgress,
-) async {
+  void Function(int done, int total) onProgress, {
+  String? mirror,
+}) async {
   final port = ReceivePort();
   try {
-    await Isolate.spawn(_isolateMain, (port.sendPort, dbPath, coverDir, roots), onError: port.sendPort, onExit: port.sendPort);
+    await Isolate.spawn(_isolateMain, (port.sendPort, dbPath, coverDir, roots, mirror), onError: port.sendPort, onExit: port.sendPort);
     await for (final m in port) {
       if (m is (int, int)) {
         onProgress(m.$1, m.$2);
@@ -60,9 +65,9 @@ Future<ScanResult> scanInBackground(
   }
 }
 
-void _isolateMain((SendPort, String, String, List<String>) args) {
-  final (send, dbPath, coverDir, roots) = args;
-  send.send(scan(dbPath, coverDir, roots, (d, t) => send.send((d, t))));
+void _isolateMain((SendPort, String, String, List<String>, String?) args) {
+  final (send, dbPath, coverDir, roots, mirror) = args;
+  send.send(scan(dbPath, coverDir, roots, (d, t) => send.send((d, t)), mirror));
 }
 
 /// Tracks gone this long are deleted for good (with their plays); until then a
@@ -73,7 +78,7 @@ const goneDays = 180;
 /// matches renamed or moved files to their old row, marks missing files gone,
 /// then regroups albums. Tags and covers are read outside the write transaction;
 /// each commit holds the write lock for a few milliseconds only.
-ScanResult scan(String dbPath, String coverDir, List<String> roots, [void Function(int, int)? onProgress]) {
+ScanResult scan(String dbPath, String coverDir, List<String> roots, [void Function(int, int)? onProgress, String? mirror]) {
   final db = openDb(dbPath);
   final res = ScanResult();
   try {
@@ -90,7 +95,7 @@ ScanResult scan(String dbPath, String coverDir, List<String> roots, [void Functi
     final seen = <String>{};
     final todo = <(String, String, int, int)>[]; // path, root, size, modified
     final online = <String>[];
-    final walk = _Walk();
+    final walk = _Walk(mirror);
     for (final root in rs) {
       if (!Directory(root).existsSync()) continue; // e.g. unplugged drive: keep its tracks
       online.add(root);
@@ -135,8 +140,8 @@ ScanResult scan(String dbPath, String coverDir, List<String> roots, [void Functi
       INSERT INTO tracks(path, root, folder, mtime, size, title, artist, album_artist_tag, compilation, album,
         track_no, disc_no, year, genre, duration_ms, codec, sample_rate, bit_depth, channels, bitrate, cover, lyrics, added_at,
         composer, work, movement, movement_no, artist_sort, album_artist_sort, album_sort, mb_album_id,
-        rg_track_gain, rg_track_peak, rg_album_gain, rg_album_peak, embedded_cover)
-      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+        rg_track_gain, rg_track_peak, rg_album_gain, rg_album_peak, embedded_cover, cue_start_ms)
+      VALUES(?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
       ON CONFLICT(path) DO UPDATE SET root=excluded.root, folder=excluded.folder, mtime=excluded.mtime,
         size=excluded.size, title=excluded.title, artist=excluded.artist, album_artist_tag=excluded.album_artist_tag,
         compilation=excluded.compilation, album=excluded.album, track_no=excluded.track_no, disc_no=excluded.disc_no,
@@ -147,7 +152,7 @@ ScanResult scan(String dbPath, String coverDir, List<String> roots, [void Functi
         artist_sort=excluded.artist_sort, album_artist_sort=excluded.album_artist_sort, album_sort=excluded.album_sort,
         mb_album_id=excluded.mb_album_id, rg_track_gain=excluded.rg_track_gain, rg_track_peak=excluded.rg_track_peak,
         rg_album_gain=excluded.rg_album_gain, rg_album_peak=excluded.rg_album_peak,
-        embedded_cover=excluded.embedded_cover, gone_at=NULL
+        embedded_cover=excluded.embedded_cover, cue_start_ms=excluded.cue_start_ms, gone_at=NULL
       RETURNING id''');
     final moveTo = db.prepare('UPDATE tracks SET path = ? WHERE id = ?');
     final clearArtists = db.prepare('DELETE FROM track_artists WHERE track_id = ?');
@@ -165,9 +170,18 @@ ScanResult scan(String dbPath, String coverDir, List<String> roots, [void Functi
       // Read a batch with no lock held: tags and cover decoding are the slow part.
       final batch = <(String, String, int, int, Tags, (String, bool)?)>[];
       final sw = Stopwatch()..start();
+      (String, Tags)? file; // a CUE file's own tags, read once for all its tracks
       while (i < todo.length && batch.length < 50 && sw.elapsedMilliseconds < 1000) {
         final (path, root, size, mtime) = todo[i++];
-        final t = readTags(path);
+        final c = walk.cueOf[path];
+        final Tags t;
+        if (c == null) {
+          t = readTags(path);
+        } else {
+          final real = cueFile(path);
+          if (file?.$1 != real) file = (real, readTags(real));
+          t = cueTags(file!.$2, c.$1, c.$2, c.$3);
+        }
         final cover = covers.forTrack(p.dirname(path), t.picture);
         t.picture = null;
         batch.add((path, root, size, mtime, t, cover));
@@ -223,6 +237,7 @@ ScanResult scan(String dbPath, String coverDir, List<String> roots, [void Functi
                   t.rgAlbumGain,
                   t.rgAlbumPeak,
                   (cover?.$2 ?? false) ? 1 : 0,
+                  walk.cueOf[path]?.$2.startMs,
                 ]).single['id']
                 as int;
         clearArtists.execute([id]);
@@ -302,6 +317,14 @@ typedef _File = (String, int, int);
 /// Lists audio files recursively. Follows junctions and symlinks once each (by real path),
 /// remembers folders it could not read, and collects the images in each folder.
 class _Walk {
+  _Walk(this.mirror);
+
+  /// Where Android 13+ keeps copies of .cue files it can't list in place (null elsewhere).
+  final String? mirror;
+
+  /// CUE tracks found, by their path (`<file>#<track no>`): the sheet, the track, and where it ends (null: the file's end).
+  final cueOf = <String, (Cue, CueTrack, int?)>{};
+  final _cues = <String, Cue>{};
   final failed = <String>[];
   final images = <String, List<_File>>{}; // lower-case folder -> its images
   final listed = <String>{}; // lower-case folders read
@@ -323,6 +346,11 @@ class _Walk {
     }
     listed.add(dir.toLowerCase());
     final base = dir.endsWith(p.separator) ? dir : '$dir${p.separator}';
+    final cues = [
+      for (final (name, kind, _, mtime) in entries)
+        if (kind == _file && name.toLowerCase().endsWith('.cue')) ('$base$name', mtime),
+      ..._mirrored(dir),
+    ];
     for (var (name, kind, size, mtime) in entries) {
       final path = '$base$name';
       String? target;
@@ -338,7 +366,11 @@ class _Walk {
       if (kind == _file) {
         final ext = p.extension(name).toLowerCase();
         if (audioExtensions.contains(ext)) {
-          yield (path, size, mtime);
+          final split = cues.isEmpty ? const <(String, int)>[] : _split(path, mtime, cues);
+          if (split.isEmpty) yield (path, size, mtime);
+          for (final (track, time) in split) {
+            yield (track, size, time);
+          }
         } else if (_imageExtensions.contains(ext)) {
           images.putIfAbsent(dir.toLowerCase(), () => []).add((path, size, mtime));
         }
@@ -350,6 +382,71 @@ class _Walk {
 }
 
 const _file = 0, _dir = 1, _link = 2;
+
+extension on _Walk {
+  /// Android 13+: the copies of [dir]'s .cue files (see [mirror]): (the copy, modified time).
+  List<(String, int)> _mirrored(String dir) {
+    final m = mirror;
+    if (m == null) return const [];
+    final d = Directory(p.join(m, p.relative(dir, from: p.rootPrefix(dir))));
+    if (!d.existsSync()) return const [];
+    return [
+      for (final f in d.listSync().whereType<File>())
+        if (f.path.toLowerCase().endsWith('.cue')) (f.path, f.statSync().modified.millisecondsSinceEpoch),
+    ];
+  }
+
+  /// The CUE tracks of [audio] (`<file>#<no>`, and the newer modified time of the file and the sheet)
+  /// from the first sheet in its folder that splits it; empty when none does.
+  List<(String, int)> _split(String audio, int mtime, List<(String, int)> cues) {
+    for (final (cuePath, cueTime) in cues) {
+      final cue = _cues.putIfAbsent(cuePath, () {
+        try {
+          return parseCue(readText(cuePath));
+        } on FileSystemException {
+          return Cue();
+        }
+      });
+      final ts = cue.tracksOf(p.basename(audio));
+      if (ts.isEmpty) continue;
+      final out = <(String, int)>[];
+      for (var i = 0; i < ts.length; i++) {
+        final path = '$audio#${ts[i].no}';
+        cueOf[path] = (cue, ts[i], i + 1 < ts.length ? ts[i + 1].startMs : null);
+        out.add((path, max(mtime, cueTime)));
+      }
+      return out;
+    }
+    return const [];
+  }
+}
+
+/// A CUE track's tags: the sheet's titles, performers, date and genre over its file's tags [f].
+Tags cueTags(Tags f, Cue cue, CueTrack tr, int? endMs) {
+  final artist = tr.performer ?? cue.performer ?? f.artist;
+  final t = Tags()
+    ..title = tr.title ?? 'Track ${tr.no}'
+    ..artist = artist
+    ..albumArtist = cue.performer ?? f.albumArtist
+    ..album = cue.title ?? f.album
+    ..track = tr.no
+    ..disc = f.disc
+    ..year = cue.year ?? f.year
+    ..genre = cue.genre ?? f.genre
+    ..composer = f.composer
+    ..mbAlbumId = f.mbAlbumId
+    ..rgAlbumGain = f.rgAlbumGain ?? f.rgTrackGain
+    ..rgAlbumPeak = f.rgAlbumPeak ?? f.rgTrackPeak
+    ..durationMs = max(0, (endMs ?? f.durationMs) - tr.startMs)
+    ..sampleRate = f.sampleRate
+    ..bitDepth = f.bitDepth
+    ..channels = f.channels
+    ..bitrate = f.bitrate
+    ..codec = f.codec
+    ..picture = f.picture;
+  if (artist != null) t.artists.add(artist);
+  return t;
+}
 
 /// One folder's entries: (name, kind, size, modified ms); null if it cannot be read.
 /// On Windows one FindFirstFileEx pass gives sizes and times too (no stat per file,

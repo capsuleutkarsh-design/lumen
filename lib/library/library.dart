@@ -131,6 +131,7 @@ class Library extends ChangeNotifier {
     _artistByName = byName;
     artists = byName.values.toList()..sort((a, b) => (a.sortName ?? a.name).toLowerCase().compareTo((b.sortName ?? b.name).toLowerCase()));
     favourites = {for (final r in db.select('SELECT track_id FROM favourites')) r['track_id'] as int};
+    ratings = {for (final r in db.select('SELECT id, rating FROM tracks WHERE rating > 0')) r['id'] as int: r['rating'] as int};
     lowCovers = {for (final r in db.select('SELECT cover FROM cover_quality WHERE problem IS NOT NULL')) r['cover'] as String};
     coverChoices = {
       for (final r in db.select('SELECT album_key, choice FROM album_covers')) r['album_key'] as String: r['choice'] as String,
@@ -379,7 +380,7 @@ class Library extends ChangeNotifier {
     var shown = 0;
     final since = Stopwatch()..start();
     try {
-      final r = await scanInBackground(dbPath, coverDir, folders, (d, t) {
+      final r = await scanInBackground(dbPath, coverDir, folders, mirror: Directory(textMirror).existsSync() ? textMirror : null, (d, t) {
         scan.value = (d, t);
         if (first && d > shown && d < t && (d - shown >= 500 || since.elapsedMilliseconds >= 2000)) {
           shown = d;
@@ -444,6 +445,10 @@ class Library extends ChangeNotifier {
 
   HomeData? _home;
   HomeData get home => _home ??= suggest(tracks, albums, playStats(), DateTime.now());
+
+  /// Android 13+: copies of the .lrc and .cue files Gleo may not read in place, under their own full path
+  /// (MainActivity.kt copies them from folders picked in Android's folder picker).
+  String get textMirror => p.join(dataDir, 'saf');
 
   /// Plays, skips and last play per track, added up by the database.
   Map<int, PlayStat> playStats() => {
@@ -526,7 +531,7 @@ class Library extends ChangeNotifier {
   }
 
   /// The songs [s] matches right now.
-  List<Track> smartTracks(SmartPlaylist s) => s.evaluate(tracks, SmartContext(playStats(), favourites, DateTime.now()));
+  List<Track> smartTracks(SmartPlaylist s) => s.evaluate(tracks, SmartContext(playStats(), favourites, DateTime.now(), ratings));
 
   // ------------------------------------------------------------ favourites
 
@@ -538,6 +543,25 @@ class Library extends ChangeNotifier {
       favourites.add(id);
       db.execute('INSERT OR IGNORE INTO favourites(track_id, at) VALUES(?, ?)', [id, DateTime.now().millisecondsSinceEpoch]);
     }
+    notifyListeners();
+  }
+
+  // ------------------------------------------------------------ ratings
+
+  /// Star ratings by track id (1-5; not rated = missing). Only in the database: files are never changed.
+  Map<int, int> ratings = {};
+  int rating(int id) => ratings[id] ?? 0;
+
+  /// Gives [ids] [stars] (0 clears the rating).
+  void setRating(Iterable<int> ids, int stars) {
+    final upd = db.prepare('UPDATE tracks SET rating = ? WHERE id = ?');
+    db.execute('BEGIN');
+    for (final id in ids) {
+      upd.execute([stars, id]);
+      stars == 0 ? ratings.remove(id) : ratings[id] = stars;
+    }
+    db.execute('COMMIT');
+    upd.close();
     notifyListeners();
   }
 

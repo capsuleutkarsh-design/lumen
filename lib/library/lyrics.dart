@@ -61,7 +61,7 @@ Lyrics? loadLyrics(String trackPath, String? embedded) {
 /// A text file (.lrc, .m3u) decoded by [decodeText], without a byte order mark.
 String readText(String path) => decodeText(File(path).readAsBytesSync()).replaceFirst('﻿', '');
 
-/// Text file bytes: UTF-16 with a byte order mark, else UTF-8, else Latin-1.
+/// Text file bytes: UTF-16 with a byte order mark, else UTF-8, else Windows-1252 (old .cue and .lrc files).
 String decodeText(List<int> b) {
   if (b.length >= 2 && ((b[0] == 0xFF && b[1] == 0xFE) || (b[0] == 0xFE && b[1] == 0xFF))) {
     final le = b[0] == 0xFF;
@@ -70,6 +70,12 @@ String decodeText(List<int> b) {
   try {
     return utf8.decode(b);
   } on FormatException {
-    return latin1.decode(b);
+    return String.fromCharCodes([for (final x in b) x >= 0x80 && x < 0xA0 ? _cp1252[x - 0x80] : x]);
   }
 }
+
+/// Windows-1252's 0x80-0x9F (€, curly quotes, dashes...); the rest is Latin-1.
+const _cp1252 = [
+  0x20AC, 0x81, 0x201A, 0x0192, 0x201E, 0x2026, 0x2020, 0x2021, 0x02C6, 0x2030, 0x0160, 0x2039, 0x0152, 0x8D, 0x017D, 0x8F, //
+  0x90, 0x2018, 0x2019, 0x201C, 0x201D, 0x2022, 0x2013, 0x2014, 0x02DC, 0x2122, 0x0161, 0x203A, 0x0153, 0x9D, 0x017E, 0x0178,
+];
