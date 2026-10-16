@@ -56,7 +56,7 @@ android {
 }
 
 // Gleo's own audio engine: libmpv.so (mpv + FFmpeg with the audio filters, soxr and bs2b), built in
-// public at https://github.com/capsuleutkarsh-design/lumen-audio-engine. It replaces the libmpv.so of
+// public at https://github.com/capsuleutkarsh-design/gleo-audio-engine. It replaces the libmpv.so of
 // media_kit_libs_android_audio: the app's own jniLibs win over a dependency's.
 // To update: set the new release tag and the SHA-256 of its zip (from the release's SHA256SUMS.txt).
 // Downloads with curl (in Windows 10+, macOS and Linux), not Java: Java's connect timed out on the
@@ -72,7 +72,7 @@ val gleoEngineSha256 = "a446d0ec91cbbb9d0ffbdddb39381567a592fca9e9a38121394df3dc
 val gleoEngineLibs = layout.buildDirectory.dir("lumen-audio-engine-$gleoEngineTag/lib").get().asFile
 val gleoEngineDone = File("$gleoEngineLibs.ok") // written last, so a half-done extract is redone
 if (!gleoEngineDone.exists()) {
-    val url = "https://github.com/capsuleutkarsh-design/lumen-audio-engine/releases/download/" +
+    val url = "https://github.com/capsuleutkarsh-design/gleo-audio-engine/releases/download/" +
         "$gleoEngineTag/lumen-audio-engine-$gleoEngineTag.zip"
     val file = File("$gleoEngineLibs.zip")
     curl(url, file)

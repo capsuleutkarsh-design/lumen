@@ -6,7 +6,7 @@
 
 **© 2026 Utkarsh Tripathi** · [capsuleutkarsh@gmail.com](mailto:capsuleutkarsh@gmail.com)<br>
 A beautiful lossless music player<br>
-Official repository: **[capsuleutkarsh-design/lumen](https://github.com/capsuleutkarsh-design/lumen)**
+Official repository: **[capsuleutkarsh-design/gleo](https://github.com/capsuleutkarsh-design/gleo)**
 
 </div>
 
@@ -31,7 +31,7 @@ Official repository: **[capsuleutkarsh-design/lumen](https://github.com/capsuleu
 
 - **Author**: Utkarsh Tripathi.
 - **Software**: Gleo: its source code, installers, scripts, documentation, logos, icons and other artwork made by the Author, as published at the Official Repository.
-- **Official Repository**: https://github.com/capsuleutkarsh-design/lumen
+- **Official Repository**: https://github.com/capsuleutkarsh-design/gleo
 - **Third-Party Parts**: code, programs, libraries, fonts, icons and other material made by others and listed in the Software's `THIRD_PARTY_NOTICES` file.
 - **Modified Version**: the Software with anything changed, added or removed, or any work that includes part of the Software's own code.
 - **Credits**: (a) this licence file, (b) the copyright notice above, (c) the `THIRD_PARTY_NOTICES` file, (d) the credit line shown in the Software, and (e) the Credits screen inside the Software.

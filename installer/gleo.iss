@@ -5,7 +5,7 @@
 #endif
 #define AppName "Gleo"
 ; The repository; renamed only at release time (GitHub redirects the old name).
-#define AppURL "https://github.com/capsuleutkarsh-design/lumen"
+#define AppURL "https://github.com/capsuleutkarsh-design/gleo"
 #define SrcDir "..\build\windows\x64\runner\Release"
 
 [Setup]

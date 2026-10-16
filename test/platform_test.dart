@@ -113,6 +113,6 @@ void main() {
   });
 
   test('the update check asks the repository named in licence.dart', () {
-    expect(releasesApi, 'https://api.github.com/repos/capsuleutkarsh-design/lumen/releases/latest');
+    expect(releasesApi, 'https://api.github.com/repos/capsuleutkarsh-design/gleo/releases/latest');
   });
 }

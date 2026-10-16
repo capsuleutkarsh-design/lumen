@@ -45,7 +45,7 @@ The full licence texts of the Dart and Flutter packages are kept in each package
 ### Gleo's audio engine (`libmpv-2.dll` on Windows, `libmpv.so` on Android)
 
 - **What it is:** mpv and FFmpeg built for audio only, with Gleo's audio filters and the soxr resampler. Network protocols are switched off; it opens local files only.
-- **Source code:** every release of [capsuleutkarsh-design/lumen-audio-engine](https://github.com/capsuleutkarsh-design/lumen-audio-engine/releases) has the complete corresponding source (`lumen-audio-engine-<tag>-source.tar`: the exact source tarballs, the build script and the configure lines). The releases this version of Gleo uses are named in `windows/CMakeLists.txt` (`GLEO_ENGINE_TAG`) and `android/app/build.gradle.kts` (`gleoEngineTag`, a `-android` release).
+- **Source code:** every release of [capsuleutkarsh-design/gleo-audio-engine](https://github.com/capsuleutkarsh-design/gleo-audio-engine/releases) has the complete corresponding source (`lumen-audio-engine-<tag>-source.tar`: the exact source tarballs, the build script and the configure lines). The releases this version of Gleo uses are named in `windows/CMakeLists.txt` (`GLEO_ENGINE_TAG`) and `android/app/build.gradle.kts` (`gleoEngineTag`, a `-android` release).
 - **Licence texts:** `LGPL-3.0.txt` and `GPL-3.0.txt` sit next to `gleo.exe`. The licence of every library inside the DLL and `libmpv.so` is in [`licenses/`](licenses/) and in the app (Credits, All package licences).
 - Portions of this software are copyright © 2026 The FreeType Project (https://freetype.org). All rights reserved.
 - On Android, `libmediakitandroidhelper.so` next to `libmpv.so` is media_kit's own helper (MIT), from media_kit_libs_android_audio.

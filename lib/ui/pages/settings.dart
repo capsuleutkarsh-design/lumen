@@ -323,7 +323,7 @@ class SettingsPage extends StatelessWidget {
                   const SizedBox(height: S.x4),
                   for (final (k, v) in [
                     ('Version', shortVersion),
-                    ('Audio engine', 'Gleo audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/lumen-audio-engine)'),
+                    ('Audio engine', 'Gleo audio engine (mpv + FFmpeg, built in public at github.com/capsuleutkarsh-design/gleo-audio-engine)'),
                     ('Design', 'Inspired by Wora (MIT)'),
                     ('Font', 'Inter (SIL Open Font License)'),
                     ('Icons', 'Lucide (ISC)'),

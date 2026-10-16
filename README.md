@@ -18,9 +18,9 @@ Windows now · Android coming · No account, no internet, no AI. Just your music
 
 ## Download
 
-Get **[Gleo for Windows](https://github.com/capsuleutkarsh-design/lumen/releases/latest)** (beta): run `Gleo-Setup-….exe`, or unzip the portable `.zip` and run `gleo.exe`. Then open **Settings → Add folder** and pick your music folder. Gleo only reads your files; it never changes them.
+Get **[Gleo for Windows](https://github.com/capsuleutkarsh-design/gleo/releases/latest)** (beta): run `Gleo-Setup-….exe`, or unzip the portable `.zip` and run `gleo.exe`. Then open **Settings → Add folder** and pick your music folder. Gleo only reads your files; it never changes them.
 
-> **Beta:** please report anything odd in [Issues](https://github.com/capsuleutkarsh-design/lumen/issues). What's new in 0.2.0: [release notes](docs/releases/v0.2.0.md).
+> **Beta:** please report anything odd in [Issues](https://github.com/capsuleutkarsh-design/gleo/issues). What's new in 0.4.0: [release notes](docs/releases/v0.4.0.md).
 
 ## Screenshots
 
@@ -92,4 +92,4 @@ Gleo is free to use and share, made by **Utkarsh Tripathi**. It is not for sale.
 
 Third-party parts and their licences are listed in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
-Questions and bug reports: [open an issue](https://github.com/capsuleutkarsh-design/lumen/issues) or email [capsuleutkarsh@gmail.com](mailto:capsuleutkarsh@gmail.com).
+Questions and bug reports: [open an issue](https://github.com/capsuleutkarsh-design/gleo/issues) or email [capsuleutkarsh@gmail.com](mailto:capsuleutkarsh@gmail.com).

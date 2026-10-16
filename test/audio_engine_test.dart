@@ -1,4 +1,4 @@
-// Checks Gleo's own audio engine (libmpv-2.dll from github.com/capsuleutkarsh-design/lumen-audio-engine):
+// Checks Gleo's own audio engine (libmpv-2.dll from github.com/capsuleutkarsh-design/gleo-audio-engine):
 // the "best sound" filters and the soxr resampler load and process audio.
 // Needs `flutter build windows --release` first (skipped otherwise). Silent: ao=null and volume 0.
 @Tags(['mpv']) // run one file at a time: see dart_test.yaml

@@ -12,9 +12,9 @@ import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 
-const licenceSha256 = '530f294f1ce83eab9c970a46e6b7d8f8ee5ebe0e077509152de9b4d90a61ff16';
+const licenceSha256 = '95262c94bf787b3befd9a11cebd141c42da793ff43eb750dbab35031eef3ef33';
 const creditLine = 'Gleo · © 2026 Utkarsh Tripathi · UT Community Licence 2.0';
-const repository = 'https://github.com/capsuleutkarsh-design/lumen';
+const repository = 'https://github.com/capsuleutkarsh-design/gleo';
 
 /// Line endings and trailing spaces do not count, so a checkout on any system gives the same hash.
 String licenceHash(String text) {

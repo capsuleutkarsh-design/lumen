@@ -58,7 +58,7 @@ add_subdirectory("runner")
 include(flutter/generated_plugins.cmake)
 
 # Gleo's own audio engine (libmpv-2.dll: mpv + FFmpeg with the audio filters and soxr),
-# built in public at https://github.com/capsuleutkarsh-design/lumen-audio-engine.
+# built in public at https://github.com/capsuleutkarsh-design/gleo-audio-engine.
 # It replaces the libmpv-2.dll that media_kit_libs_windows_audio downloads.
 # To update: set the new release tag and the SHA-256 of its -win64.zip.
 set(GLEO_ENGINE_TAG "v2026.10.14")
@@ -67,7 +67,7 @@ set(GLEO_ENGINE_ZIP "lumen-audio-engine-${GLEO_ENGINE_TAG}-win64.zip")
 set(GLEO_ENGINE_DIR "${CMAKE_BINARY_DIR}/lumen-audio-engine-${GLEO_ENGINE_TAG}")
 if(NOT EXISTS "${GLEO_ENGINE_DIR}/libmpv-2.dll")
   file(DOWNLOAD
-    "https://github.com/capsuleutkarsh-design/lumen-audio-engine/releases/download/${GLEO_ENGINE_TAG}/${GLEO_ENGINE_ZIP}"
+    "https://github.com/capsuleutkarsh-design/gleo-audio-engine/releases/download/${GLEO_ENGINE_TAG}/${GLEO_ENGINE_ZIP}"
     "${CMAKE_BINARY_DIR}/${GLEO_ENGINE_ZIP}"
     EXPECTED_HASH SHA256=${GLEO_ENGINE_SHA256} TLS_VERIFY ON)
   file(ARCHIVE_EXTRACT INPUT "${CMAKE_BINARY_DIR}/${GLEO_ENGINE_ZIP}" DESTINATION "${GLEO_ENGINE_DIR}")
