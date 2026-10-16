@@ -221,6 +221,17 @@ class _AppState extends State<App> with WidgetsBindingObserver {
   @override
   void didChangePlatformBrightness() => _theme();
 
+  static double get _viewWidth => WidgetsBinding.instance.platformDispatcher.views.first.physicalSize.width;
+  double _width = _viewWidth;
+
+  /// A toast's side margins are measured for the window it opened in, so one that gets narrower
+  /// would squeeze it: a change of width closes it before the next frame is laid out.
+  @override
+  void didChangeMetrics() {
+    if (_viewWidth != _width) messengerKey.currentState?.removeCurrentSnackBar();
+    _width = _viewWidth;
+  }
+
   /// Switches the palette and rebuilds every widget (const widgets too, which a plain setState skips).
   void _theme() {
     final p = paletteFor(appearance.value, ui.PlatformDispatcher.instance.platformBrightness);

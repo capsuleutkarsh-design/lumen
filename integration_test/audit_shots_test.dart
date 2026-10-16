@@ -398,10 +398,12 @@ void main() {
     await shot('w09_songs_filtered');
     songsFilter.value = '';
     await engine.playTracks([lib.byId[500003]!, lib.byId[500004]!, lib.byId[500005]!]); // missing files, one after another
-    await shot('w10_failures_merged', 4000);
+    await shot('w10_failures_merged', 1500);
     await engine.playTracks(hiRes.tracks);
     await engine.player.pause();
     await size(960, 640);
+    setSleep(30);
+    await settle(1000);
     await tester.tap(find.descendant(of: find.byType(PlayerBar), matching: find.byTooltip('More · ${sleepTip(ctx())}')));
     await shot('w11_min_more_menu_with_sleep');
     await esc();
