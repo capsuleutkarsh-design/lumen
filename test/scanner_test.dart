@@ -79,6 +79,7 @@ void main() {
 
     r = scan(dbPath, covers, [lib]);
     expect([r.added, r.updated, r.removed, r.unchanged], [0, 0, 0, 3]);
+    expect(r.changed, isFalse); // nothing to reload
 
     // Change one (new tags, newer time), add one, delete one.
     final changed = File(p.join(lib, 'A', '01.flac'));
@@ -88,6 +89,7 @@ void main() {
     File(p.join(lib, 'A', '03.flac')).deleteSync();
     r = scan(dbPath, covers, [lib]);
     expect([r.added, r.updated, r.removed, r.unchanged], [1, 1, 1, 1]);
+    expect(r.changed, isTrue);
     expect(col('SELECT title FROM tracks WHERE gone_at IS NULL ORDER BY path'), ['Renamed', 'T2', 'T4']);
 
     // An unplugged library drive keeps its tracks (and their play counts).
@@ -264,7 +266,7 @@ void main() {
     File(p.join(lib, 'C', 'Artwork', 'front.jpg')).writeAsBytesSync(jpeg(130));
     File(p.join(lib, 'D', 'scan 001.png')).writeAsBytesSync(img.encodePng(img.Image(width: 4, height: 4)));
     File(p.join(lib, 'E', 'folder.jpg')).writeAsBytesSync(jpeg(140)); // embedded art wins
-    scan(dbPath, covers, [lib]);
+    expect(scan(dbPath, covers, [lib]).changed, isTrue); // new covers only: still a change to show
     final first = col('SELECT cover FROM tracks ORDER BY title');
     expect(first.every((c) => c != null), isTrue);
 

@@ -197,15 +197,18 @@ class _SeekLine extends StatelessWidget {
           height: 8,
           child: Align(
             alignment: Alignment.bottomLeft,
-            child: ValueListenableBuilder(
-              valueListenable: engine.position,
-              builder: (_, pos, _) {
-                final total = engine.duration.inMilliseconds;
-                return FractionallySizedBox(
-                  widthFactor: total <= 0 ? 0 : (pos.inMilliseconds / total).clamp(0.0, 1.0),
-                  child: Container(height: 2, color: C.text.withValues(alpha: 0.6)),
-                );
-              },
+            // Its own layer: the position repaints only the line.
+            child: RepaintBoundary(
+              child: ValueListenableBuilder(
+                valueListenable: engine.position,
+                builder: (_, pos, _) {
+                  final total = engine.duration.inMilliseconds;
+                  return FractionallySizedBox(
+                    widthFactor: total <= 0 ? 0 : (pos.inMilliseconds / total).clamp(0.0, 1.0),
+                    child: Container(height: 2, color: C.text.withValues(alpha: 0.6)),
+                  );
+                },
+              ),
             ),
           ),
         ),

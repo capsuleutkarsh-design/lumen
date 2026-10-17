@@ -19,6 +19,9 @@ import 'tags.dart';
 class ScanResult {
   int added = 0, updated = 0, moved = 0, removed = 0, unchanged = 0;
 
+  /// Whether the library has anything new to show (songs, covers): without it nothing needs reloading.
+  bool changed = false;
+
   /// Folders that could not be read (no access, path too long...). Their tracks are kept.
   List<String> skipped = [];
   @override
@@ -263,8 +266,9 @@ ScanResult scan(String dbPath, String coverDir, List<String> roots, [void Functi
     gone.close();
     db.execute('DELETE FROM tracks WHERE gone_at < ?', [now - goneDays * 86400000]);
 
-    _refreshFolderCovers(db, covers, walk);
+    final newCovers = _refreshFolderCovers(db, covers, walk);
     final blank = db.select("SELECT 1 FROM tracks WHERE album_key = '' AND gone_at IS NULL LIMIT 1").isNotEmpty;
+    res.changed = todo.isNotEmpty || res.removed > 0 || blank || newCovers;
     if (todo.isNotEmpty || res.removed > 0 || blank) regroup(db);
     covers.clean(db);
     onProgress?.call(todo.length, todo.length);
@@ -284,7 +288,8 @@ int? _match(Map<String, List<(int, int)>> candidates, int size, Tags t) {
 }
 
 /// Folder art added, changed or removed since the last scan, for tracks without embedded art.
-void _refreshFolderCovers(Database db, _Covers covers, _Walk walk) {
+/// Returns whether any cover (or a cover's quality) changed.
+bool _refreshFolderCovers(Database db, _Covers covers, _Walk walk) {
   final changes = <(String?, int)>[];
   for (final r in db.select('SELECT id, folder, cover FROM tracks WHERE embedded_cover = 0 AND gone_at IS NULL')) {
     final folder = r['folder'] as String;
@@ -295,9 +300,11 @@ void _refreshFolderCovers(Database db, _Covers covers, _Walk walk) {
   final upd = db.prepare('UPDATE tracks SET cover = ? WHERE id = ?');
   _batched(db, changes, (x) => upd.execute([x.$1, x.$2]));
   upd.close();
+  final changed = changes.isNotEmpty || covers._quality.isNotEmpty;
   db.execute('BEGIN IMMEDIATE');
   covers.saveQuality(db);
   db.execute('COMMIT');
+  return changed;
 }
 
 /// Runs [write] for each item in short transactions, so a UI write never waits long.

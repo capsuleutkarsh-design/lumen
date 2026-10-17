@@ -381,8 +381,8 @@ class _ShellState extends State<Shell> {
             children: [
               // Under Now Playing or Disc mode the window is covered: its animations
               // (the playing bars in a list) pause, so nothing draws there for nothing.
-              TickerMode(
-                enabled: !nav.nowPlaying && !nav.disc,
+              Covered(
+                covered: nav.nowPlaying || nav.disc,
                 child: Column(
                   children: [
                     const SizedBox(height: TitleBar.height), // the title bar is drawn on top (below)

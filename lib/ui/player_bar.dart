@@ -752,8 +752,11 @@ class _SeekBarState extends State<SeekBar> {
   double? _drag, _hoverX;
   static const _pad = 10.0; // the slider's track inset (its overlay radius)
 
+  // Its own layer: the position (about 10 times a second) repaints only the bar, not the window.
   @override
-  Widget build(BuildContext context) => ValueListenableBuilder(
+  Widget build(BuildContext context) => RepaintBoundary(child: _bar());
+
+  Widget _bar() => ValueListenableBuilder(
     valueListenable: engine.position,
     builder: (context, pos, _) {
       final total = engine.duration.inMilliseconds.toDouble();

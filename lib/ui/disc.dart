@@ -244,12 +244,10 @@ class DiscViewState extends State<DiscView> with TickerProviderStateMixin {
                   Positioned.fill(
                     child: RepaintBoundary(child: CustomPaint(painter: _DiscShadow())),
                   ),
-                  ValueListenableBuilder(
-                    valueListenable: turns,
-                    builder: (_, v, child) => Transform.rotate(angle: v * 2 * math.pi, child: child),
-                    child: RepaintBoundary(
-                      child: RawImage(image: _disc, width: d, height: d, filterQuality: FilterQuality.medium),
-                    ),
+                  // Turned by its painter: a turn repaints only this layer. (A widget rebuilt per frame here sat
+                  // under Now Playing's LayoutBuilder, so every turn laid out and repainted the whole window.)
+                  RepaintBoundary(
+                    child: CustomPaint(size: Size.square(d), painter: _Turning(_disc!, turns)),
                   ),
                   Positioned.fill(
                     child: RepaintBoundary(child: CustomPaint(painter: _DiscSheen(vinyl))),
@@ -335,6 +333,33 @@ Future<ui.Image> renderDisc(DiscStyle style, ui.Image? art, int px) {
   }
   final pic = rec.endRecording();
   return pic.toImage(px, px).whenComplete(pic.dispose);
+}
+
+/// The disc image at [turns]' angle, about its centre (as Transform.rotate around a RawImage drew it).
+class _Turning extends CustomPainter {
+  _Turning(this.image, this.turns) : super(repaint: turns);
+  final ui.Image image;
+  final ValueNotifier<double> turns;
+
+  @override
+  void paint(Canvas c, Size s) {
+    final o = s.center(Offset.zero);
+    c
+      ..translate(o.dx, o.dy)
+      ..rotate(turns.value * 2 * math.pi)
+      ..translate(-o.dx, -o.dy)
+      ..drawImageRect(
+        image,
+        Rect.fromLTWH(0, 0, image.width.toDouble(), image.height.toDouble()),
+        Offset.zero & s,
+        Paint()
+          ..filterQuality = FilterQuality.medium
+          ..isAntiAlias = false,
+      );
+  }
+
+  @override
+  bool shouldRepaint(_Turning old) => old.image != image;
 }
 
 /// A soft shadow under the disc (it does not turn).
