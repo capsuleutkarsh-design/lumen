@@ -59,6 +59,9 @@ bool crossfades(Track a, Track b) {
   return !((db == da && tb == ta + 1) || (db == da + 1 && tb <= 1));
 }
 
+/// A sleep fade's volume at [t] (0 to 1 of the way through): a gentle S curve, slow at both ends.
+double fadeLevel(double t) => 0.5 + 0.5 * cos(pi * t.clamp(0.0, 1.0));
+
 /// Long files (audiobooks, DJ mixes, whole concerts) start where they were left (Sound → Playback).
 const longFile = Duration(minutes: 20);
 
@@ -138,11 +141,14 @@ class Engine extends ChangeNotifier {
   final cantPlay = <int>{};
   int? lastFailed;
 
-  /// Sleep timer: the volume fades out over the last 10 s, then playback pauses.
+  /// Sleep timer: the volume fades out over the last 10 s (Bedtime: the last 5 min), then playback pauses.
   DateTime? sleepAt;
   StopAfter stopAfter = StopAfter.none;
   Timer? _sleep;
-  static const sleepFade = Duration(seconds: 10);
+  static const sleepFade = Duration(seconds: 10), bedtimeFade = Duration(minutes: 5);
+
+  /// The sleep timer running is Bedtime (its slow fade).
+  bool bedtime = false;
 
   /// Counts seeks, so the OS media overlay can follow them.
   int seeks = 0;
@@ -222,6 +228,7 @@ class Engine extends ChangeNotifier {
     for (final e in _props.entries) {
       await m.setProperty(e.key, e.value);
     }
+    if (_hidden) _watchPos(m, false);
     _players.add(pl);
     bool on() => identical(pl, player);
     pl.stream.position.listen((d) {
@@ -237,6 +244,7 @@ class Engine extends ChangeNotifier {
     pl.stream.playing.listen((p) {
       if (!on()) return;
       playing = p;
+      _syncPoll();
       notifyListeners();
     });
     pl.stream.completed.listen((c) {
@@ -270,6 +278,47 @@ class Engine extends ChangeNotifier {
       if (on()) await _readOut();
     });
     return pl;
+  }
+
+  /// Nothing shows Gleo (Android: the screen is off or another app is in front). mpv's position
+  /// updates (about 20 a second, each one wakes the app) stop, and while music plays a poll twice a
+  /// second keeps play counts, crossfade and the resume place going. Measured: the app's main thread
+  /// wakes about 10 times a second instead of 24.
+  void setHidden(bool hidden) {
+    if (hidden == _hidden) return;
+    _hidden = hidden;
+    for (final pl in _players) {
+      _watchPos(pl.platform as NativePlayer, !hidden);
+    }
+    _syncPoll();
+  }
+
+  bool _hidden = false;
+  Timer? _poll;
+
+  /// The poll runs only while hidden and playing: paused, nothing wakes the app.
+  void _syncPoll() {
+    final want = _hidden && playing;
+    if (want == (_poll != null)) return;
+    _poll?.cancel();
+    _poll = !want
+        ? null
+        : Timer.periodic(const Duration(milliseconds: 500), (_) async {
+            final s = double.tryParse(await _mpv.getProperty('time-pos'));
+            if (playing && s != null) _onPosition(Duration(microseconds: (s * 1e6).round()));
+          });
+  }
+
+  /// Starts or stops media_kit's own `time-pos` watch (its reply id is the name's hash).
+  static void _watchPos(NativePlayer m, bool on) {
+    const name = 'time-pos';
+    if (!on) {
+      m.mpv.mpv_unobserve_property(m.ctx, name.hashCode);
+      return;
+    }
+    final n = name.toNativeUtf8();
+    m.mpv.mpv_observe_property(m.ctx, name.hashCode, n.cast(), 5); // MPV_FORMAT_DOUBLE
+    calloc.free(n);
   }
 
   Future<void> _readOut() async {
@@ -469,27 +518,31 @@ class Engine extends ChangeNotifier {
     return _set('mute', muted ? 'yes' : 'no');
   }
 
-  /// Pauses after [d], fading the volume out over the last 10 s; null cancels.
-  void sleepIn(Duration? d) {
+  /// Pauses after [d], fading the volume out over the last 10 s ([bedtime]: 5 min); null cancels.
+  /// One timer waits for the fade; the fade's steps run only while it fades.
+  void sleepIn(Duration? d, {bool bedtime = false}) {
     _sleep?.cancel();
     sleepAt = d == null ? null : DateTime.now().add(d);
+    this.bedtime = d != null && bedtime;
     if (d != null) {
-      final fade = d < sleepFade ? d : sleepFade;
+      final most = bedtime ? bedtimeFade : sleepFade;
+      final fade = d < most ? d : most;
       _sleep = Timer(d - fade, () => _fadeOut(fade));
     }
     notifyListeners();
   }
 
   Future<void> _fadeOut(Duration fade) async {
-    const steps = 20;
+    final steps = max(20, fade.inSeconds); // a long fade steps once a second
     final at = sleepAt;
     for (var i = 1; i <= steps && sleepAt == at; i++) {
-      await player.setVolume(volume * (steps - i) / steps);
+      await player.setVolume(volume * fadeLevel(i / steps));
       await Future<void>.delayed(fade ~/ steps);
     }
     if (sleepAt == at) {
       await player.pause();
       sleepAt = null;
+      bedtime = false;
     }
     await player.setVolume(volume);
     notifyListeners();
@@ -905,6 +958,7 @@ class Engine extends ChangeNotifier {
     _saveTimer?.cancel();
     _sleep?.cancel();
     _fade?.cancel();
+    _poll?.cancel();
     _save();
     await _messages.close();
     await _resumed.close();

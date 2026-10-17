@@ -235,18 +235,7 @@ class _NowPlayingState extends State<NowPlaying> {
                           }),
                         ],
                       ),
-                    if (phone && sleepOn)
-                      Padding(
-                        padding: const EdgeInsets.only(top: S.x2),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            Icon(LucideIcons.moon, size: 14, color: C.text),
-                            const SizedBox(width: S.x1),
-                            Text(sleepTip(context), style: T.caption.copyWith(color: C.text)),
-                          ],
-                        ),
-                      ),
+                    if (phone && sleepOn) const Padding(padding: EdgeInsets.only(top: S.x2), child: SleepLine()),
                     Expanded(
                       child: t == null
                           ? EmptyState(icon: LucideIcons.music, title: 'Nothing playing', body: '$tapWord any song to play it.')
@@ -384,9 +373,9 @@ class _Player extends StatelessWidget {
           mainAxisAlignment: MainAxisAlignment.spaceEvenly,
           children: [
             _RowBtn(LucideIcons.messageSquareQuote, 'Lyrics', onLyrics!, active: lyrics),
-            _RowBtn(LucideIcons.moon, 'Sleep', () async {
+            _RowBtn(sleepIcon, 'Sleep', () async {
               final v = await phoneSheet(context, sleepChoices(), title: sleepTip(context));
-              if (v != null) setSleep(v);
+              if (context.mounted) await chooseSleep(context, v);
             }, active: sleepOn),
             _RowBtn(LucideIcons.listMusic, 'Queue', () {
               nav.setNowPlaying(false);

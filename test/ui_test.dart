@@ -191,6 +191,109 @@ void main() {
     expect((engine.sleepAt, engine.stopAfter), (null, StopAfter.none));
   });
 
+  uiTest('Sleep timer: Custom… picks any length, remembers it, and shows the time left', (tester) async {
+    addTracks();
+    engine.queue.playNow([lib.tracks.first.id]);
+    await pumpOne(tester, const Align(alignment: Alignment.bottomCenter, child: PlayerBar()));
+    await tester.tap(find.byIcon(LucideIcons.moon));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Custom…'));
+    await tester.pumpAndSettle();
+    expect(find.text('45 min'), findsOneWidget, reason: 'first time: 45 minutes');
+    await tester.tap(find.byKey(const ValueKey('sleep.more')));
+    await tester.tap(find.byKey(const ValueKey('sleep.more')));
+    await tester.pump();
+    expect(find.text('47 min'), findsOneWidget);
+    await tester.tap(find.byKey(const ValueKey('sleep.start')));
+    await tester.pumpAndSettle();
+    final left = engine.sleepAt!.difference(DateTime.now()).inSeconds;
+    expect(left, inInclusiveRange(46 * 60, 47 * 60));
+    expect(lib.setting('sleepCustom'), '47');
+    expect(sleepTip(tester.element(find.byType(PlayerBar))), endsWith('· 47 min left'));
+    expect(sleepActive(sleepCustom), isTrue);
+    // Cancel keeps the timer as it was.
+    await tester.tap(find.byIcon(LucideIcons.moon));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Custom…'));
+    await tester.pumpAndSettle();
+    expect(find.text('47 min'), findsOneWidget, reason: 'the last length comes back');
+    await tester.tap(find.text('Cancel'));
+    await tester.pumpAndSettle();
+    expect(engine.sleepAt, isNotNull);
+    setSleep(0);
+    expect(engine.sleepAt, isNull);
+  });
+
+  uiTest('Bedtime: one tap starts the last length with the slow fade; the moon gets a star', (tester) async {
+    addTracks();
+    engine.queue.playNow([lib.tracks.first.id]);
+    lib.setSetting('sleepCustom', '50');
+    await pumpOne(tester, const Align(alignment: Alignment.bottomCenter, child: PlayerBar()));
+    await tester.tap(find.byIcon(LucideIcons.moon));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Bedtime · 50 min'));
+    await tester.pumpAndSettle();
+    expect(engine.bedtime, isTrue);
+    expect(engine.sleepAt!.difference(DateTime.now()).inMinutes, 49);
+    expect(find.byIcon(LucideIcons.moonStar), findsOneWidget);
+    expect(sleepTip(tester.element(find.byType(PlayerBar))), startsWith('Bedtime: pauses at '));
+    setSleep(0);
+    await tester.pump();
+    expect((engine.bedtime, engine.sleepAt), (false, null));
+    expect(find.byIcon(LucideIcons.moon), findsOneWidget);
+  });
+
+  uiTest('Automatic Bedtime arms once a night, says so, and Cancel keeps it off that night', (tester) async {
+    addTracks();
+    engine.queue.playNow([lib.tracks.first.id]);
+    await pumpOne(tester, const Align(alignment: Alignment.bottomCenter, child: PlayerBar()));
+    final now = DateTime.now();
+    lib.setSetting('bedtimeAuto', '${(now.hour * 60 + now.minute - 1) % 1440}'); // it started a minute ago
+    engine.playing = false;
+    maybeBedtime();
+    expect(engine.sleepAt, isNull, reason: 'nothing plays');
+    engine.playing = true;
+    maybeBedtime();
+    await tester.pumpAndSettle(); // the toast slides in
+    expect(engine.bedtime, isTrue);
+    expect(find.textContaining('Bedtime on: pauses at '), findsOneWidget);
+    await tester.tap(find.text('Cancel'));
+    await tester.pump();
+    expect(engine.sleepAt, isNull);
+    maybeBedtime();
+    expect(engine.sleepAt, isNull, reason: 'once a night, even after Cancel');
+    await tester.pump(const Duration(seconds: 10)); // the toast goes
+  });
+
+  test('Sleep fade: a gentle S curve from full to silent', () {
+    expect(fadeLevel(0), 1);
+    expect(fadeLevel(1), closeTo(0, 1e-9));
+    expect(fadeLevel(0.5), closeTo(0.5, 1e-9));
+    expect(fadeLevel(0.1), greaterThan(0.97), reason: 'slow at the start');
+    expect(fadeLevel(0.9), lessThan(0.03), reason: 'slow at the end');
+    for (var i = 1; i <= 100; i++) {
+      expect(fadeLevel(i / 100), lessThan(fadeLevel((i - 1) / 100)));
+    }
+  });
+
+  test('Bedtime night: from the chosen time until 6 AM, armed once per night', () {
+    const eleven = 23 * 60;
+    DateTime d(int day, int h, [int m = 0]) => DateTime(2026, 10, day, h, m);
+    String? arm(DateTime now, {String? last, bool playing = true, bool timerOn = false, int? start = eleven}) =>
+        bedtimeArm(now, start, playing: playing, timerOn: timerOn, last: last);
+    expect(arm(d(17, 22, 59)), isNull, reason: 'before the time');
+    expect(arm(d(17, 23, 10)), '2026-10-17');
+    expect(arm(d(18, 1, 30)), '2026-10-17', reason: 'after midnight is still that night');
+    expect(arm(d(18, 1, 30), last: '2026-10-17'), isNull, reason: 'already ran (or was cancelled) tonight');
+    expect(arm(d(18, 7)), isNull, reason: 'daytime');
+    expect(arm(d(18, 23, 5), last: '2026-10-17'), '2026-10-18', reason: 'the next night');
+    expect(arm(d(17, 23, 10), playing: false), isNull);
+    expect(arm(d(17, 23, 10), timerOn: true), isNull, reason: 'a timer the user set wins');
+    expect(arm(d(17, 23, 10), start: null), isNull, reason: 'off');
+    expect(arm(d(18, 0, 45), start: 30), '2026-10-18', reason: 'a time after midnight');
+    expect(arm(d(17, 23), start: 30), isNull);
+  });
+
   uiTest('B2: album and playlist headers wrap instead of overflowing when narrow', (tester) async {
     addTracks(title: long);
     final a = lib.albums.first;

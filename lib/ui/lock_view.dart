@@ -67,6 +67,7 @@ class _LockViewState extends State<LockView> {
                     Text(t?.title ?? '', maxLines: 2, textAlign: TextAlign.center, overflow: TextOverflow.ellipsis, style: T.title),
                     const SizedBox(height: S.x1),
                     Text(t?.artist ?? '', maxLines: 1, overflow: TextOverflow.ellipsis, style: T.body.copyWith(color: C.dim)),
+                    if (sleepOn) const Padding(padding: EdgeInsets.only(top: S.x2), child: SleepLine()),
                     const SizedBox(height: S.x4),
                     const SeekBar(big: true),
                     const SizedBox(height: S.x2),

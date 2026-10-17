@@ -18,6 +18,7 @@ import 'platform/update.dart';
 import 'platform/window.dart';
 import 'ui/app.dart';
 import 'ui/mini_player.dart';
+import 'ui/player_bar.dart' show watchBedtime;
 import 'ui/pages/credits.dart';
 import 'ui/theme.dart';
 import 'ui/widgets.dart' show fmtTime, toast;
@@ -104,7 +105,11 @@ Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error
     useMusicFolder(lib);
     await startAndroidMedia(engine);
     // Back in Gleo (from Settings, say): the music permission again, and a rescan (Android has no recursive folder watch).
-    AppLifecycleListener(onResume: () => recheckMusic(lib).then((_) => lib.rescan()));
+    // Out of sight (screen off, another app in front): no position flood from mpv (battery).
+    AppLifecycleListener(
+      onResume: () => recheckMusic(lib).then((_) => lib.rescan()),
+      onStateChange: (s) => engine.setHidden(s == AppLifecycleState.hidden || s == AppLifecycleState.paused),
+    );
     // The screen stays on while Disc mode or the lock-screen view is open and music plays.
     Listenable.merge([nav, engine, lockView]).addListener(() => keepScreenOn(engine.playing && (nav.disc || lockView.value)));
   }
@@ -142,6 +147,7 @@ Future<void> start(String data) async {
       return engine.shutdown();
     }, background: C.bg);
     runApp(const App());
+    watchBedtime();
     trayItems.add((() => nav.mini ? 'Full window' : 'Mini player', () => setMini(!nav.mini)));
     var mini = nav.mini;
     nav.addListener(() {

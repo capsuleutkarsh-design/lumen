@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:io';
+import 'dart:math' show max;
 
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
@@ -10,12 +11,12 @@ import 'package:path/path.dart' as p;
 import '../audio/engine.dart';
 import '../audio/queue.dart';
 import '../platform/log.dart' show openPath;
-import '../platform/window.dart' show isDesktop;
+import '../platform/window.dart' show isDesktop, isTouch;
 import 'app.dart';
 import 'art_accent.dart';
 import 'cover_picker.dart';
 import 'mini_player.dart';
-import 'phone.dart' show phoneLayout;
+import 'phone.dart' show phoneLayout, showPhoneSheet;
 import 'theme.dart';
 import 'tracks.dart';
 import 'widgets.dart';
@@ -23,10 +24,10 @@ import 'widgets.dart';
 /// The sleep timer is set: a time, or stop after this song or the queue.
 bool get sleepOn => engine.sleepAt != null || engine.stopAfter != StopAfter.none;
 
-/// What the sleep timer does now, e.g. "Sleep timer: pauses at 23:15".
+/// What the sleep timer does now, e.g. "Pauses at 23:15 · 12 min left".
 String sleepTip(BuildContext context) {
   final at = engine.sleepAt;
-  if (at != null) return 'Sleep timer: pauses at ${TimeOfDay.fromDateTime(at).format(context)}';
+  if (at != null) return '${engine.bedtime ? 'Bedtime: pauses' : 'Pauses'} at ${TimeOfDay.fromDateTime(at).format(context)} · ${sleepLeft(at)} left';
   return switch (engine.stopAfter) {
     StopAfter.song => 'Stops after this song',
     StopAfter.queue => 'Stops at the end of the queue',
@@ -34,10 +35,24 @@ String sleepTip(BuildContext context) {
   };
 }
 
-/// The sleep timer's choices (the player bar's menu, the phone's sheet): minutes,
+/// The time left until [at], in whole minutes rounded up ("12 min", "1 h 5 min").
+String sleepLeft(DateTime at) => fmtLong(Duration(minutes: max(1, (at.difference(DateTime.now()).inSeconds + 59) ~/ 60)));
+
+/// The sleep choice that asks for its own length (remembered for next time).
+const sleepCustom = -3;
+
+/// Bedtime: the last custom length (45 min at first), and the volume fades slowly over the last 5 min.
+const sleepBedtime = -4;
+
+/// The sleep timer's icon: a moon, with a star for Bedtime.
+IconData get sleepIcon => engine.bedtime ? LucideIcons.moonStar : LucideIcons.moon;
+
+/// The sleep timer's choices (the player bar's menu, the phone's sheet): minutes, [sleepCustom],
 /// -1 the end of this song, -2 the end of the queue, 0 off (only while it is on).
 List<(int, IconData, String)> sleepChoices() => [
+  (sleepBedtime, LucideIcons.moonStar, 'Bedtime · ${fmtLong(Duration(minutes: lastSleepMinutes))}'),
   for (final m in [15, 30, 45, 60]) (m, LucideIcons.timer, '$m minutes'),
+  (sleepCustom, LucideIcons.slidersHorizontal, 'Custom…'),
   (-1, LucideIcons.music, 'End of this song'),
   (-2, LucideIcons.listMusic, 'End of the queue'),
   if (sleepOn) (0, LucideIcons.x, 'Turn off'),
@@ -54,14 +69,234 @@ bool sleepActive(int v) => switch (v) {
   _ => engine.sleepAt != null && _sleepChoice == v,
 };
 
-void setSleep(int v) {
+/// [minutes] is the length for [sleepCustom].
+void setSleep(int v, {int? minutes}) {
   _sleepChoice = v;
-  engine.sleepIn(v > 0 ? Duration(minutes: v) : null);
+  final m = switch (v) {
+    sleepCustom => minutes ?? 0,
+    sleepBedtime => lastSleepMinutes,
+    _ => v,
+  };
+  engine.sleepIn(m > 0 ? Duration(minutes: m) : null, bedtime: v == sleepBedtime);
   engine.setStopAfter(switch (v) {
     -1 => StopAfter.song,
     -2 => StopAfter.queue,
     _ => StopAfter.none,
   });
+}
+
+/// Applies a sleep choice from a menu (null: dismissed); "Custom…" asks for the length first.
+Future<void> chooseSleep(BuildContext context, int? v) async {
+  if (v != sleepCustom) return v == null ? null : setSleep(v);
+  final m = await pickSleepMinutes(context);
+  if (m != null) setSleep(sleepCustom, minutes: m);
+}
+
+/// The last custom length (45 minutes at first): Bedtime's length too.
+int get lastSleepMinutes => int.tryParse(lib.setting('sleepCustom') ?? '') ?? 45;
+
+/// Settings → "Start Bedtime automatically after": minutes after midnight, null when off.
+int? get bedtimeAuto => int.tryParse(lib.setting('bedtimeAuto') ?? '');
+set bedtimeAuto(int? m) {
+  lib.setSetting('bedtimeAuto', m == null ? '' : '$m');
+  _scheduleBedtime();
+}
+
+/// When the night [now] is in began: the last [start] (minutes after midnight) up to [now], while it
+/// is before the next 6 AM. Null in the daytime.
+DateTime? bedtimeNight(DateTime now, int start) {
+  DateTime at(int day, int h, int m) => DateTime(now.year, now.month, now.day + day, h, m);
+  var from = at(0, start ~/ 60, start % 60);
+  if (from.isAfter(now)) from = at(-1, start ~/ 60, start % 60);
+  var end = DateTime(from.year, from.month, from.day, 6);
+  if (!end.isAfter(from)) end = DateTime(from.year, from.month, from.day + 1, 6);
+  return now.isBefore(end) ? from : null;
+}
+
+/// The night Bedtime should switch itself on for (e.g. "2026-10-17"), or null: automatic Bedtime is
+/// on ([start]), it is that night, music plays, no sleep timer runs, and this night hasn't had one
+/// ([last]; cancelling it counts, so it comes back only the next night).
+String? bedtimeArm(DateTime now, int? start, {required bool playing, required bool timerOn, String? last}) {
+  final night = start == null || !playing || timerOn ? null : bedtimeNight(now, start);
+  if (night == null) return null;
+  final key = '${night.year}-${night.month}-${night.day}';
+  return key == last ? null : key;
+}
+
+/// Automatic Bedtime: checked when music starts, and by one timer at the chosen time (no polling).
+void watchBedtime() {
+  var was = engine.playing;
+  engine.addListener(() {
+    if (engine.playing && !was) maybeBedtime();
+    was = engine.playing;
+  });
+  _scheduleBedtime();
+}
+
+Timer? _bedtimeTimer;
+void _scheduleBedtime() {
+  _bedtimeTimer?.cancel();
+  final start = bedtimeAuto;
+  if (start == null) return;
+  final now = DateTime.now();
+  var next = DateTime(now.year, now.month, now.day, start ~/ 60, start % 60);
+  if (!next.isAfter(now)) next = DateTime(now.year, now.month, now.day + 1, start ~/ 60, start % 60);
+  _bedtimeTimer = Timer(next.difference(now), () {
+    maybeBedtime();
+    _scheduleBedtime();
+  });
+}
+
+/// Switches Bedtime on when it should start by itself now, with "Bedtime on: pauses at … · Cancel".
+void maybeBedtime() {
+  final night = bedtimeArm(DateTime.now(), bedtimeAuto, playing: engine.playing, timerOn: sleepOn, last: lib.setting('bedtimeNight'));
+  if (night == null) return;
+  lib.setSetting('bedtimeNight', night);
+  setSleep(sleepBedtime);
+  final c = messengerKey.currentContext;
+  final at = engine.sleepAt!;
+  final time = c == null ? '${at.hour}:${'${at.minute}'.padLeft(2, '0')}' : TimeOfDay.fromDateTime(at).format(c);
+  toast(null, 'Bedtime on: pauses at $time', action: 'Cancel', onAction: () => setSleep(0), seconds: 8);
+}
+
+/// Asks for a sleep timer length, 1 to 240 minutes: a sheet on the phone, a small dialog on Windows.
+/// The length chosen is remembered; null when cancelled.
+Future<int?> pickSleepMinutes(BuildContext context) async {
+  Widget picker(BuildContext c) => SleepPicker(initial: lastSleepMinutes, onDone: (m) => Navigator.pop(c, m));
+  final m = phoneLayout(context)
+      ? await showPhoneSheet<int>(context, (c) => SafeArea(top: false, child: picker(c)))
+      : await showDialog<int>(
+          context: context,
+          builder: (c) => AlertDialog(content: SizedBox(width: 360, child: picker(c))),
+        );
+  if (m != null) lib.setSetting('sleepCustom', '$m');
+  return m;
+}
+
+/// Picks a sleep timer length: the slider moves in 5-minute steps, − and + by one minute.
+/// Shows when it would pause ("Pauses at 1:42 AM").
+class SleepPicker extends StatefulWidget {
+  const SleepPicker({super.key, required this.initial, required this.onDone});
+  final int initial;
+  final ValueChanged<int?> onDone;
+  static const most = 240;
+  @override
+  State<SleepPicker> createState() => _SleepPickerState();
+}
+
+class _SleepPickerState extends State<SleepPicker> {
+  late int _m = widget.initial.clamp(1, SleepPicker.most);
+  void _set(num m) => setState(() => _m = m.round().clamp(1, SleepPicker.most));
+
+  @override
+  Widget build(BuildContext context) {
+    final box = isTouch ? 48.0 : 36.0; // a finger needs 48 dp
+    final side = phoneLayout(context) ? S.x6 : 0.0;
+    final at = TimeOfDay.fromDateTime(DateTime.now().add(Duration(minutes: _m))).format(context);
+    final length = fmtLong(Duration(minutes: _m));
+    return Padding(
+      padding: EdgeInsets.fromLTRB(side, S.x3, side, S.x3),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          Text('Sleep timer', style: T.heading),
+          const SizedBox(height: S.x4),
+          Row(
+            children: [
+              IconBtn(
+                LucideIcons.minus,
+                key: const ValueKey('sleep.less'),
+                tooltip: 'A minute less',
+                box: box,
+                size: 20,
+                color: C.text,
+                onTap: _m > 1 ? () => _set(_m - 1) : null,
+              ),
+              Expanded(
+                child: Column(
+                  children: [
+                    Text(length, key: const ValueKey('sleep.length'), style: T.title),
+                    Text('Pauses at $at', key: const ValueKey('sleep.at'), style: T.small),
+                  ],
+                ),
+              ),
+              IconBtn(
+                LucideIcons.plus,
+                key: const ValueKey('sleep.more'),
+                tooltip: 'A minute more',
+                box: box,
+                size: 20,
+                color: C.text,
+                onTap: _m < SleepPicker.most ? () => _set(_m + 1) : null,
+              ),
+            ],
+          ),
+          const SizedBox(height: S.x2),
+          Slider(
+            key: const ValueKey('sleep.slider'),
+            value: _m.toDouble(),
+            max: SleepPicker.most.toDouble(),
+            divisions: SleepPicker.most ~/ 5,
+            label: length,
+            semanticFormatterCallback: (_) => length,
+            onChanged: _set,
+          ),
+          const SizedBox(height: S.x3),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              PillButton('Cancel', onTap: () => widget.onDone(null)),
+              const SizedBox(width: S.x2),
+              PillButton('Start', key: const ValueKey('sleep.start'), icon: LucideIcons.moon, primary: true, onTap: () => widget.onDone(_m)),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// The sleep timer's line (the phone's Now Playing, the lock-screen view): what it does, kept up to
+/// date while it shows ("Pauses at 1:42 AM · 12 min left").
+class SleepLine extends StatefulWidget {
+  const SleepLine({super.key});
+  @override
+  State<SleepLine> createState() => _SleepLineState();
+}
+
+class _SleepLineState extends State<SleepLine> {
+  late final Timer _tick;
+
+  @override
+  void initState() {
+    super.initState();
+    _tick = Timer.periodic(const Duration(seconds: 20), (_) => setState(() {}));
+  }
+
+  @override
+  void dispose() {
+    _tick.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      Icon(sleepIcon, size: 14, color: C.text),
+      const SizedBox(width: S.x1),
+      Flexible(
+        child: Text(
+          sleepTip(context),
+          key: const ValueKey('sleep.line'),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+          style: T.caption.copyWith(color: C.text),
+        ),
+      ),
+    ],
+  );
 }
 
 /// Playback failures close together become one toast ("3 songs couldn't be played").
@@ -123,11 +358,10 @@ class _PlayerBarState extends State<PlayerBar> {
       child: Row(
         children: [
           SizedBox(width: 24, child: sleepActive(v) ? Icon(LucideIcons.check, size: 14, color: C.text) : null),
-          Text(label, style: T.label),
+          Flexible(child: Text(label, style: T.label, overflow: TextOverflow.ellipsis)),
         ],
       ),
     );
-    final until = engine.sleepAt;
     final v = await showMenu<int>(
       context: context,
       position: RelativeRect.fromLTRB(at.dx, at.dy - 8, at.dx + box.size.width, at.dy),
@@ -137,19 +371,14 @@ class _PlayerBarState extends State<PlayerBar> {
           PopupMenuItem(
             enabled: false,
             height: 32,
-            child: Text(
-              until == null
-                  ? sleepTip(context)
-                  : 'Pauses at ${TimeOfDay.fromDateTime(until).format(context)} · ${until.difference(DateTime.now()).inMinutes + 1} min left',
-              style: T.caption,
-            ),
+            child: Text(sleepTip(context), style: T.caption),
           ),
           const PopupMenuDivider(height: 8),
         ],
         for (final (v, _, label) in sleepChoices()) ...[if (v == 0) const PopupMenuDivider(height: 8), item(v, label)],
       ],
     );
-    if (v != null) setSleep(v);
+    if (mounted) await chooseSleep(context, v);
   }
 
   /// •••: Disc mode, the mini player, and Change cover for the song playing (and the sleep timer in a small window).
@@ -157,7 +386,7 @@ class _PlayerBarState extends State<PlayerBar> {
     final album = lib.albumByKey[engine.current?.albumKey];
     final box = b.findRenderObject()! as RenderBox;
     final v = await popMenu(context, box.localToGlobal(Offset.zero) - const Offset(0, 8), [
-      if (sleep) menuItem('sleep', LucideIcons.moon, sleepOn ? sleepTip(context) : 'Sleep timer…'),
+      if (sleep) menuItem('sleep', sleepIcon, sleepOn ? sleepTip(context) : 'Sleep timer…'),
       menuItem('disc', LucideIcons.disc3, 'Disc mode', hint: 'D'),
       menuItem('mini', LucideIcons.pictureInPicture2, 'Mini player'),
       if (album != null) ...[const PopupMenuDivider(height: S.x2), menuItem('cover', LucideIcons.image, 'Change cover…')],
@@ -216,7 +445,7 @@ class _PlayerBarState extends State<PlayerBar> {
                       if (!compact)
                         Builder(
                           builder: (b) => IconBtn(
-                            LucideIcons.moon,
+                            sleepIcon,
                             size: 18,
                             active: sleepOn,
                             tooltip: sleepTip(context),

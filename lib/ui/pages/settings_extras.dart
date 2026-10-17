@@ -14,6 +14,7 @@ import '../app.dart';
 import '../art_accent.dart';
 import '../disc.dart';
 import '../lyrics_view.dart' show lyricsOnline;
+import '../player_bar.dart' show bedtimeAuto, lastSleepMinutes;
 import '../theme.dart';
 import '../widgets.dart';
 import 'browse.dart';
@@ -93,6 +94,59 @@ class LockScreenSettings extends StatelessWidget {
       sendLockAllowed(engine);
     },
   );
+}
+
+/// Settings → Bedtime: start it by itself after a chosen time (off unless switched on).
+class BedtimeSettings extends StatefulWidget {
+  const BedtimeSettings({super.key});
+  @override
+  State<BedtimeSettings> createState() => _BedtimeSettingsState();
+}
+
+class _BedtimeSettingsState extends State<BedtimeSettings> {
+  int? _at = bedtimeAuto;
+  int _last = bedtimeAuto ?? 23 * 60; // 11 PM until one is picked
+
+  Future<void> _pick() async {
+    final m = _at ?? _last;
+    final t = await showTimePicker(context: context, initialTime: TimeOfDay(hour: m ~/ 60, minute: m % 60));
+    if (t != null) setState(() => bedtimeAuto = _at = _last = t.hour * 60 + t.minute);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final m = _at ?? _last;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Expanded(child: Text('Start Bedtime automatically after', style: T.label)),
+            const SizedBox(width: S.x4),
+            Switch(
+              key: const ValueKey('bedtime.auto'),
+              value: _at != null,
+              onChanged: (v) => setState(() => bedtimeAuto = _at = v ? _last : null),
+            ),
+          ],
+        ),
+        const SizedBox(height: S.x2),
+        PillButton(
+          TimeOfDay(hour: m ~/ 60, minute: m % 60).format(context),
+          key: const ValueKey('bedtime.time'),
+          icon: LucideIcons.clock,
+          dense: true,
+          onTap: _pick,
+        ),
+        const SizedBox(height: S.x2),
+        Text(
+          'When music plays after this time, a $lastSleepMinutes-minute sleep timer starts once a night, and the volume '
+          'fades slowly over its last 5 minutes. Bedtime is also in the sleep timer menu.',
+          style: T.small,
+        ),
+      ],
+    );
+  }
 }
 
 class _Toggle extends StatefulWidget {

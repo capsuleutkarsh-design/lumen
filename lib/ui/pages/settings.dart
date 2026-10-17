@@ -261,6 +261,7 @@ class SettingsPage extends StatelessWidget {
                 _card('Theme', null, [const ThemeSettings()]),
                 if (!Platform.isAndroid) _card('Window', null, [const WindowSettings()]),
                 if (Platform.isAndroid) _card('Lock screen', null, [const LockScreenSettings()]),
+                _card('Bedtime', null, [const BedtimeSettings()]),
                 if (!Platform.isAndroid)
                   _card('Keyboard', null, [
                     for (final (k, v) in const [

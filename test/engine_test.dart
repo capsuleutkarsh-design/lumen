@@ -308,6 +308,34 @@ void main() {
       expect(await mpvOf(again).getProperty('mute'), 'yes');
     });
 
+    test('out of sight: mpv stops sending positions, a poll keeps the clock while playing, none while paused', () async {
+      final e = await newEngine();
+      await e.playTracks(album('Northern Lights'));
+      await playingPast(e);
+      var events = 0;
+      final sub = e.player.stream.position.listen((_) => events++);
+      await wait(1000);
+      expect(events, greaterThan(5), reason: 'in view: mpv sends many a second');
+      e.setHidden(true);
+      await wait(200);
+      events = 0;
+      final from = e.position.value;
+      await wait(1500);
+      expect(events, lessThanOrEqualTo(1), reason: 'hidden: none (one may be on its way)');
+      expect(e.position.value - from, greaterThan(const Duration(milliseconds: 800)), reason: 'the poll moves the clock');
+      await e.pause();
+      await wait(700);
+      final paused = e.position.value;
+      await wait(1100);
+      expect(e.position.value, paused);
+      e.setHidden(false);
+      await e.play();
+      await wait(1000);
+      expect(events, greaterThan(5), reason: 'back in view: updates again');
+      await sub.cancel();
+      await closeEngine(e);
+    });
+
     test('audio filters: a chain applies, empty clears, a broken one is dropped with a message', () async {
       final e = await newEngine();
       final said = <String>[];

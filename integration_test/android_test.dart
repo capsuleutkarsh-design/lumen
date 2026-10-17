@@ -40,6 +40,13 @@ Future<void> waitFor(bool Function() ok, {Duration timeout = const Duration(seco
   }
 }
 
+/// The length the sleep picker shows, in minutes ("2 h 1 min" → 121).
+int engineMinutes(WidgetTester tester) {
+  final t = tester.widget<Text>(find.byKey(const ValueKey('sleep.length'))).data!;
+  final h = RegExp(r'(\d+) h').firstMatch(t), m = RegExp(r'(\d+) min').firstMatch(t);
+  return int.parse(h?.group(1) ?? '0') * 60 + int.parse(m?.group(1) ?? '0');
+}
+
 void main() {
   if (!Platform.isAndroid) {
     test('android end to end', () {}, skip: 'runs on an Android device or emulator');
@@ -216,7 +223,8 @@ void main() {
     await tester.tap(find.text('15 minutes'));
     await settle();
     expect(engine.sleepAt, isNotNull);
-    expect(find.textContaining('pauses at'), findsWidgets);
+    expect(find.textContaining('Pauses at'), findsWidgets);
+    expect(find.textContaining('min left'), findsWidgets);
     await shot('dark_sleep_on');
     await tester.tap(moon);
     await settle();
@@ -230,6 +238,38 @@ void main() {
     await settle();
     expect((engine.sleepAt, engine.stopAfter), (null, StopAfter.none));
     expect(find.textContaining('Stops after'), findsNothing);
+    // Custom…: any length (the slider, then a minute more), remembered; then Bedtime with that length.
+    await tester.tap(moon);
+    await settle();
+    await tester.tap(find.text('Custom…'));
+    await settle();
+    final slider = tester.getRect(find.byKey(const ValueKey('sleep.slider')));
+    await tester.tapAt(Offset(slider.left + slider.width / 2, slider.center.dy)); // about 2 hours
+    await settle();
+    await tester.tap(find.byKey(const ValueKey('sleep.more')));
+    await settle();
+    final picked = engineMinutes(tester);
+    await shot('dark_sleep_custom');
+    await tester.tap(find.byKey(const ValueKey('sleep.start')));
+    await settle();
+    final left = engine.sleepAt!.difference(DateTime.now()).inMinutes;
+    expect(left, inInclusiveRange(picked - 1, picked));
+    expect(lib.setting('sleepCustom'), '$picked');
+    expect(find.byKey(const ValueKey('sleep.line')), findsOneWidget);
+    await shot('dark_sleep_custom_on');
+    await tester.tap(moon);
+    await settle();
+    await tester.tap(find.textContaining('Bedtime · '));
+    await settle();
+    expect(engine.bedtime, isTrue);
+    expect(find.textContaining('Bedtime: pauses at'), findsOneWidget);
+    await shot('dark_bedtime_on');
+    await tester.tap(moon);
+    await settle();
+    await tester.tap(find.text('Turn off'));
+    await settle();
+    expect((engine.sleepAt, engine.bedtime), (null, false));
+    say('Custom sleep timer: $picked min set from the sheet and remembered; Bedtime on and off');
     nav.setNowPlaying(false);
     engine.sleepIn(const Duration(seconds: 3));
     await waitFor(() => !engine.playing && engine.sleepAt == null, timeout: const Duration(seconds: 10), what: 'sleep timer pause');
