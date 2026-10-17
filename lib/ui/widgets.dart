@@ -3,6 +3,7 @@ import 'dart:math';
 import 'dart:ui' as ui;
 
 import 'package:flutter/material.dart';
+import 'package:flutter/rendering.dart' show SliverConstraints, SliverGridLayout;
 import 'package:flutter/services.dart';
 import 'package:lucide_icons_flutter/lucide_icons.dart';
 
@@ -889,20 +890,28 @@ bool get ctrl => HardwareKeyboard.instance.isControlPressed;
 bool get shift => HardwareKeyboard.instance.isShiftPressed;
 
 /// A grid of cards that are as tall as they are wide plus [extra] (square cover + text).
-Widget sliverCards({required int count, required IndexedWidgetBuilder builder, double maxWidth = 220, double extra = 82}) => SliverLayoutBuilder(
-  builder: (context, c) {
-    final w = c.crossAxisExtent;
+Widget sliverCards({required int count, required IndexedWidgetBuilder builder, double maxWidth = 220, double extra = 82}) =>
+    SliverGrid.builder(gridDelegate: _CardGrid(maxWidth, extra), itemCount: count, itemBuilder: builder);
+
+/// [sliverCards]' columns, worked out from the width at layout. (A SliverLayoutBuilder did this before
+/// and rebuilt every card on every scrolled frame: its constraints carry the scroll offset.)
+class _CardGrid extends SliverGridDelegate {
+  const _CardGrid(this.maxWidth, this.extra);
+  final double maxWidth, extra;
+
+  @override
+  SliverGridLayout getLayout(SliverConstraints constraints) {
+    final w = constraints.crossAxisExtent;
     final cols = ((w + S.x4) / (maxWidth + S.x4)).ceil().clamp(1, 99);
     final itemW = (w - S.x4 * (cols - 1)) / cols;
-    return SliverGrid.builder(
-      gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-        crossAxisCount: cols,
-        mainAxisExtent: itemW + extra,
-        crossAxisSpacing: S.x4,
-        mainAxisSpacing: S.x4,
-      ),
-      itemCount: count,
-      itemBuilder: builder,
-    );
-  },
-);
+    return SliverGridDelegateWithFixedCrossAxisCount(
+      crossAxisCount: cols,
+      mainAxisExtent: itemW + extra,
+      crossAxisSpacing: S.x4,
+      mainAxisSpacing: S.x4,
+    ).getLayout(constraints);
+  }
+
+  @override
+  bool shouldRelayout(_CardGrid old) => old.maxWidth != maxWidth || old.extra != extra;
+}
