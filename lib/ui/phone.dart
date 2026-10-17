@@ -98,8 +98,8 @@ class _PhoneShellState extends State<PhoneShell> {
         resizeToAvoidBottomInset: false,
         body: Stack(
           children: [
-            TickerMode(
-              enabled: !nav.nowPlaying && !nav.disc && !nav.queue,
+            Covered(
+              covered: nav.nowPlaying || nav.disc || nav.queue,
               // Landscape: the navigation moves to the side, so the page keeps the short height.
               child: MediaQuery.orientationOf(context) == Orientation.landscape
                   ? Row(
@@ -516,17 +516,20 @@ class PhoneBar extends StatelessWidget {
                   ],
                 ),
               ),
-              ValueListenableBuilder(
-                valueListenable: engine.position,
-                builder: (_, pos, _) {
-                  final total = engine.duration.inMilliseconds;
-                  return LinearProgressIndicator(
-                    value: total <= 0 ? 0 : (pos.inMilliseconds / total).clamp(0.0, 1.0),
-                    minHeight: 2,
-                    color: C.accent,
-                    backgroundColor: Colors.transparent,
-                  );
-                },
+              // Its own layer: the position repaints only the line, not the page above it.
+              RepaintBoundary(
+                child: ValueListenableBuilder(
+                  valueListenable: engine.position,
+                  builder: (_, pos, _) {
+                    final total = engine.duration.inMilliseconds;
+                    return LinearProgressIndicator(
+                      value: total <= 0 ? 0 : (pos.inMilliseconds / total).clamp(0.0, 1.0),
+                      minHeight: 2,
+                      color: C.accent,
+                      backgroundColor: Colors.transparent,
+                    );
+                  },
+                ),
               ),
             ],
           ),

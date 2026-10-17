@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:math';
 import 'dart:ui' as ui;
@@ -573,6 +574,48 @@ class _GlowState extends State<_Glow> {
       RawImage(image: _image, width: widget.size.width, height: widget.size.height, fit: BoxFit.fill, filterQuality: FilterQuality.medium);
 }
 
+/// What lies under a full-window cover (Now Playing, Disc mode, the phone's queue): its animations pause,
+/// and once the cover has faded in it is not drawn at all (the GPU drew it under the cover on every
+/// frame while the disc turned). It shows again at once when the cover goes.
+class Covered extends StatefulWidget {
+  const Covered({super.key, required this.covered, required this.child});
+  final bool covered;
+  final Widget child;
+  @override
+  State<Covered> createState() => _CoveredState();
+}
+
+class _CoveredState extends State<Covered> {
+  bool _hidden = false;
+  Timer? _hide;
+
+  @override
+  void didUpdateWidget(Covered old) {
+    super.didUpdateWidget(old);
+    if (widget.covered == old.covered) return;
+    _hide?.cancel();
+    _hidden = false;
+    if (widget.covered) _hide = Timer(Motion.slow, () => mounted ? setState(() => _hidden = true) : null);
+  }
+
+  @override
+  void dispose() {
+    _hide?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) => Visibility(
+    visible: !(_hidden && widget.covered),
+    // Keeps its size (a Stack may size itself by it), state, animations and keyboard focus: only the drawing stops.
+    maintainSize: true,
+    maintainAnimation: true,
+    maintainState: true,
+    maintainFocusability: true,
+    child: TickerMode(enabled: !widget.covered, child: widget.child),
+  );
+}
+
 /// "FLAC 24/96". Neutral: the gold is kept for what is playing now.
 class FormatBadge extends StatelessWidget {
   const FormatBadge(this.text, {super.key});
@@ -762,27 +805,36 @@ class _PlayingBarsState extends State<PlayingBars> with SingleTickerProviderStat
     super.dispose();
   }
 
+  // Painted, not rebuilt, on each frame: a row that changes size every frame laid out the song's row
+  // (and Now Playing's queue) again 60 times a second.
   @override
   Widget build(BuildContext context) => Semantics(
     label: widget.playing ? 'Playing' : 'Paused',
-    child: AnimatedBuilder(
-      animation: _c,
-      builder: (_, _) => Row(
-        mainAxisSize: MainAxisSize.min,
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: [
-          for (final phase in [0.0, 0.35, 0.7])
-            Container(
-              margin: const EdgeInsets.symmetric(horizontal: 1),
-              width: 3,
-              height: 4 + 10 * (widget.playing ? (0.5 + 0.5 * _wave((_c.value + phase) % 1)) : 0.3),
-              decoration: BoxDecoration(color: widget.color ?? C.accent, borderRadius: BorderRadius.circular(2)),
-            ),
-        ],
-      ),
-    ),
+    child: CustomPaint(size: const Size(15, 14), painter: _Bars(_c, widget.playing, widget.color ?? C.accent, _wave)),
   );
   double _wave(double t) => (t < 0.5 ? t * 2 : 2 - t * 2) * 2 - 1;
+}
+
+/// [PlayingBars]: three 3 px bars 2 px apart, bottoms level, as a centred row of them was.
+class _Bars extends CustomPainter {
+  _Bars(this.c, this.playing, this.color, this.wave) : super(repaint: c);
+  final Animation<double> c;
+  final bool playing;
+  final Color color;
+  final double Function(double) wave;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final hs = [for (final phase in [0.0, 0.35, 0.7]) 4 + 10 * (playing ? (0.5 + 0.5 * wave((c.value + phase) % 1)) : 0.3)];
+    final bottom = size.height / 2 + hs.reduce(max) / 2;
+    final paint = Paint()..color = color;
+    for (var i = 0; i < 3; i++) {
+      canvas.drawRRect(RRect.fromRectAndRadius(Rect.fromLTWH(1 + i * 5.0, bottom - hs[i], 3, hs[i]), const Radius.circular(2)), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(_Bars old) => old.playing != playing || old.color != color;
 }
 
 /// A simple confirm/prompt dialog for names.
