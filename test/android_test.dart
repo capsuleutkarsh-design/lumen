@@ -9,6 +9,20 @@ const phone = DeviceInfo(name: 'Phone speaker', android: true, nativeRate: 48000
 const bt = DeviceInfo(name: 'Bluetooth headphones', android: true, bluetooth: true, nativeRate: 48000, outFormat: 'floatp', outRate: 96000, outChannels: 2);
 
 void main() {
+  testWidgets('the lock-screen view keeps the screen on only for a minute after a wake or touch', (t) async {
+    pokeLockView();
+    expect(lockAwake.value, isTrue);
+    await t.pump(const Duration(seconds: 59));
+    pokeLockView(); // a touch starts the minute again
+    await t.pump(const Duration(seconds: 59));
+    expect(lockAwake.value, isTrue);
+    await t.pump(const Duration(seconds: 2));
+    expect(lockAwake.value, isFalse);
+    pokeLockView();
+    pokeLockView(on: false); // the screen went off
+    expect(lockAwake.value, isFalse);
+  });
+
   test('Gleo sends the song rate up to 96 kHz; higher rates stay in their family', () {
     final s = SoundSettings()..bestQuality = false;
     expect(androidRate(s, phone, 44100), 0);

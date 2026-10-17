@@ -95,7 +95,9 @@ Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error
   await loadArtPacks();
   engine = Engine(lib, silent: silent, logLevel: logLevel);
   await engine.init();
-  engine.resumed.listen((at) => toast(null, 'Resumed at ${fmtTime(at)}', action: 'Start over', onAction: () => engine.seek(Duration.zero)));
+  engine.resumed.listen(
+    (at) => toast(null, 'Resumed at ${fmtTime(at)}', action: 'Start over', onAction: () => engine.seek(Duration.zero)),
+  );
   await sound.init();
   MediaControls(engine);
   if (Platform.isAndroid) {
@@ -107,11 +109,19 @@ Future<void> boot({bool silent = false, MPVLogLevel logLevel = MPVLogLevel.error
     // Back in Gleo (from Settings, say): the music permission again, and a rescan (Android has no recursive folder watch).
     // Out of sight (screen off, another app in front): no position flood from mpv (battery).
     AppLifecycleListener(
-      onResume: () => recheckMusic(lib).then((_) => lib.rescan()),
-      onStateChange: (s) => engine.setHidden(s == AppLifecycleState.hidden || s == AppLifecycleState.paused),
+      onResume: () {
+        pokeLockView();
+        recheckMusic(lib).then((_) => lib.rescan());
+      },
+      onStateChange: (s) {
+        final hidden = s == AppLifecycleState.hidden || s == AppLifecycleState.paused;
+        engine.setHidden(hidden);
+        if (hidden) pokeLockView(on: false);
+      },
     );
-    // The screen stays on while Disc mode or the lock-screen view is open and music plays.
-    Listenable.merge([nav, engine, lockView]).addListener(() => keepScreenOn(engine.playing && (nav.disc || lockView.value)));
+    // The screen stays on while Disc mode is open and music plays; the lock-screen view only for a minute after a wake or touch.
+    Listenable.merge([nav, engine, lockView, lockAwake])
+        .addListener(() => keepScreenOn(engine.playing && (nav.disc || (lockView.value && lockAwake.value))));
   }
   lib.watch();
   lib.rescan(); // background: picks up anything changed while the app was closed

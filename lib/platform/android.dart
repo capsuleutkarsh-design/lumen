@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:audio_service/audio_service.dart';
@@ -27,6 +28,16 @@ final photosStep = ValueNotifier(false);
 
 /// The phone locked with Gleo in front while music played: Gleo shows its lock-screen view (MainActivity.kt).
 final lockView = ValueNotifier(false);
+
+/// The lock-screen view keeps the screen on only for a minute after the screen wakes or the view is touched
+/// (a night of play pressed there must not leave the screen lit).
+final lockAwake = ValueNotifier(false);
+Timer? _awake;
+void pokeLockView({bool on = true}) {
+  _awake?.cancel();
+  lockAwake.value = on;
+  if (on) _awake = Timer(const Duration(minutes: 1), () => lockAwake.value = false);
+}
 
 /// Settings → "Show on lock screen" (on unless switched off).
 bool lockViewOn(Library lib) => lib.setting('lockView') != '0';
@@ -212,7 +223,9 @@ Future<void> startAndroidMedia(Engine engine) async {
     if (engine.playing == was) return;
     was = engine.playing;
     if (was) {
-      _channel.invokeMethod('askNotifications').ignore(); // Android 13+: once, the first time something plays with Gleo in front
+      _channel
+          .invokeMethod('askNotifications')
+          .ignore(); // Android 13+: once, the first time something plays with Gleo in front
       session.setActive(true).then((ok) {
         if (!ok) engine.pause(); // a call holds the audio
       });
@@ -240,7 +253,12 @@ class _Session extends BaseAudioHandler with SeekHandler {
     _last = key;
     if (file == null && art != null) ArtCache.ensure(art, 384).then((_) => _update()); // drawn art: sent once ready
     // The home-screen widget (its channel stays while music plays on with no activity).
-    _widget.invokeMethod('update', {'title': t?.title ?? '', 'artist': t?.artist ?? '', 'art': file ?? '', 'playing': engine.playing}).ignore();
+    _widget.invokeMethod('update', {
+      'title': t?.title ?? '',
+      'artist': t?.artist ?? '',
+      'art': file ?? '',
+      'playing': engine.playing,
+    }).ignore();
     if (trackChanged) {
       mediaItem.add(
         t == null
@@ -257,7 +275,11 @@ class _Session extends BaseAudioHandler with SeekHandler {
     }
     playbackState.add(
       PlaybackState(
-        controls: [MediaControl.skipToPrevious, engine.playing ? MediaControl.pause : MediaControl.play, MediaControl.skipToNext],
+        controls: [
+          MediaControl.skipToPrevious,
+          engine.playing ? MediaControl.pause : MediaControl.play,
+          MediaControl.skipToNext,
+        ],
         systemActions: const {MediaAction.seek, MediaAction.playPause},
         androidCompactActionIndices: const [0, 1, 2],
         processingState: t == null ? AudioProcessingState.idle : AudioProcessingState.ready,
