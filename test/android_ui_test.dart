@@ -123,6 +123,7 @@ void main() {
     await tester.pump(const Duration(seconds: 1));
     expect(find.bySemanticsLabel(RegExp('Open Gleo')), findsNothing);
     expect(find.bySemanticsLabel(RegExp('Settings')), findsWidgets);
+    pokeLockView(on: false); // the tap on Open Gleo started the one-minute screen-on timer
     semantics.dispose();
   });
 }
