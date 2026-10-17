@@ -392,8 +392,10 @@ class Library extends ChangeNotifier {
     final first = tracks.isEmpty;
     var shown = 0;
     final since = Stopwatch()..start();
+    ScanResult? r;
+    final skipped = skippedFolders;
     try {
-      final r = await scanInBackground(dbPath, coverDir, folders, mirror: Directory(textMirror).existsSync() ? textMirror : null, (d, t) {
+      r = await scanInBackground(dbPath, coverDir, folders, mirror: Directory(textMirror).existsSync() ? textMirror : null, (d, t) {
         scan.value = (d, t);
         if (first && d > shown && d < t && (d - shown >= 500 || since.elapsedMilliseconds >= 2000)) {
           shown = d;
@@ -408,7 +410,8 @@ class Library extends ChangeNotifier {
     } finally {
       scan.value = null;
     }
-    load();
+    // Nothing new (most rescans: each return to the app on Android): no reload, so no page rebuilds.
+    if (r?.changed != false || !loaded || !listEquals(skipped, skippedFolders)) load();
     try {
       if ((await afterScan?.call() ?? 0) > 0) _again = true;
     } catch (e) {
