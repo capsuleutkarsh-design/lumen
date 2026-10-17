@@ -20,7 +20,7 @@ Windows now · Android coming · No account, no internet, no AI. Just your music
 
 Get **[Gleo for Windows](https://github.com/capsuleutkarsh-design/gleo/releases/latest)** (beta): run `Gleo-Setup-….exe`, or unzip the portable `.zip` and run `gleo.exe`. Then open **Settings → Add folder** and pick your music folder. Gleo only reads your files; it never changes them.
 
-> **Beta:** please report anything odd in [Issues](https://github.com/capsuleutkarsh-design/gleo/issues). What's new in 0.4.0: [release notes](docs/releases/v0.4.0.md).
+> **Beta:** please report anything odd in [Issues](https://github.com/capsuleutkarsh-design/gleo/issues). What's new in 0.4.1: [release notes](docs/releases/v0.4.1.md).
 
 ## Screenshots
 
