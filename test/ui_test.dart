@@ -794,4 +794,20 @@ void main() {
     expect(tester.state<ScrollableState>(list).position.pixels, greaterThan(before));
     expect(find.text('EQ is off'), findsOneWidget);
   });
+
+  uiTest('phone Now Playing: the sleep line shows a timer, then "Stops after this song" at once', (tester) async {
+    addTracks();
+    engine.queue.playNow([lib.tracks.first.id]);
+    await pumpPhone(tester);
+    nav.setNowPlaying(true);
+    await tester.pumpAndSettle();
+    setSleep(15);
+    await tester.pumpAndSettle();
+    expect(find.textContaining('min left'), findsWidgets);
+    setSleep(-1);
+    await tester.pumpAndSettle();
+    expect(find.text('Stops after this song'), findsOneWidget, reason: 'it kept showing the old timer until its 20 s tick');
+    setSleep(0);
+    await tester.pump();
+  });
 }

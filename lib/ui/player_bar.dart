@@ -280,8 +280,11 @@ class _SleepLineState extends State<SleepLine> {
     super.dispose();
   }
 
+  // The engine rebuilds it at once when the choice changes; the 20 s tick keeps "min left" current.
   @override
-  Widget build(BuildContext context) => Row(
+  Widget build(BuildContext context) => ListenableBuilder(
+    listenable: engine,
+    builder: (context, _) => Row(
     mainAxisAlignment: MainAxisAlignment.center,
     children: [
       Icon(sleepIcon, size: 14, color: C.text),
@@ -296,6 +299,7 @@ class _SleepLineState extends State<SleepLine> {
         ),
       ),
     ],
+  ),
   );
 }
 
